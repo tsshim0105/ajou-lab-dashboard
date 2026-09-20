@@ -1,5 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible} from '../server/worker.mjs';
 const OWNER='owner@example.test';
+test('authorized student roster applies once and owner revocation remains effective',async()=>{
+ const {worker,env}=fixture();env.STUDENT_ACCESS_REVISION='roster-1';env.STUDENT_ACCESS_ROSTER=JSON.stringify([{name:'Student One',email:'one@example.test'}]);
+ assert.equal((await worker.fetch(req('unlisted@example.test'),env)).status,403);
+ const first=await worker.fetch(req('one@example.test'),env);assert.equal(first.status,200);const student=await first.json();assert.equal(student.user.role,'student');assert.deepEqual(student.students,[]);assert.deepEqual(student.studentNames,{});assert.deepEqual(student.data.funds,[]);assert.deepEqual(student.data.payroll,[]);
+ const owner=await (await worker.fetch(req(OWNER),env)).json();assert.ok(owner.students.includes('one@example.test'));assert.ok(owner.students.includes('student@example.test'));assert.equal(owner.studentNames['one@example.test'],'Student One');
+ assert.equal((await worker.fetch(req(OWNER,'/api/students','PUT',{version:owner.version,students:owner.students.filter(s=>s!=='one@example.test')}),env)).status,200);
+ assert.equal((await worker.fetch(req('one@example.test'),env)).status,403);assert.equal((await worker.fetch(req('one@example.test','/api/notifications'),env)).status,403);assert.equal((await worker.fetch(req('student@example.test'),env)).status,200);
+ assert.equal((await (await worker.fetch(req(OWNER),env)).json()).students.includes('one@example.test'),false);
+});
 test('research notifications persist, exclude private fields and ignore metadata-only edits',async()=>{
  const {worker,env}=fixture();const initial=await (await worker.fetch(req(OWNER),env)).json(),d=initial.data;
  d.papers[0].journal='Updated journal';d.papers[0].fund='PRIVATE FUND';d.conferences.push({id:'new',year:2026,presenter:'Author',conference:'Meeting',title:'Talk'});
