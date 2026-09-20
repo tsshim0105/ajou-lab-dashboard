@@ -62,7 +62,7 @@ export function createWorker(html){return {async fetch(req,env){const url=new UR
    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},data:visible(state.data,admin),students:admin?state.students:[]});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),data:visible(state.data,admin),students:admin?state.students:[]});
   if(req.method==='PUT'&&['/api/data','/api/students'].includes(url.pathname)){
    if(!admin)return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
