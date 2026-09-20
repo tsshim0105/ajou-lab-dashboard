@@ -23,7 +23,8 @@ export function createWorker(html){return {async fetch(req,env){const url=new UR
   const existing=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();
   if(!existing){
    const initial=fresh();
-   if(env.INITIAL_DATA_GZIP){const bytes=Uint8Array.from(atob(env.INITIAL_DATA_GZIP),c=>c.charCodeAt(0));const json=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();initial.data=validateData(JSON.parse(json));}
+   const initialSeed=env.INITIAL_DATA_GZIP||Array.from({length:16},(_,i)=>env['INITIAL_DATA_GZIP_'+(i+1)]||'').join('');
+   if(initialSeed){const bytes=Uint8Array.from(atob(initialSeed),c=>c.charCodeAt(0));const json=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();initial.data=validateData(JSON.parse(json));}
    await env.DB.prepare('INSERT OR IGNORE INTO lab_state VALUES (1,0,?)').bind(JSON.stringify(initial)).run();
   }
   const row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first(),state=JSON.parse(row.payload);
