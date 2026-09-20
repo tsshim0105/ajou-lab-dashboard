@@ -46,6 +46,26 @@ export function recordNotifications(state,before,after,type,actor='교수님'){
  const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
  state.notifications=[...added.reverse(),...(state.notifications||[])].slice(0,200);
 }
+const researchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
+export function applyResearchChanges(data,changes){
+ if(!Array.isArray(changes)||!changes.length||changes.length>100)throw Error('변경할 연구 기록을 확인해주세요.');
+ const next=structuredClone(data),seen=new Set();
+ for(const c of changes){
+  if(!c||!['papers','conferences'].includes(c.type)||!['add','edit'].includes(c.action)||typeof c.id!=='string'||!c.id||c.id.length>200||!c.values||typeof c.values!=='object'||Array.isArray(c.values))throw Error('연구 기록 형식이 올바르지 않습니다.');
+  const key=c.type+':'+c.id;if(seen.has(key))throw Error('중복 수정 요청입니다.');seen.add(key);
+  const keys=Object.keys(c.values);if(!keys.length||keys.some(k=>!researchFields[c.type].includes(k)))throw Error('허용되지 않는 수정 항목입니다.');
+  for(const k of keys){const v=c.values[k];if(k==='year'){if(!Number.isInteger(v)||v<1900||v>2200)throw Error('연도를 확인해주세요.');}else if(k==='authorCount'){if(v!==null&&(!Number.isInteger(v)||v<1||v>100000))throw Error('총저자수를 확인해주세요.');}else if(typeof v!=='string'||v.length>2000)throw Error('입력값을 확인해주세요.');}
+  const index=next[c.type].findIndex(r=>r.id===c.id);if(c.action==='add'?index>=0:index<0)throw Error('기록이 변경되었습니다. 새로고침해주세요.');
+  const old=index>=0?next[c.type][index]:{},r={...old,...c.values,id:c.id};
+  if(c.type==='papers'){
+   if(!r.title?.trim()||!r.journal?.trim()||/[가-힣]/.test((r.firstAuthor||'')+(r.correspondingAuthor||'')))throw Error('논문 제목, 학술지와 영문 저자를 확인해주세요.');
+   if(old.title&&r.title!==old.title)r.titleAliases=[...new Set([...(old.titleAliases||[]),old.title])];
+   r.paperEditedFields=[...new Set([...(old.paperEditedFields||[]),...keys])];r.paperEditedAt=new Date().toISOString();
+  }else{r.manual=true;r.locationEdited=true;}
+  if(index>=0)next[c.type][index]=r;else next[c.type].push(r);
+ }
+ return validateData(next);
+}
 export function createWorker(html,meetingEvents=null){return {async fetch(req,env){const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
  const reply=(body,status=200,type)=>new Response(req.method==='HEAD'?null:typeof body==='string'?body:JSON.stringify(body),{status,headers:{...headers,...(type?{'Content-Type':type}:{})}});
  try{
@@ -101,12 +121,13 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students'].includes(url.pathname)){
-   if(!admin)return reply({error:'교수님만 변경할 수 있습니다.'},403);
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/research'].includes(url.pathname)){
+   if(!admin&&url.pathname!=='/api/research')return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
-   if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
+   if(url.pathname==='/api/research'){const next=applyResearchChanges(state.data,input.changes);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');state.data=next;}
+   else if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
    else {if(!Array.isArray(input.students)||input.students.length>100||input.students.some(s=>typeof s!=='string'||!/^\S+@\S+\.\S+$/.test(s)||s.length>254))return reply({error:'이메일 목록을 확인해주세요.'},400);state.students=[...new Set(input.students.map(s=>s.trim().toLowerCase()))];}
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
