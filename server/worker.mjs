@@ -9,6 +9,13 @@ export function validateData(d){
  for(const r of d.papers)if(typeof r.title!=='string'||!Number.isInteger(r.year))throw Error('논문 제목과 연도를 확인해주세요.');
  for(const r of d.conferences)if(typeof r.presenter!=='string'||!Number.isInteger(r.year))throw Error('발표자와 연도를 확인해주세요.');
  for(const r of d.funds)if(!Array.isArray(r.months))throw Error('연구비 월별 자료를 확인해주세요.');
+ const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
+ const amountOK=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000;
+ for(const r of d.conferences)if(r.manual&&(!(r.year>=1900&&r.year<=2200)||!r.presenter.trim()||typeof r.conference!=='string'||!r.conference.trim()||!['구두','포스터','미기재'].includes(r.kind)||(r.date&&(!dateOK(r.date)||Number(r.date.slice(0,4))!==r.year))))throw Error('학회명, 발표자, 연도와 발표일을 확인해주세요.');
+ for(const f of d.funds){
+  if(f.manual&&(typeof f.title!=='string'||!f.title.trim()||!amountOK(f.total)||!amountOK(f.balance)||f.balance>f.total))throw Error('연구비명, 총액과 잔액을 확인해주세요.');
+  if(f.entries!==undefined){if(!Array.isArray(f.entries)||f.entries.length>20000)throw Error('지출 목록을 확인해주세요.');for(const e of f.entries)if(!e||!dateOK(e.date)||typeof e.description!=='string'||!e.description.trim()||!amountOK(e.amount)||e.amount===0)throw Error('지출일, 사용 내역과 양의 정수 금액을 확인해주세요.');}
+ }
  return d;
 }
 export function createWorker(html){return {async fetch(req,env){const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
