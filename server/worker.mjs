@@ -36,10 +36,21 @@ export function createWorker(html){return {async fetch(req,env){const url=new UR
    if(initialSeed){const bytes=Uint8Array.from(atob(initialSeed),c=>c.charCodeAt(0));const json=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();initial.data=validateData(JSON.parse(json));}
    await env.DB.prepare('INSERT OR IGNORE INTO lab_state VALUES (1,0,?)').bind(JSON.stringify(initial)).run();
   }
-  const row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first(),state=JSON.parse(row.payload);
+  let row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first(),state=JSON.parse(row.payload);
   if(!admin&&!state.students.includes(email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
   const read=['GET','HEAD'].includes(req.method),origin=req.headers.get('Origin');
   if((origin&&origin!==url.origin)||(!read&&(origin!==url.origin||req.headers.get('X-Lab-Request')!=='1'||req.headers.get('Content-Type')!=='application/json')))return reply({error:'허용되지 않는 요청입니다.'},403);
+  if(admin&&read&&url.pathname==='/api/data'&&env.PAPER_CATALOG_REVISION&&state.paperCatalogRevision!==env.PAPER_CATALOG_REVISION){
+   const count=Number(env.PAPER_CATALOG_CHUNKS);if(!Number.isInteger(count)||count<1||count>16)throw Error('논문 갱신 자료 설정을 확인해주세요.');
+   const compressed=Array.from({length:count},(_,i)=>env['PAPER_CATALOG_GZIP_'+(i+1)]||'').join('');
+   const bytes=Uint8Array.from(atob(compressed),c=>c.charCodeAt(0));
+   const catalog=JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+   if(catalog.revision!==env.PAPER_CATALOG_REVISION)throw Error('논문 갱신 자료 버전이 일치하지 않습니다.');
+   const next={...state,data:validateData(mergePaperCatalog(state.data,catalog)),paperCatalogRevision:catalog.revision};
+   const changed=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();
+   if(!changed.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
+   row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+  }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},data:visible(state.data,admin),students:admin?state.students:[]});
   if(req.method==='PUT'&&['/api/data','/api/students'].includes(url.pathname)){
@@ -56,3 +67,19 @@ export function createWorker(html){return {async fetch(req,env){const url=new UR
   return reply({error:'페이지를 찾을 수 없습니다.'},404);
  }catch(e){return reply({error:e instanceof SyntaxError?'자료 형식을 확인해주세요.':e.message||'처리 중 오류가 발생했습니다.'},400);}
 }};}
+
+export function mergePaperCatalog(data,catalog){
+ if(!Array.isArray(catalog.papers)||catalog.papers.length>2000)throw Error('논문 갱신 목록을 확인해주세요.');
+ const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+ const signatures=p=>new Set([p.title,...(p.titleAliases||[])].map(key).filter(Boolean));
+ const existing=data.papers,used=new Set();
+ const papers=catalog.papers.map(p=>{
+  if(!p.title||!Number.isInteger(p.year)||!Array.isArray(p.authorList)||!p.authorList.length)throw Error('논문 저자·제목·연도를 확인해주세요.');
+  const keys=signatures(p);const index=existing.findIndex((r,i)=>!used.has(i)&&((r.metadataSource===catalog.source&&r.websiteNumber===p.websiteNumber)||[...signatures(r)].some(k=>keys.has(k))));
+  const previous=index>=0?existing[index]:{};if(index>=0)used.add(index);
+  const aliases=[...new Set([...(previous.titleAliases||[]),...(p.titleAliases||[]),previous.title].filter(t=>t&&key(t)!==key(p.title)))];
+  return {...previous,...p,id:previous.id||'nisml-paper-'+p.websiteNumber,titleAliases:aliases,role:previous.role||'미기재',fund:previous.fund||'',metadataSource:catalog.source,metadataChecked:catalog.checked};
+ });
+ papers.push(...existing.filter((_,i)=>!used.has(i)));
+ return {...data,papers,sources:[...data.sources.filter(s=>s.name!=='연구실 홈페이지 논문 목록'),{type:'papers',name:'연구실 홈페이지 논문 목록',url:catalog.source,importedAt:catalog.checked+'T00:00:00Z'}]};
+}
