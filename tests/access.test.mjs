@@ -1,5 +1,22 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible} from '../server/worker.mjs';
 const OWNER='owner@example.test';
+test('research notifications persist, exclude private fields and ignore metadata-only edits',async()=>{
+ const {worker,env}=fixture();const initial=await (await worker.fetch(req(OWNER),env)).json(),d=initial.data;
+ d.papers[0].journal='Updated journal';d.papers[0].fund='PRIVATE FUND';d.conferences.push({id:'new',year:2026,presenter:'Author',conference:'Meeting',title:'Talk'});
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);
+ const feed=await (await worker.fetch(req('student@example.test','/api/notifications'),env)).json();assert.equal(feed.notifications.length,2);assert.ok(!JSON.stringify(feed).includes('PRIVATE'));assert.ok(feed.notifications.some(n=>n.label==='논문 수정'));
+ d.papers[0].fund='OTHER PRIVATE';d.papers[0].metadataChecked='2026-09-22';
+ await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env);assert.equal((await (await worker.fetch(req(OWNER,'/api/notifications'),env)).json()).notifications.length,2);
+ d.conferences=[];await worker.fetch(req(OWNER,'/api/data','PUT',{version:2,data:d}),env);assert.equal((await (await worker.fetch(req(OWNER,'/api/notifications'),env)).json()).notifications[0].action,'삭제');
+ assert.equal((await worker.fetch(req(null,'/api/notifications'),env)).status,401);
+});
+test('conference deployment notifications establish baseline and detect future editions without check-date noise',async()=>{
+ const {env}=fixture();let events=[{id:'meeting-2027',name:'Meeting 2027',start:'2027-05-01',end:'2027-05-03',checked:'2026-09-21'}];
+ let worker=createWorker('',events);let first=await (await worker.fetch(req(OWNER),env)).json();assert.equal(first.version,1);assert.equal(first.notifications.length,0);
+ worker=createWorker('',[{...events[0],checked:'2026-09-22'}]);assert.equal((await (await worker.fetch(req(OWNER,'/api/notifications'),env)).json()).notifications.length,0);
+ worker=createWorker('',[{...events[0],start:'2027-05-02'},{id:'meeting-2028',name:'Meeting 2028'}]);const feed=await (await worker.fetch(req(OWNER,'/api/notifications'),env)).json();assert.equal(feed.notifications.length,2);assert.ok(feed.notifications.some(n=>n.title==='Meeting 2028'&&n.action==='등록'));
+ assert.equal((await (await worker.fetch(req(OWNER,'/api/notifications'),env)).json()).notifications.length,2);
+});
 test('paper form adds and edits SCI and author count with persistent validation',async()=>{
  const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');let submit;
  const data=fresh().data,context=vm.createContext({data,crypto,Date,esc:s=>String(s??''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
@@ -25,7 +42,7 @@ test('direct conference and expense edits persist without replacing original mon
 test('invalid direct entries are rejected without changing saved records',async()=>{for(const change of [d=>d.funds[0].entries[0].amount=-1,d=>d.funds[0].entries[0].amount=1.5,d=>d.funds[0].entries[0].date='2026-02-30',d=>d.funds[0].entries[0].description=' ',d=>d.conferences[0].year=2025,d=>{Object.assign(d.conferences[0],{locationEdited:true,scope:'invalid',city:'City',venue:'Venue'});}]){const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;d.funds[0].entries=[{date:'2026-09-20',description:'Supplies',amount:120}];d.conferences=[{manual:true,year:2026,date:'2026-09-20',presenter:'Researcher',conference:'Meeting',kind:'구두'}];change(d);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,400);assert.equal((await (await worker.fetch(req(OWNER),env)).json()).version,0);}});
 
 test('conference calendar keeps unknown dates unknown and calculates local deadline days',async()=>{
- const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({Intl,Date,Math});vm.runInContext(source.slice(source.indexOf('function calendarDay(')),context);
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({Intl,Date,Math});vm.runInContext(source.slice(source.indexOf('function calendarDay('),source.indexOf('// Shared research change feed')),context);
  const d={date:'2026-09-24',tz:'America/New_York',time:'23:59'};
  assert.equal(context.deadlineState(d,new Date('2026-09-25T02:00:00Z')).label,'오늘 마감 · 시각 확인');assert.equal(context.deadlineState(d,new Date('2026-09-25T04:01:00Z')).label,'마감');assert.equal(context.deadlineState(d,new Date('2026-09-20T12:00:00Z')).label,'D-4');
  assert.match(context.deadlineList([]),/미공개/);
@@ -44,7 +61,7 @@ test('original fund edits and optional end date persist while preserving expense
 });
 test('fund countdown uses the Korean calendar and handles today, ended, and missing dates',async()=>{
  const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({Intl,Date,Math,badge:s=>s});
- vm.runInContext(source.slice(source.indexOf('function calendarDay('))+source.slice(source.indexOf('function fundCountdown('),source.indexOf('function editFund(')),context);
+ vm.runInContext(source.slice(source.indexOf('function calendarDay('),source.indexOf('// Shared research change feed'))+source.slice(source.indexOf('function fundCountdown('),source.indexOf('function editFund(')),context);
  const now=new Date('2026-09-20T15:01:00Z');assert.equal(context.fundCountdown('2026-09-22',now),'D-1');assert.equal(context.fundCountdown('2026-09-21',now),'D-DAY');assert.equal(context.fundCountdown('2026-09-20',now),'종료');assert.equal(context.fundCountdown('',now),'');
 });
 
@@ -100,7 +117,7 @@ test('paper authors display in English and Korean search uses the saved mapping'
 
 test('lab paper highlighting and recent papers distinguish lead and corresponding roles',async()=>{
  const {readFile}=await import('node:fs/promises');const vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({data:{papers:[],authorAliases:[{korean:'학생',english:'Student Author'}]},labLeadAuthor:'Lab Professor',labMemberAuthors:['Former Student'],Intl,Date});
- vm.runInContext(source.slice(source.indexOf('const searchKey='),source.indexOf('const filter='))+source.slice(source.indexOf('function authorAliases('),source.indexOf('const badge='))+source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function paperLocation('))+source.slice(source.indexOf('function calendarDay(')),context);
+ vm.runInContext(source.slice(source.indexOf('const searchKey='),source.indexOf('const filter='))+source.slice(source.indexOf('function authorAliases('),source.indexOf('const badge='))+source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function paperLocation('))+source.slice(source.indexOf('function calendarDay('),source.indexOf('// Shared research change feed')),context);
  assert.equal(context.labPaperRole({authorList:[{name:'Other Person',first:true},{name:'Student Author',equalContribution:true}]}).highlight,true);
  assert.equal(context.labPaperRole({authorList:[{name:'Lab Professor',corresponding:true}]}).highlight,true);
  assert.equal(context.labPaperRole({authorList:[{name:'Student Author'},{name:'Lab Professor'}]}).recent,false);
