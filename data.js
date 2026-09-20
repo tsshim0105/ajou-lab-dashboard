@@ -30,7 +30,10 @@ globalThis.LabData=(()=>{
   }else throw Error('지원되는 원본 시트가 없습니다. 논문·학회·인건비·기본연구소 연구비 파일을 선택해주세요.');
   out.sources=[{type,name,importedAt:new Date().toISOString()}];return {type,data:out};
  }
- function merge(base,part){const out=structuredClone(base),{type,data}=part;out[type]=data[type];if(type==='payroll')out.standards=data.standards;out.sources=[...out.sources.filter(s=>s.type!==type),...data.sources];out.issues=[...out.issues.filter(s=>s.type!==type),...data.issues.map(message=>({type,message}))];return out;}
+ function merge(base,part){const out=structuredClone(base),{type,data}=part;out[type]=data[type];if(type==='papers'){
+ const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+ const used=new Set();out.papers=data.papers.map(r=>{const old=base.papers.find(p=>p.metadataSource&&[p.title,...(p.titleAliases||[])].some(t=>key(t)===key(r.title)));if(!old)return r;used.add(old.id);const merged={...r,id:old.id};for(const k of ['title','year','journal','citation','authorList','authorNamesKo','authorsText','authors','firstAuthor','publicationUrl','websiteNumber','metadataSource','metadataChecked','titleAliases','status'])if(old[k]!==undefined)merged[k]=old[k];return merged;});out.papers.push(...base.papers.filter(p=>p.metadataSource&&!used.has(p.id)));
+ }if(type==='payroll')out.standards=data.standards;out.sources=[...out.sources.filter(s=>s.type!==type),...data.sources];out.issues=[...out.issues.filter(s=>s.type!==type),...data.issues.map(message=>({type,message}))];return out;}
  async function readXlsx(file){
   if(file.size>12*1024*1024)throw Error('엑셀 파일은 12MB 이하로 선택해주세요.');
   const buf=await file.arrayBuffer(),v=new DataView(buf),bytes=new Uint8Array(buf);let end=-1;
