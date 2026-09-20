@@ -1,0 +1,9 @@
+private/
+dist/
+.sites-runtime/
+.env*
+node_modules/
+*.xlsx
+*.gsheet
+preview.html
+.openai/hosting.json
