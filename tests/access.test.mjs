@@ -46,7 +46,7 @@ test('website metadata sync is atomic, idempotent and preserves private data and
 
 test('paper publication fields save, validate partial dates and retain edit overrides',async()=>{
  const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;
- d.papers[0]={...d.papers[0],journal:'Example Journal',volume:'25',issue:'1',pages:'419–425',articleNumber:'',issueDate:'2026-02',onlineDate:'2025-12-16',doi:'10.1234/example',publicationUrl:'https://doi.org/10.1234/example',paperEditedFields:['issueDate','pages']};
+ d.papers[0]={...d.papers[0],journal:'Example Journal',correspondingAuthor:'Example Corresponding Author',volume:'25',issue:'1',pages:'419–425',articleNumber:'',issueDate:'2026-02',onlineDate:'2025-12-16',doi:'10.1234/example',publicationUrl:'https://doi.org/10.1234/example',paperEditedFields:['issueDate','pages','correspondingAuthor']};
  assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);
  const saved=(await (await worker.fetch(req(OWNER),env)).json());assert.deepEqual(saved.data,d);
  for(const date of ['2026-02-30','2026-13','2026-00','26-01','2026-1-01']){d.papers[0].issueDate=date;assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,400);}
