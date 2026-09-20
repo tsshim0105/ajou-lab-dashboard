@@ -18,4 +18,35 @@
 .fund-card .data-table th,.fund-card .data-table td{padding:8px 10px}
 .fund-card .empty{padding:16px}
 @media(max-width:760px){.fund-top{gap:8px}.fund-note{margin-left:0}.fund-card{padding:12px}.fund-card .cards[style]{grid-template-columns:1fr!important;gap:6px}.fund-card .card{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px}.fund-card .card .value{font-size:21px;margin:0}.fund-card .card small{grid-column:1/-1}}
+
+.meeting-list{display:grid;gap:18px}
+.meeting-card{border:1px solid #d3deed;border-radius:10px;background:#fff;padding:18px}
+.meeting-header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:16px;flex-wrap:wrap}
+.meeting-name{display:flex;align-items:center;gap:16px;min-width:0;color:inherit;text-decoration:none;flex:1}
+.meeting-name:hover h2{text-decoration:underline;color:#1458bf}
+.meeting-name h2{font-size:21px;line-height:1.45;margin:0;overflow-wrap:anywhere}
+.meeting-logo{width:104px;height:80px;display:flex;align-items:center;justify-content:center;flex:none;background:#fff;border:1px solid #dce4ee;border-radius:8px;padding:10px}
+.meeting-logo img{object-fit:contain;width:100%;height:100%}
+.meeting-blocks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.meeting-block{border:1px solid #d6e1ef;border-top:3px solid #1769e8;border-radius:7px;padding:14px;background:#f9fbff;min-width:0}
+.meeting-block h3{font-size:14px;color:#475569;margin:0 0 12px;font-weight:600}
+.meeting-deadline+.meeting-deadline{margin-top:12px;padding-top:12px;border-top:1px solid #dce4ee}
+.meeting-deadline-label{font-size:14px;color:#475569;display:block;margin-bottom:3px}
+.meeting-deadline-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.meeting-deadline strong,.meeting-key{font-size:21px;font-weight:800;line-height:1.4;display:block;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.meeting-deadline strong{white-space:nowrap}
+.meeting-deadline small{font-size:13px;color:#64748b;display:block;margin-top:5px}
+.meeting-urgent{background:#fee2e2;color:#b91c1c}
+.meeting-range{display:block;font-size:18px;font-weight:700;margin-top:4px}
+.meeting-unknown{font-size:16px;color:#64748b;margin:0}
+.meeting-location{border-top-color:#0e7490}.meeting-schedule{border-top-color:#4338ca}
+.meeting-footer{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:12px;font-size:14px}
+.meeting-footer details{margin:0;flex:1}.meeting-footer p{margin:8px 0}.meeting-footer>.muted{white-space:nowrap}
+.meeting-sources{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+[data-theme=dark] .meeting-card{background:#1e293b;border-color:#475569}
+[data-theme=dark] .meeting-block{background:#26364d;border-color:#475569;border-top-color:#73a6ff}
+[data-theme=dark] :is(.meeting-block h3,.meeting-deadline-label,.meeting-deadline small,.meeting-unknown){color:#b9c7db}
+[data-theme=dark] .meeting-name:hover h2,[data-theme=dark] .meeting-sources a{color:#93c5fd}
+@media(max-width:1000px){.meeting-blocks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.meeting-card{padding:14px}.meeting-blocks{grid-template-columns:1fr}.meeting-logo{width:84px;height:68px;padding:8px}.meeting-name{gap:10px}.meeting-name h2{font-size:18px}.meeting-footer{flex-wrap:wrap}.meeting-header>.badge{margin-left:94px}.meeting-footer details{flex-basis:100%}}
 </style></head><body><main class="app"><header class="header-bar"><div><div class="eyebrow">AJOU UNIVERSITY · LAB DASHBOARD</div><div class="header-title">자연모사연성재료 연구실</div></div><div class="user-info"><span id="userLabel">연결 확인 중</span><button class="secondary" id="theme">다크 모드</button></div></header><div id="previewNotice" class="notice hidden">교수님 검토용 파일 · 업로드한 자료의 사본이며 온라인 공유·자동 갱신은 연결 전입니다.</div><nav class="tabs" aria-label="주 메뉴" id="tabs"></nav><div class="filter-bar" id="filters"><label for="year">연도</label><select id="year"><option value="all">전체 연도</option></select><label for="query">검색</label><input id="query" placeholder="논문·학회·발표자 검색"><button class="secondary" id="reset">초기화</button></div><section class="panel" id="panel" aria-live="polite"><div class="empty">자료를 불러오는 중입니다.</div></section><footer class="foot"><span>아주대학교 · 자연모사연성재료 연구실</span><span id="sourceDate">원본 자료 기준</span></footer></main><script src="data.js"></script><script src="conference-info.js"></script><script src="app.js"></script></body></html>
