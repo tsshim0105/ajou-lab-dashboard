@@ -33,3 +33,13 @@ test('fund countdown uses the Korean calendar and handles today, ended, and miss
  vm.runInContext(source.slice(source.indexOf('function calendarDay('))+source.slice(source.indexOf('function fundCountdown('),source.indexOf('function editFund(')),context);
  const now=new Date('2026-09-20T15:01:00Z');assert.equal(context.fundCountdown('2026-09-22',now),'D-1');assert.equal(context.fundCountdown('2026-09-21',now),'D-DAY');assert.equal(context.fundCountdown('2026-09-20',now),'종료');assert.equal(context.fundCountdown('',now),'');
 });
+
+test('website metadata sync is atomic, idempotent and preserves private data and unmatched drafts',async()=>{
+ const {gzipSync}=await import('node:zlib');const {worker,env}=fixture();
+ const catalog={revision:'test-publications-v1',source:'https://lab.example/publications',checked:'2026-09-20',papers:[{websiteNumber:1,title:'Updated A',titleAliases:['A'],year:2026,journal:'Journal',authorList:[{name:'Example Author',korean:'예시저자',first:true}],firstAuthor:'예시저자',authorNamesKo:['예시저자']}]};
+ env.PAPER_CATALOG_REVISION=catalog.revision;env.PAPER_CATALOG_CHUNKS='1';env.PAPER_CATALOG_GZIP_1=gzipSync(JSON.stringify(catalog)).toString('base64');
+ const original=(await (await worker.fetch(req(OWNER),env)).json());assert.equal(original.version,1);assert.equal(original.data.papers.length,1);assert.equal(original.data.papers[0].title,'Updated A');assert.equal(original.data.papers[0].points,100);assert.equal(original.data.funds[0].balance,500);assert.equal(original.data.payroll[0].monthly,100);
+ const again=await (await worker.fetch(req(OWNER),env)).json();assert.equal(again.version,1);
+ const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.data.papers[0].authorNamesKo[0],'예시저자');assert.equal(student.data.papers[0].points,undefined);assert.deepEqual(student.data.funds,[]);
+ const stale=await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:original.data}),env);assert.equal(stale.status,409);
+});
