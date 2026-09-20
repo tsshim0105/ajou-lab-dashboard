@@ -20,6 +20,7 @@ export function validateData(d){
  }
  const amountOK=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000;
  for(const r of d.conferences)if(r.manual&&(!(r.year>=1900&&r.year<=2200)||!r.presenter.trim()||typeof r.conference!=='string'||!r.conference.trim()||!['구두','포스터','미기재'].includes(r.kind)||(r.date&&(!dateOK(r.date)||Number(r.date.slice(0,4))!==r.year))))throw Error('학회명, 발표자, 연도와 발표일을 확인해주세요.');
+ for(const r of d.conferences)if(r.locationEdited&&(!['국내','국제'].includes(r.scope)||typeof r.city!=='string'||r.city.length>500||typeof r.venue!=='string'||r.venue.length>1000))throw Error('학회 국내/국제 구분, 도시와 장소를 확인해주세요.');
  for(const f of d.funds){
   if(f.endDate!==undefined&&f.endDate!==''&&(!dateOK(f.endDate)||f.endDate<'1900-01-01'||f.endDate>'2200-12-31'))throw Error('연구비 종료일을 확인해주세요.');
   if(f.initialEdited&&f.months.some(m=>!m||typeof m.month!=='string'||!m.month.trim()||(m.spend!==null&&!amountOK(m.spend))||(m.balance!==null&&!amountOK(m.balance))))throw Error('연구비 월별 기록의 기간과 금액을 확인해주세요.');
