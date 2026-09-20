@@ -83,3 +83,18 @@ test('paper authors display in English and Korean search uses the saved mapping'
  assert.equal(context.paperFirst(r),'Example Student');assert.equal(context.paperCorresponding(r),'Other Author');assert.equal(context.matchesResearch(r,'등록학생'),true);assert.equal(context.matchesResearch(r,'예시학생'),false);assert.equal(context.matchesResearch(r,'ExampleStudent'),true);
  assert.equal(context.englishAuthorText('예시학생 (Example Student), 다른이름 [확인 필요] (Other Author)'),'Example Student, Other Author');
 });
+
+test('lab paper highlighting and recent papers distinguish lead and corresponding roles',async()=>{
+ const {readFile}=await import('node:fs/promises');const vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({data:{papers:[],authorAliases:[{korean:'학생',english:'Student Author'}]},labLeadAuthor:'Lab Professor',labMemberAuthors:['Former Student'],Intl,Date});
+ vm.runInContext(source.slice(source.indexOf('const searchKey='),source.indexOf('const filter='))+source.slice(source.indexOf('function authorAliases('),source.indexOf('const badge='))+source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function paperLocation('))+source.slice(source.indexOf('function calendarDay(')),context);
+ assert.equal(context.labPaperRole({authorList:[{name:'Other Person',first:true},{name:'Student Author',equalContribution:true}]}).highlight,true);
+ assert.equal(context.labPaperRole({authorList:[{name:'Lab Professor',corresponding:true}]}).highlight,true);
+ assert.equal(context.labPaperRole({authorList:[{name:'Student Author'},{name:'Lab Professor'}]}).recent,false);
+ assert.equal(context.labPaperRole({authorList:[{name:'Former Student',first:true}]}).highlight,true);
+ const studentCorresponding=context.labPaperRole({authorList:[{name:'Student Author',corresponding:true}]});assert.equal(studentCorresponding.highlight,false);assert.equal(studentCorresponding.recent,true);
+ assert.equal(context.labPaperRole({authorList:[{name:'Lab Professor',first:true}]}).highlight,false);
+ assert.equal(context.labPaperRole({firstAuthor:'Student Author',paperEditedFields:['firstAuthor'],authorList:[]}).highlight,true);
+ assert.equal(context.labPaperRole({firstAuthor:'Student Author Jr.',paperEditedFields:['firstAuthor']}).highlight,false);
+ const rows=[{year:2014},{year:2015},{year:2026,date:'2026-09-21'},{year:2026,date:'2026-09-22'},{year:2027}];
+ assert.equal(JSON.stringify(context.homePeriod(rows,new Date('2026-09-20T15:10:00Z'))),JSON.stringify([rows[1],rows[2]]));
+});
