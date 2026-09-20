@@ -9,3 +9,27 @@ test('owner updates persist and stale saves are rejected',async()=>{const {worke
 test('cross origin mutation blocked',async()=>{const {worker,env}=fixture(),r=req(OWNER,'/api/data','PUT',{version:0,data:fresh().data});r.headers.set('Origin','https://other.example');assert.equal((await worker.fetch(r,env)).status,403);});
 test('direct conference and expense edits persist without replacing original months',async()=>{const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();const d=original.data;d.conferences.push({id:'direct',manual:true,year:2026,date:'2026-09-20',presenter:'Researcher',conference:'Conference',kind:'구두'});d.funds[0].months=[{month:'8월',spend:100,balance:500}];d.funds[0].entries=[{id:'expense',date:'2026-09-20',description:'Supplies',amount:120,note:''}];assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);const saved=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data,d);d.funds[0].entries[0].amount=150;assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,200);const edited=await (await worker.fetch(req(OWNER),env)).json();assert.equal(edited.data.funds[0].entries[0].amount,150);assert.deepEqual(edited.data.funds[0].months,[{month:'8월',spend:100,balance:500}]);});
 test('invalid direct entries are rejected without changing saved records',async()=>{for(const change of [d=>d.funds[0].entries[0].amount=-1,d=>d.funds[0].entries[0].amount=1.5,d=>d.funds[0].entries[0].date='2026-02-30',d=>d.funds[0].entries[0].description=' ',d=>d.conferences[0].year=2025]){const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;d.funds[0].entries=[{date:'2026-09-20',description:'Supplies',amount:120}];d.conferences=[{manual:true,year:2026,date:'2026-09-20',presenter:'Researcher',conference:'Meeting',kind:'구두'}];change(d);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,400);assert.equal((await (await worker.fetch(req(OWNER),env)).json()).version,0);}});
+
+test('conference calendar keeps unknown dates unknown and calculates local deadline days',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({Intl,Date,Math});vm.runInContext(source.slice(source.indexOf('function calendarDay(')),context);
+ const d={date:'2026-09-24',tz:'America/New_York',time:'23:59'};
+ assert.equal(context.deadlineState(d,new Date('2026-09-25T02:00:00Z')).label,'오늘 마감 · 시각 확인');assert.equal(context.deadlineState(d,new Date('2026-09-25T04:01:00Z')).label,'마감');assert.equal(context.deadlineState(d,new Date('2026-09-20T12:00:00Z')).label,'D-4');
+ assert.match(context.deadlineList([]),/미공개/);
+ const info=vm.runInContext(await readFile(new URL('../conference-info.js',import.meta.url),'utf8')+'\nConferenceInfo;',context);assert.equal(new Set(info.events.map(e=>e.id)).size,info.events.length);
+ for(const e of info.events){assert.ok(info.icons[e.society]);assert.equal(new URL(e.url).protocol,'https:');assert.ok(e.sources.length);if(e.start)assert.ok(e.end>=e.start);for(const d of [...e.abstracts,...e.registration]){assert.equal(new Date(d.date).toISOString().slice(0,10),d.date);assert.doesNotThrow(()=>context.deadlineState(d));}}
+ const ksiec=info.events.find(e=>e.id==='ksiec-2026-fall');assert.equal(ksiec.registration.length,2);assert.equal(info.events.find(e=>e.id==='colloids-2027').abstracts.length,0);
+});
+
+test('original fund edits and optional end date persist while preserving expense entries',async()=>{
+ const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;
+ d.funds[0]={...d.funds[0],title:'Edited fund',total:1000,balance:700,initialEdited:true,endDate:'2027-02-28',months:[{month:'9월',spend:300,balance:700}],entries:[{date:'2026-09-20',description:'Supplies',amount:100}]};
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);
+ assert.deepEqual((await (await worker.fetch(req(OWNER),env)).json()).data.funds,d.funds);
+ d.funds[0].endDate='2027-02-30';assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,400);
+ d.funds[0].endDate='';assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,200);
+});
+test('fund countdown uses the Korean calendar and handles today, ended, and missing dates',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');const context=vm.createContext({Intl,Date,Math,badge:s=>s});
+ vm.runInContext(source.slice(source.indexOf('function calendarDay('))+source.slice(source.indexOf('function fundCountdown('),source.indexOf('function editFund(')),context);
+ const now=new Date('2026-09-20T15:01:00Z');assert.equal(context.fundCountdown('2026-09-22',now),'D-1');assert.equal(context.fundCountdown('2026-09-21',now),'D-DAY');assert.equal(context.fundCountdown('2026-09-20',now),'종료');assert.equal(context.fundCountdown('',now),'');
+});
