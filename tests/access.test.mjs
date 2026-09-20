@@ -43,3 +43,21 @@ test('website metadata sync is atomic, idempotent and preserves private data and
  const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.data.papers[0].authorNamesKo[0],'예시저자');assert.equal(student.data.papers[0].points,undefined);assert.deepEqual(student.data.funds,[]);
  const stale=await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:original.data}),env);assert.equal(stale.status,409);
 });
+
+test('paper publication fields save, validate partial dates and retain edit overrides',async()=>{
+ const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;
+ d.papers[0]={...d.papers[0],journal:'Example Journal',volume:'25',issue:'1',pages:'419–425',articleNumber:'',issueDate:'2026-02',onlineDate:'2025-12-16',doi:'10.1234/example',publicationUrl:'https://doi.org/10.1234/example',paperEditedFields:['issueDate','pages']};
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);
+ const saved=(await (await worker.fetch(req(OWNER),env)).json());assert.deepEqual(saved.data,d);
+ for(const date of ['2026-02-30','2026-13','2026-00','26-01','2026-1-01']){d.papers[0].issueDate=date;assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,400);}
+ const student=(await (await worker.fetch(req('student@example.test'),env)).json()).data;assert.equal(student.papers[0].issueDate,'2026-02');assert.equal(student.papers[0].points,undefined);
+});
+test('catalog refresh and workbook import preserve manual paper edits and unknown drafts',async()=>{
+ const {mergePaperCatalog}=await import('../server/worker.mjs');const {readFile}=await import('node:fs/promises');const vm=await import('node:vm');
+ const d=fresh().data;d.papers=[{id:'a',title:'Manually revised title',titleAliases:['Original title'],year:2026,journal:'Journal',firstAuthor:'Edited author',issueDate:'2026-08',pages:'55–60',fund:'Private fund',metadataSource:'https://lab.example/papers',websiteNumber:1,paperEditedFields:['title','issueDate','pages','fund'],points:100},{id:'draft',title:'Draft',year:2026,firstAuthor:'Draft author',paperEditedFields:['firstAuthor']}];
+ const cat={source:'https://lab.example/papers',checked:'2026-09-20',patchFields:['title','volume','pages','issueDate'],papers:[{websiteNumber:1,title:'Original title',year:2026,volume:'34',pages:'1–10',issueDate:'2026-09',authorList:[{name:'Example'}]}]};
+ const merged=mergePaperCatalog(d,cat);assert.equal(merged.papers.length,2);assert.equal(merged.papers[0].title,'Manually revised title');assert.equal(merged.papers[0].pages,'55–60');assert.equal(merged.papers[0].issueDate,'2026-08');assert.equal(merged.papers[0].firstAuthor,'Edited author');assert.equal(merged.papers[0].volume,'34');assert.equal(merged.papers[0].points,100);
+ const context=vm.createContext({structuredClone});vm.runInContext((await readFile(new URL('../data.js',import.meta.url),'utf8'))+'\nthis.adapter=LabData;',context);
+ const imported=context.adapter.merge(merged,{type:'papers',data:{papers:[{id:'excel',title:'Original title',year:2020,fund:'Workbook fund'}],sources:[],issues:[]}});
+ assert.equal(imported.papers.length,2);assert.equal(imported.papers[0].title,'Manually revised title');assert.equal(imported.papers[0].issueDate,'2026-08');assert.equal(imported.papers[0].fund,'Private fund');assert.equal(imported.papers[1].firstAuthor,'Draft author');
+});
