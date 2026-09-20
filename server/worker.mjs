@@ -63,6 +63,16 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
    await env.DB.prepare('INSERT OR IGNORE INTO lab_state VALUES (1,0,?)').bind(JSON.stringify(initial)).run();
   }
   let row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first(),state=JSON.parse(row.payload);
+  if(env.STUDENT_ACCESS_REVISION&&state.studentAccessRevision!==env.STUDENT_ACCESS_REVISION){
+   const roster=JSON.parse(env.STUDENT_ACCESS_ROSTER||'[]');
+   if(!Array.isArray(roster)||roster.length>100||roster.some(r=>!r||typeof r.name!=='string'||typeof r.email!=='string'||!/^\S+@\S+\.\S+$/.test(r.email)))throw Error('학생 접근 설정을 확인해주세요.');
+   // Apply the owner-authorized roster once; subsequent removals remain revoked.
+   if(!admin&&!roster.some(r=>r.email.trim().toLowerCase()===email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
+   const next={...state,students:[...new Set([...state.students,...roster.map(r=>r.email.trim().toLowerCase())])],studentNames:{...(state.studentNames||{}),...Object.fromEntries(roster.map(r=>[r.email.trim().toLowerCase(),r.name]))},studentAccessRevision:env.STUDENT_ACCESS_REVISION};
+   const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();
+   if(!saved.meta?.changes)return reply({error:'계정 정보를 갱신 중입니다. 다시 시도해주세요.'},409);
+   row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+  }
   if(!admin&&!state.students.includes(email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
   const read=['GET','HEAD'].includes(req.method),origin=req.headers.get('Origin');
   if((origin&&origin!==url.origin)||(!read&&(origin!==url.origin||req.headers.get('X-Lab-Request')!=='1'||req.headers.get('Content-Type')!=='application/json')))return reply({error:'허용되지 않는 요청입니다.'},403);
@@ -90,7 +100,7 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
    if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[]});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students'].includes(url.pathname)){
    if(!admin)return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
