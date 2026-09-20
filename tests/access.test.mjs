@@ -1,5 +1,17 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible} from '../server/worker.mjs';
 const OWNER='owner@example.test';
+test('students add and edit research while financial and administrative data remain intact',async()=>{
+ const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();original.data.papers[0].id='existing';original.data.papers[0].fund='private fund';
+ await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:original.data}),env);
+ const changes=[{type:'papers',id:'existing',action:'edit',values:{title:'Revised paper',journal:'Journal',firstAuthor:'Student Author'}},{type:'papers',id:'new-paper',action:'add',values:{title:'New paper',journal:'Journal',year:2026,sci:'Y',authorCount:3}},{type:'conferences',id:'new-talk',action:'add',values:{title:'Talk',year:2026,date:'2026-09-21',presenter:'Student',conference:'Conference',scope:'국내',city:'Seoul',venue:'Hall',kind:'구두'}}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:1,changes}),env)).status,200);
+ let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.papers[0].title,'Revised paper');assert.equal(saved.data.papers[0].points,100);assert.equal(saved.data.papers[0].fund,'private fund');assert.deepEqual(saved.data.funds,original.data.funds);assert.deepEqual(saved.data.payroll,original.data.payroll);assert.equal(saved.data.conferences.length,1);assert.ok(saved.data.papers[0].paperEditedFields.includes('firstAuthor'));
+ const edit=[{type:'conferences',id:'new-talk',action:'edit',values:{title:'Revised talk'}}];assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:2,changes:edit}),env)).status,200);
+ assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:2,changes:edit}),env)).status,409);
+ for(const change of [{type:'funds',id:'x',action:'add',values:{title:'bad'}},{type:'papers',id:'existing',action:'edit',values:{fund:'overwrite'}},{type:'papers',id:'existing',action:'edit',values:{points:0}},{type:'papers',id:'existing',action:'delete',values:{title:'bad'}},{type:'papers',id:'existing',action:'edit',values:{paperEditedFields:['fund']}}])assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:3,changes:[change]}),env)).status,400);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/research','PUT',{version:3,changes:edit}),env)).status,403);
+ saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.version,3);assert.equal(saved.data.conferences[0].title,'Revised talk');assert.equal(saved.notifications[0].actor,'연구실 구성원');
+});
 test('authorized student roster applies once and owner revocation remains effective',async()=>{
  const {worker,env}=fixture();env.STUDENT_ACCESS_REVISION='roster-1';env.STUDENT_ACCESS_ROSTER=JSON.stringify([{name:'Student One',email:'one@example.test'}]);
  assert.equal((await worker.fetch(req('unlisted@example.test'),env)).status,403);
@@ -28,7 +40,7 @@ test('conference deployment notifications establish baseline and detect future e
 });
 test('paper form adds and edits SCI and author count with persistent validation',async()=>{
  const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');let submit;
- const data=fresh().data,context=vm.createContext({data,crypto,Date,esc:s=>String(s??''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
+ const data=fresh().data,context=vm.createContext({data,crypto,Date,admin:()=>true,esc:s=>String(s??''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
  vm.runInContext(source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function editPaperAuthor(')),context);
  assert.equal(context.paperAuthorCount({authors:7}),7);assert.equal(context.paperAuthorCount({authorList:[{},{}]}),2);assert.equal(context.paperAuthorCount({authorCount:null,authors:7}),null);
  const values={title:'New paper',year:'2026',journal:'Test journal',firstAuthor:'First Author',correspondingAuthor:'Lead Author',volume:'1',issue:'2',pages:'3–4',articleNumber:'',sci:'Y',authorCount:'5',issueDate:'2026-09',onlineDate:'',doi:'',publicationUrl:'',fund:''};
