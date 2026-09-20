@@ -1,5 +1,19 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible} from '../server/worker.mjs';
 const OWNER='owner@example.test';
+test('paper form adds and edits SCI and author count with persistent validation',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');let submit;
+ const data=fresh().data,context=vm.createContext({data,crypto,Date,esc:s=>String(s??''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
+ vm.runInContext(source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function editPaperAuthor(')),context);
+ assert.equal(context.paperAuthorCount({authors:7}),7);assert.equal(context.paperAuthorCount({authorList:[{},{}]}),2);assert.equal(context.paperAuthorCount({authorCount:null,authors:7}),null);
+ const values={title:'New paper',year:'2026',journal:'Test journal',firstAuthor:'First Author',correspondingAuthor:'Lead Author',volume:'1',issue:'2',pages:'3–4',articleNumber:'',sci:'Y',authorCount:'5',issueDate:'2026-09',onlineDate:'',doi:'',publicationUrl:'',fund:''};
+ context.editPaper();submit({...values},data);assert.equal(data.papers.length,1);assert.ok(data.papers[0].id);assert.equal(data.papers[0].authorCount,5);
+ const {worker,env}=fixture();assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data}),env)).status,200);
+ context.editPaper(0);submit({...values,sci:'N',authorCount:'6'},data);assert.equal(data.papers.length,1);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data}),env)).status,200);
+ const saved=(await (await worker.fetch(req('student@example.test'),env)).json()).data;assert.equal(saved.papers[0].sci,'N');assert.equal(saved.papers[0].authorCount,6);
+ for(const bad of [{sci:'yes'},{authorCount:0},{authorCount:1.5},{authorCount:'5'}]){const invalid=structuredClone(data);Object.assign(invalid.papers[0],bad);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:2,data:invalid}),env)).status,400);}
+ const adapter=vm.createContext({structuredClone});vm.runInContext(await readFile(new URL('../data.js',import.meta.url),'utf8')+'\nthis.adapter=LabData;',adapter);
+ const merged=adapter.adapter.merge(data,{type:'papers',data:{papers:[],sources:[],issues:[]}});assert.equal(merged.papers[0].sci,'N');assert.equal(merged.papers[0].authorCount,6);
+});
 function fixture(){const state=fresh();state.students=['student@example.test'];state.data.papers=[{title:'A',year:2026,points:100,engineeringPoints:200}];state.data.payroll=[{name:'PRIVATE_PERSON',monthly:100}];state.data.funds=[{balance:500,months:[]}];let row={version:0,payload:JSON.stringify(state)};const DB={prepare(sql){return {bind(...a){this.a=a;return this;},async first(){return {...row};},async run(){if(sql.startsWith('UPDATE')){if(this.a[1]!==row.version)return {meta:{changes:0}};row={version:row.version+1,payload:this.a[0]};return {meta:{changes:1}};}return {meta:{changes:0}};}};}};return {env:{DB,ADMIN_EMAIL:OWNER},worker:createWorker('<p>Dashboard</p>')};}
 const req=(email,path='/api/data',method='GET',body)=>new Request('https://lab.example'+path,{method,headers:{...(email?{'oai-authenticated-user-id':'verified-id','oai-authenticated-user-email':email}:{}),...(method==='PUT'?{'Origin':'https://lab.example','Content-Type':'application/json','X-Lab-Request':'1'}:{})},...(body?{body:JSON.stringify(body)}:{})});
 test('anonymous and unapproved users cannot read HTML or API',async()=>{const {worker,env}=fixture();assert.equal((await worker.fetch(req(null),env)).status,401);assert.equal((await worker.fetch(req('unknown@example.test','/'),env)).status,403);});
