@@ -12,10 +12,10 @@ export function validateData(d){
  const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
  const partialDateOK=s=>{if(typeof s!=='string'||!/^\d{4}(-\d{2}(-\d{2})?)?$/.test(s)||s.slice(0,4)<'1900'||s.slice(0,4)>'2200')return false;return dateOK(s.length===4?s+'-01-01':s.length===7?s+'-01':s);};
  for(const p of d.papers){
-  for(const k of ['volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');
+  for(const k of ['correspondingAuthor','volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');
   for(const k of ['issueDate','onlineDate'])if(p[k]&&!partialDateOK(p[k]))throw Error('논문 출판일을 확인해주세요.');
   if(p.publicationUrl&&!/^https:\/\//i.test(p.publicationUrl))throw Error('논문 링크는 https 주소여야 합니다.');
-  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['title','year','journal','firstAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
+  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['title','year','journal','firstAuthor','correspondingAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
   if(p.paperEditedFields?.length&&(!p.title.trim()||p.year<1900||p.year>2200))throw Error('논문 제목과 게재 연도를 확인해주세요.');
  }
  const amountOK=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000;
