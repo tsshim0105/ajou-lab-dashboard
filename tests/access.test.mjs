@@ -61,3 +61,25 @@ test('catalog refresh and workbook import preserve manual paper edits and unknow
  const imported=context.adapter.merge(merged,{type:'papers',data:{papers:[{id:'excel',title:'Original title',year:2020,fund:'Workbook fund'}],sources:[],issues:[]}});
  assert.equal(imported.papers.length,2);assert.equal(imported.papers[0].title,'Manually revised title');assert.equal(imported.papers[0].issueDate,'2026-08');assert.equal(imported.papers[0].fund,'Private fund');assert.equal(imported.papers[1].firstAuthor,'Draft author');
 });
+
+test('removed papers stay removed after catalog refresh and workbook upload',async()=>{
+ const {mergePaperCatalog}=await import('../server/worker.mjs');const {readFile}=await import('node:fs/promises');const vm=await import('node:vm');
+ const d=fresh().data;d.papers=[{id:'draft',title:'Remove this draft',year:2026},{id:'published',title:'Keep this paper',year:2026}];d.funds=[{months:[],balance:10}];
+ const catalog={source:'https://lab.example/papers',checked:'2026-09-20',papers:[{websiteNumber:1,title:'Keep this paper',year:2026,authorList:[{name:'Example Author',korean:'예시저자',nameMatch:'record',first:true}]}],removedPapers:[{id:'draft',title:'Remove this draft'}]};
+ const merged=mergePaperCatalog(d,catalog);assert.equal(merged.papers.length,1);assert.equal(merged.papers[0].id,'published');assert.deepEqual(merged.funds,d.funds);assert.deepEqual(mergePaperCatalog(merged,catalog),merged);assert.equal(merged.authorAliases[0].english,'Example Author');
+ const context=vm.createContext({structuredClone});vm.runInContext((await readFile(new URL('../data.js',import.meta.url),'utf8'))+'\nthis.adapter=LabData;',context);
+ const result=context.adapter.merge(merged,{type:'papers',data:{papers:[{id:'new-excel-id',title:'Remove this draft',year:2026}],sources:[],issues:[]}});assert.equal(result.papers.length,1);assert.equal(result.papers[0].title,'Keep this paper');
+});
+test('name mappings save for shared Korean search and invalid mappings are rejected',async()=>{
+ const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;d.authorAliases=[{korean:'예시학생',english:'Example Student'}];
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env)).status,200);
+ const student=(await (await worker.fetch(req('student@example.test'),env)).json()).data;assert.deepEqual(student.authorAliases,d.authorAliases);assert.deepEqual(student.funds,[]);
+ d.authorAliases[0].english='한글';assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:d}),env)).status,400);
+});
+test('paper authors display in English and Korean search uses the saved mapping',async()=>{
+ const {readFile}=await import('node:fs/promises');const vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');
+ const r={title:'Test paper',year:2026,firstAuthor:'예시학생 (Example Student)',authorList:[{name:'Example Student',korean:'예시학생',first:true},{name:'Other Author',corresponding:true}]};const context=vm.createContext({data:{papers:[r],authorAliases:[{korean:'등록학생',english:'Example Student'}]}});
+ vm.runInContext(source.slice(source.indexOf('const searchKey='),source.indexOf('const filter='))+source.slice(source.indexOf('function authorAliases('),source.indexOf('const badge='))+source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function paperLocation(')),context);
+ assert.equal(context.paperFirst(r),'Example Student');assert.equal(context.paperCorresponding(r),'Other Author');assert.equal(context.matchesResearch(r,'등록학생'),true);assert.equal(context.matchesResearch(r,'예시학생'),false);assert.equal(context.matchesResearch(r,'ExampleStudent'),true);
+ assert.equal(context.englishAuthorText('예시학생 (Example Student), 다른이름 [확인 필요] (Other Author)'),'Example Student, Other Author');
+});
