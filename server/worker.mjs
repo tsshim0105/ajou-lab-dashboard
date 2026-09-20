@@ -1,10 +1,11 @@
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences'].includes(s.type)),issues:[]};}
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[]};}
 export function validateData(d){
  if(!d||typeof d!=='object')throw Error('자료 형식이 올바르지 않습니다.');
  for(const key of ['papers','conferences','funds','payroll','standards','sources','issues'])if(!Array.isArray(d[key])||d[key].length>20000)throw Error('필수 자료 목록이 없거나 너무 큽니다.');
  for(const row of [...d.papers,...d.conferences,...d.funds,...d.payroll,...d.standards,...d.sources,...d.issues])if(!row||typeof row!=='object'||Array.isArray(row))throw Error('자료 행 형식이 올바르지 않습니다.');
+ if(d.authorAliases!==undefined&&(!Array.isArray(d.authorAliases)||d.authorAliases.length>1000||d.authorAliases.some(a=>!a||typeof a.korean!=='string'||!a.korean.trim()||a.korean.length>100||!/[가-힣]/.test(a.korean)||typeof a.english!=='string'||!a.english.trim()||a.english.length>200||/[가-힣]/.test(a.english)||!/[A-Za-z]/.test(a.english))))throw Error('학생 국문·영문명 연결 정보를 확인해주세요.');
  const str=JSON.stringify(d);if(str.length>1500000)throw Error('자료가 너무 큽니다.');
  for(const r of d.papers)if(typeof r.title!=='string'||!Number.isInteger(r.year))throw Error('논문 제목과 연도를 확인해주세요.');
  for(const r of d.conferences)if(typeof r.presenter!=='string'||!Number.isInteger(r.year))throw Error('발표자와 연도를 확인해주세요.');
@@ -81,16 +82,19 @@ export function mergePaperCatalog(data,catalog){
  if(!Array.isArray(catalog.papers)||catalog.papers.length>2000)throw Error('논문 갱신 목록을 확인해주세요.');
  const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
  const signatures=p=>new Set([p.title,...(p.titleAliases||[])].map(key).filter(Boolean));
- const existing=data.papers,used=new Set();
- const papers=catalog.papers.map(p=>{
+ const removedPapers=[...(data.removedPapers||[])];for(const item of catalog.removedPapers||[])if(!removedPapers.some(r=>r.id===item.id&&r.title===item.title))removedPapers.push(item);
+ const removed=p=>removedPapers.some(r=>[p.title,...(p.titleAliases||[])].some(t=>key(t)===key(r.title)));
+ const existing=data.papers.filter(p=>!removed(p)),used=new Set();
+ const papers=catalog.papers.filter(p=>!removed(p)).map(p=>{
   if(!p.title||!Number.isInteger(p.year)||!Array.isArray(p.authorList)||!p.authorList.length)throw Error('논문 저자·제목·연도를 확인해주세요.');
   const keys=signatures(p);const index=existing.findIndex((r,i)=>!used.has(i)&&((r.metadataSource===catalog.source&&r.websiteNumber===p.websiteNumber)||[...signatures(r)].some(k=>keys.has(k))));
   const previous=index>=0?existing[index]:{};if(index>=0)used.add(index);
   const aliases=[...new Set([...(previous.titleAliases||[]),...(p.titleAliases||[]),previous.title,p.title].filter(t=>t&&key(t)!==key(previous.paperEditedFields?.includes('title')?previous.title:p.title)))];
-  const incoming=index>=0&&Array.isArray(catalog.patchFields)?Object.fromEntries(catalog.patchFields.filter(k=>p[k]!==undefined).map(k=>[k,p[k]])):p;
+  const incoming=index>=0&&previous.metadataSource===catalog.source&&Array.isArray(catalog.patchFields)?Object.fromEntries(catalog.patchFields.filter(k=>p[k]!==undefined).map(k=>[k,p[k]])):p;
   const edited=Object.fromEntries((previous.paperEditedFields||[]).filter(k=>previous[k]!==undefined).map(k=>[k,previous[k]]));
   return {...previous,...incoming,...edited,id:previous.id||'nisml-paper-'+p.websiteNumber,titleAliases:aliases,role:previous.role||'미기재',fund:previous.fund||'',metadataSource:catalog.source,metadataChecked:catalog.checked};
  });
  papers.push(...existing.filter((_,i)=>!used.has(i)));
- return {...data,papers,sources:[...data.sources.filter(s=>s.name!=='연구실 홈페이지 논문 목록'),{type:'papers',name:'연구실 홈페이지 논문 목록',url:catalog.source,importedAt:catalog.checked+'T00:00:00Z'}]};
+ const aliases=data.authorAliases??[...new Map(papers.flatMap(p=>(p.authorList||[]).filter(a=>a.korean&&a.nameMatch==='record').map(a=>[a.korean+'|'+a.name,{korean:a.korean,english:a.name}]))).values()];
+ return {...data,papers,removedPapers,authorAliases:aliases,sources:[...data.sources.filter(s=>s.name!=='연구실 홈페이지 논문 목록'),{type:'papers',name:'연구실 홈페이지 논문 목록',url:catalog.source,importedAt:catalog.checked+'T00:00:00Z'}]};
 }
