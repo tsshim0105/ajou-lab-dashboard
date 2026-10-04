@@ -108,6 +108,18 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
    if(!changed.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
   }
+  if(url.pathname==='/api/preferences'&&req.method==='PUT'){
+   const raw=await req.text();if(raw.length>16000)return reply({error:'설정이 너무 큽니다.'},413);
+   const input=JSON.parse(raw),next={};
+   for(const k of ['papers','conferences'])if(input[k]){next[k]={};for(const field of ['selected','order']){const a=input[k][field];if(!Array.isArray(a)||a.length>30||a.some(v=>typeof v!=='string'||v.length>80))return reply({error:'표시 항목을 확인해주세요.'},400);next[k][field]=[...new Set(a)];}}
+   for(const [k,values] of Object.entries({theme:['light','dark'],accent:['blue','green','purple'],texture:['plain','jelly','metal']}))if(values.includes(input[k]))next[k]=input[k];
+   const previous=state.preferences?.[email]||{};
+   if(input.notifications){next.notifications={};for(const k of ['read','hidden']){const a=input.notifications[k]||[];if(!Array.isArray(a)||a.length>400||a.some(v=>typeof v!=='string'||v.length>200))return reply({error:'알림 설정을 확인해주세요.'},400);next.notifications[k]=[...new Set([...(previous.notifications?.[k]||[]),...a])].slice(-400);}}
+   state.preferences={...(state.preferences||{}),[email]:{...previous,...next}};
+   const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
+   if(!result.meta?.changes)return reply({error:'설정이 변경되었습니다. 다시 저장해주세요.'},409);
+   return reply({preferences:state.preferences[email],previousVersion:row.version,version:row.version+1});
+  }
   if(read&&['/api/notifications','/api/data'].includes(url.pathname)){
    const snapshot=(meetingEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
    if(meetingEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot)){
@@ -120,7 +132,7 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
    if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/research'].includes(url.pathname)){
    if(!admin&&url.pathname!=='/api/research')return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
