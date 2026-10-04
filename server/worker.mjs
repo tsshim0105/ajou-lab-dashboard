@@ -112,7 +112,7 @@ export function createWorker(html,meetingEvents=null){return {async fetch(req,en
    const raw=await req.text();if(raw.length>16000)return reply({error:'설정이 너무 큽니다.'},413);
    const input=JSON.parse(raw),next={};
    for(const k of ['papers','conferences'])if(input[k]){next[k]={};for(const field of ['selected','order']){const a=input[k][field];if(!Array.isArray(a)||a.length>30||a.some(v=>typeof v!=='string'||v.length>80))return reply({error:'표시 항목을 확인해주세요.'},400);next[k][field]=[...new Set(a)];}}
-   for(const [k,values] of Object.entries({theme:['light','dark'],accent:['blue','green','purple'],texture:['plain','jelly','metal']}))if(values.includes(input[k]))next[k]=input[k];
+   for(const [k,values] of Object.entries({theme:['light','dark'],accent:['default','blue','green','pink','yellow','purple'],layout:['horizontal','vertical'],texture:['plain','jelly','metal']}))if(values.includes(input[k]))next[k]=input[k];
    const previous=state.preferences?.[email]||{};
    if(input.notifications){next.notifications={};for(const k of ['read','hidden']){const a=input.notifications[k]||[];if(!Array.isArray(a)||a.length>400||a.some(v=>typeof v!=='string'||v.length>200))return reply({error:'알림 설정을 확인해주세요.'},400);next.notifications[k]=[...new Set([...(previous.notifications?.[k]||[]),...a])].slice(-400);}}
    state.preferences={...(state.preferences||{}),[email]:{...previous,...next}};
