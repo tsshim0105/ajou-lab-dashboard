@@ -1,6 +1,6 @@
 // Public conference notices only. Update dates only from cited official announcements.
 const ConferenceInfo = {
-  "updated": "2026-09-20",
+  "updated": "2026-10-05",
   "events": [
     {
       "id": "kiche-2026-fall",
@@ -31,45 +31,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.kiche.or.kr/conference/introduce"
       ],
-      "checked": "2026-09-20"
-    },
-    {
-      "id": "polymer-2026-fall",
-      "society": "polymer",
-      "group": "domestic",
-      "name": "한국고분자학회 · IUPAC-PSK50",
-      "url": "https://www.polymer.or.kr/conferenceintl/default/index.php",
-      "start": "2026-09-28",
-      "end": "2026-10-01",
-      "venue": "부산 BEXCO",
-      "abstracts": [
-        {
-          "label": "초록",
-          "date": "2026-07-15",
-          "tz": "Asia/Seoul",
-          "time": null
-        }
-      ],
-      "registration": [
-        {
-          "label": "조기등록",
-          "date": "2026-08-15",
-          "tz": "Asia/Seoul",
-          "time": null
-        },
-        {
-          "label": "후기 사전등록",
-          "date": "2026-09-21",
-          "tz": "Asia/Seoul",
-          "time": null
-        }
-      ],
-      "note": "2026 가을 개최 국제행사. 별도 추계학술대회 공지는 확인되지 않았습니다.",
-      "sources": [
-        "https://www.polymer.or.kr/conferenceintl/default/index.php",
-        "https://www.polymer.or.kr/news/news_1.php?idx=6413&mode=view"
-      ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "ksiec-2026-fall",
@@ -86,6 +48,12 @@ const ConferenceInfo = {
           "date": "2026-08-26",
           "tz": "Asia/Seoul",
           "time": null
+        },
+        {
+          "label": "제출 초록 수정",
+          "date": "2026-09-02",
+          "tz": "Asia/Seoul",
+          "time": null
         }
       ],
       "registration": [
@@ -96,34 +64,35 @@ const ConferenceInfo = {
           "time": null
         },
         {
-          "label": "초록 제출자",
-          "date": "2026-08-26",
+          "label": "발표자 사전등록(9월 뉴스레터)",
+          "date": "2026-09-02",
           "tz": "Asia/Seoul",
           "time": null
         }
       ],
-      "note": "발표자는 일반 참가자와 등록 마감일이 다릅니다.",
+      "note": "9월 공식 뉴스레터 제326호는 발표자 사전등록 마감을 9월 2일로 안내합니다. 학술대회 상세 페이지의 기존 8월 26일 표기와 차이가 있어 최신 뉴스레터 기준으로 표시했습니다. 신규 초록 제출 마감(8월 26일)과 제출 초록 수정 마감(9월 2일), 일반 참가 사전등록(9월 28일)을 구분합니다.",
       "sources": [
-        "https://www.ksiec.or.kr/html/sub/competition/competition101"
+        "https://www.ksiec.or.kr/html/sub/competition/competition101",
+        "https://www.ksiec.or.kr/pkmailer/pkletterhistory.php?pg_letter=326"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "kiche-2027-spring",
       "society": "kiche",
       "group": "domestic",
       "name": "한국화학공학회 · 2027 춘계",
-      "url": "https://www.kiche.or.kr/event/list/domestic",
-      "start": null,
-      "end": null,
-      "venue": "",
+      "url": "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860",
+      "start": "2027-04-21",
+      "end": "2027-04-23",
+      "venue": "부산 BEXCO",
       "abstracts": [],
       "registration": [],
-      "note": "차기 춘계 공지 추적 · 개최 일정 및 마감일 미확인. 현재는 학회 공식 일정 안내로 연결됩니다.",
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
       "sources": [
-        "https://www.kiche.or.kr/event/list/domestic"
+        "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "polymer-2027-spring",
@@ -131,33 +100,34 @@ const ConferenceInfo = {
       "group": "domestic",
       "name": "한국고분자학회 · 2027 춘계",
       "url": "https://www.polymer.or.kr/function/function_0.php",
-      "start": null,
-      "end": null,
-      "venue": "",
+      "start": "2027-03-31",
+      "end": "2027-04-02",
+      "venue": "제주컨벤션센터(ICC JEJU)",
       "abstracts": [],
       "registration": [],
-      "note": "차기 춘계 공지 추적 · 개최 일정 및 마감일 미확인. 현재는 학회 공식 일정 안내로 연결됩니다.",
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
       "sources": [
-        "https://www.polymer.or.kr/function/function_0.php"
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "ksiec-2027-spring",
       "society": "ksiec",
       "group": "domestic",
       "name": "한국공업화학회 · 2027 춘계",
-      "url": "https://www.ksiec.or.kr/html/sub/competition/competition101",
-      "start": null,
-      "end": null,
-      "venue": "",
+      "url": "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc=",
+      "start": "2027-06-02",
+      "end": "2027-06-04",
+      "venue": "제주국제컨벤션센터(ICC JEJU)",
       "abstracts": [],
       "registration": [],
-      "note": "차기 춘계 공지 추적 · 개최 일정 및 마감일 미확인. 현재는 학회 공식 일정 안내로 연결됩니다.",
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
       "sources": [
-        "https://www.ksiec.or.kr/html/sub/competition/competition101"
+        "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc="
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "mrs-2026-fall",
@@ -241,11 +211,13 @@ const ConferenceInfo = {
         }
       ],
       "registration": [],
-      "note": "초록 마감 시각·세션별 예외는 제출 페이지에서 확인하세요.",
+      "note": "초록 마감 2026-09-28. 제출 안내 원문은 ‘11:59 EST’로 표기하나 오전·오후 및 서머타임 적용이 명확하지 않아 확정 시각으로 환산하지 않았습니다. 세션별 변경은 제출 페이지에서 확인하세요. 참가등록은 2026년 12월 개시 예정이며, 정확한 개시일·등록 마감일은 미공개입니다.",
       "sources": [
-        "https://www.acs.org/events/spring.html"
+        "https://www.acs.org/events/spring.html",
+        "https://callforabstracts.acs.org/acsspring2027",
+        "https://callforabstracts.acs.org/acsspring2027/COLL"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "acs-2027-fall",
@@ -262,7 +234,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "colloids-2027",
@@ -277,9 +249,10 @@ const ConferenceInfo = {
       "registration": [],
       "note": "초록 제출·참가등록은 2027년 초 공지 예정. 숙박 예약 마감과 구분합니다.",
       "sources": [
-        "https://colloids2027.org/"
+        "https://colloids2027.org/",
+        "https://www.colloidssurfaces.org/conferences/"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
     },
     {
       "id": "okinawa-2026",
@@ -320,9 +293,254 @@ const ConferenceInfo = {
       ],
       "note": "차기 개최 주기는 아직 미확인 · 매년 개최로 가정하지 않습니다.",
       "sources": [
-        "https://okinawacolloids.jp/"
+        "https://okinawacolloids.jp/",
+        "https://okinawacolloids.jp/submission-registration/registration/"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "kiche-2027-fall",
+      "society": "kiche",
+      "group": "domestic",
+      "name": "한국화학공학회 · 2027 추계",
+      "url": "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860",
+      "start": "2027-10-27",
+      "end": "2027-10-29",
+      "venue": "대전컨벤션센터(DCC)",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "kiche-2028-spring",
+      "society": "kiche",
+      "group": "domestic",
+      "name": "한국화학공학회 · 2028 춘계",
+      "url": "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860",
+      "start": "2028-04-19",
+      "end": "2028-04-21",
+      "venue": "제주국제컨벤션센터(ICC JEJU)",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "kiche-2028-fall",
+      "society": "kiche",
+      "group": "domestic",
+      "name": "한국화학공학회 · 2028 추계",
+      "url": "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860",
+      "start": "2028-10-25",
+      "end": "2028-10-27",
+      "venue": "부산 BEXCO",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "polymer-2027-fall",
+      "society": "polymer",
+      "group": "domestic",
+      "name": "한국고분자학회 · 2027 추계",
+      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "start": "2027-10-06",
+      "end": "2027-10-08",
+      "venue": "대전컨벤션센터(DCC)",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "polymer-2028-spring",
+      "society": "polymer",
+      "group": "domestic",
+      "name": "한국고분자학회 · 2028 춘계",
+      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "start": "2028-04-05",
+      "end": "2028-04-07",
+      "venue": "부산 BEXCO",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "polymer-2028-fall",
+      "society": "polymer",
+      "group": "domestic",
+      "name": "한국고분자학회 · 2028 추계",
+      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "start": "2028-10-11",
+      "end": "2028-10-13",
+      "venue": "대전컨벤션센터(DCC)",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "polymer-2029-spring",
+      "society": "polymer",
+      "group": "domestic",
+      "name": "한국고분자학회 · 2029 춘계",
+      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "start": "2029-04-11",
+      "end": "2029-04-13",
+      "venue": "제주컨벤션센터(ICC JEJU)",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "polymer-2029-fall",
+      "society": "polymer",
+      "group": "domestic",
+      "name": "한국고분자학회 · 2029 추계",
+      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "start": "2029-10-10",
+      "end": "2029-10-12",
+      "venue": "부산 BEXCO",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.polymer.or.kr/function/function_0.php",
+        "https://www.polymer.or.kr/eng/function/function_0.php"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "ksiec-2027-fall",
+      "society": "ksiec",
+      "group": "domestic",
+      "name": "한국공업화학회 · 2027 추계",
+      "url": "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc=",
+      "start": "2027-11-03",
+      "end": "2027-11-05",
+      "venue": "부산 BEXCO",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc="
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "acs-2028-spring",
+      "society": "acs",
+      "group": "international",
+      "name": "ACS · 2028 Spring Meeting",
+      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
+      "start": "2028-03-19",
+      "end": "2028-03-23",
+      "venue": "미국 휴스턴",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.acs.org/events/acs-meetings/future-meetings.html"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "acs-2028-fall",
+      "society": "acs",
+      "group": "international",
+      "name": "ACS · 2028 Fall Meeting",
+      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
+      "start": "2028-08-20",
+      "end": "2028-08-24",
+      "venue": "미국 워싱턴 D.C.",
+      "abstracts": [],
+      "registration": [],
+      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
+      "sources": [
+        "https://www.acs.org/events/acs-meetings/future-meetings.html"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "acs-2029-spring",
+      "society": "acs",
+      "group": "international",
+      "name": "ACS · 2029 Spring Meeting",
+      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
+      "start": "2029-03-25",
+      "end": "2029-03-29",
+      "venue": "미국 시카고 · 미확정(Pending)",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 미래 일정에 게시됨. 개최지는 Pending(미확정)으로 표시되어 있습니다. 초록·등록 마감 및 전용 페이지는 공지 대기.",
+      "sources": [
+        "https://www.acs.org/events/acs-meetings/future-meetings.html"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "acs-2029-fall",
+      "society": "acs",
+      "group": "international",
+      "name": "ACS · 2029 Fall Meeting",
+      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
+      "start": "2029-08-19",
+      "end": "2029-08-23",
+      "venue": "미국 로스앤젤레스 · 미확정(Pending)",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 미래 일정에 게시됨. 개최지는 Pending(미확정)으로 표시되어 있습니다. 초록·등록 마감 및 전용 페이지는 공지 대기.",
+      "sources": [
+        "https://www.acs.org/events/acs-meetings/future-meetings.html"
+      ],
+      "checked": "2026-10-05"
+    },
+    {
+      "id": "coins-next",
+      "society": "coins",
+      "group": "international",
+      "name": "COINS · 차기 개최 공지 대기",
+      "url": "https://www.coins2026.org/",
+      "start": null,
+      "end": null,
+      "venue": "",
+      "abstracts": [],
+      "registration": [],
+      "note": "Colloid and Interface Symposium(COINS)을 추적하는 항목입니다. 공식 COINS2026 안내 및 IACIS에 실린 조직위원회 공지의 시드니 UNSW 행사(2026년 7월 19–23일)는 종료되었습니다. 차기 개최 연도·일정·장소·마감일은 아직 공식 공지를 확인하지 못했습니다. 링크는 최근 공식 개최 홈페이지이며 연례 개최로 가정하지 않습니다. 홈페이지 직접 접속 오류가 있어 IACIS 공식 뉴스레터의 조직위원회 안내로 학회명을 확인했습니다.",
+      "sources": [
+        "https://www.coins2026.org/",
+        "https://www.utwente.nl/en/iacis/archives/newsletters/nl91.pdf"
+      ],
+      "checked": "2026-10-05"
     }
   ],
   "icons": {
@@ -349,6 +567,11 @@ const ConferenceInfo = {
     "polymer": {
       "src": "data:image/png;base64,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",
       "source": "https://www.polymer.or.kr/pub/images/common/logo.png"
+    },
+    "coins": {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAxNjAgODAiPjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iODAiIHJ4PSIxMiIgZmlsbD0iI2VhZjJmYyIvPjx0ZXh0IHg9IjgwIiB5PSI0OCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9IkFyaWFsLHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI3MDAiIGZvbnQtc2l6ZT0iMjUiIGZpbGw9IiMxNjQ0NzciPkNPSU5TPC90ZXh0Pjwvc3ZnPg==",
+      "source": "https://www.coins2026.org/",
+      "note": "학회명을 표시하는 텍스트 아이콘(공식 로고 아님)"
     }
   }
 };
