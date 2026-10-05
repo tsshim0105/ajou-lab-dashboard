@@ -43,7 +43,7 @@ export function recordNotifications(state,before,after,type,actor='교수님'){
  for(const [id,r] of next){const previous=old.get(id);if(previous&&JSON.stringify(notificationView(previous,type))===JSON.stringify(notificationView(r,type)))continue;events.push({r,action:previous?'수정':'등록'});}
  for(const [id,r] of old)if(!next.has(id))events.push({r,action:'삭제'});
  const label={papers:'논문',conferences:'학회 발표',meetingInfo:'학술대회'}[type];
- const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
+ const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.kind,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
  state.notifications=[...added.reverse(),...(state.notifications||[])].slice(0,200);
 }
 const researchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};

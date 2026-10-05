@@ -1,4 +1,4 @@
-/* Desktop notifications, phase 1. No subscriptions, polling delivery or Push server.
+/* Desktop notifications: local permission + changes from the shared research feed.
  * Keep permission and presentation here; Web Push can later supply a transport
  * backed by ServiceWorkerRegistration.showNotification with the same payload.
  * Permission belongs to this browser + origin, never to an account preference.
@@ -20,16 +20,16 @@ globalThis.NISMLNotifications = (() => {
     const refresh = () => onState(state());
 
     // Same-origin target is shared with the future notificationclick handler.
-    function show({title = 'NISML 연구실', body, target = '/'} = {}) {
+    function show({title = 'NISML 연구실', body, target = '/', tag = 'nisml-local-test', onClick, test = true} = {}) {
       if (!supported() || env.Notification.permission !== 'granted') return false;
       let destination;
       try {
         destination = new URL(target, env.location.href);
         if (destination.origin !== env.location.origin) throw Error('외부 알림 링크');
-        const notification = new env.Notification(title, {body, icon, lang:'ko', tag:'nisml-local-test'});
-        notification.onclick = () => {env.focus(); notification.close(); env.location.assign(destination.href);};
+        const notification = new env.Notification(title, {body, icon, lang:'ko', tag});
+        notification.onclick = () => {env.focus(); notification.close(); if(onClick)onClick();else env.location.assign(destination.href);};
         notification.onerror = () => {message = '알림을 표시하지 못했습니다. 브라우저 및 운영체제의 알림 설정을 확인한 뒤 다시 눌러주세요.'; refresh();};
-        message = '테스트 알림을 요청했습니다. 표시되지 않으면 운영체제의 브라우저 알림 설정과 집중 모드를 확인해주세요.';
+        if(test)message = '테스트 알림을 요청했습니다. 대시보드가 열려 있는 동안 연구 정보 변경도 자동으로 알립니다. 표시되지 않으면 운영체제의 브라우저 알림 설정과 집중 모드를 확인해주세요.';
         return true;
       } catch {
         message = '알림을 표시하지 못했습니다. Mac/PC의 브라우저 알림 설정을 확인한 뒤 다시 눌러주세요.';
@@ -66,6 +66,38 @@ globalThis.NISMLNotifications = (() => {
     return {state, enable, show, refresh, start, stop};
   }
 
+  // First response is a baseline, not an inbox replay. Track IDs even while
+  // permission is denied so granting later cannot cause an old-event flood.
+  function createFeedDelivery(controller, account, onOpen, env = globalThis) {
+    let seen = null;
+    const key = 'nisml-os-delivered:' + encodeURIComponent(account);
+    const valid = rows => rows.filter(row => row && typeof row.id === 'string' && ['papers','conferences','meetingInfo'].includes(row.type));
+    function readDelivered() {
+      try {const value=JSON.parse(env.localStorage.getItem(key)||'[]');return new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'):[]);}catch{return new Set();}
+    }
+    async function observe(rows) {
+      rows=valid(rows);
+      if(seen===null){seen=new Set(rows.map(row=>row.id));return;}
+      const fresh=rows.filter(row=>!seen.has(row.id));
+      seen=new Set([...seen,...rows.map(row=>row.id)].slice(-400));
+      if(!fresh.length||controller.state().permission!=='granted')return;
+      const deliver=()=>{
+        const delivered=readDelivered(),unsent=[...new Map(fresh.filter(row=>!delivered.has(row.id)).map(row=>[row.id,row])).values()].reverse();
+        if(!unsent.length)return;
+        const sent=[];
+        if(unsent.length>5){
+          if(controller.show({body:unsent.length+'건의 논문·학회 정보가 변경되었습니다. 알림 센터에서 확인해주세요.',tag:'nisml-research-batch',onClick:()=>onOpen(null),test:false}))sent.push(...unsent.map(row=>row.id));
+        }else for(const row of unsent){
+          if(controller.show({body:[row.label,row.title,row.detail].filter(Boolean).join('\n'),tag:'nisml-research-'+row.id,onClick:()=>onOpen(row),test:false}))sent.push(row.id);
+        }
+        try {env.localStorage.setItem(key,JSON.stringify([...delivered,...sent].slice(-400)));}catch{}
+      };
+      // Serializes check + record across open tabs on browsers with Web Locks.
+      if(env.navigator?.locks)await env.navigator.locks.request(key,deliver);else deliver();
+    }
+    return {observe};
+  }
+
   function mount(button, status) {
     const controller = createController(globalThis, value => {
       button.textContent = value.pending ? '알림 권한 확인 중…' : value.label;
@@ -80,5 +112,5 @@ globalThis.NISMLNotifications = (() => {
     controller.start();
     return controller;
   }
-  return {createController, mount};
+  return {createController, createFeedDelivery, mount};
 })();

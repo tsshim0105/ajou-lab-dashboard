@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 const source=await readFile(new URL('../notifications.js',import.meta.url),'utf8');
+const api=vm.createContext({URL});vm.runInContext(source,api);
 function fixture(permission='default',answer='granted'){
  const shown=[],updates=[],events=new Map();let requests=0,focused=false,assigned;
  class Notification{
@@ -47,4 +48,33 @@ test('permission changes outside the dashboard update on focus/visibility withou
 });
 test('notification click focuses dashboard and external destinations are rejected',()=>{
  const f=fixture('granted');assert.equal(f.controller.show({body:'Test',target:'/'}),true);f.shown[0].onclick();assert.equal(f.focused,true);assert.equal(f.assigned,'https://lab.example.test/');assert.equal(f.shown[0].closed,true);assert.equal(f.controller.show({body:'Test',target:'https://other.example.test/'}),false);assert.equal(f.shown.length,1);
+});
+
+const record=(id,type='papers')=>({id,type,label:type==='papers'?'논문 수정':type==='conferences'?'학회 발표 등록':'학술대회 수정',title:'Research '+id,detail:'Public detail'});
+function deliveryFixture(permission='granted',storage=new Map()){
+ const f=fixture(permission),opened=[];
+ f.env.localStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)};
+ const delivery=api.NISMLNotifications.createFeedDelivery(f.controller,'student@example.test',row=>opened.push(row),f.env);
+ return {f,delivery,opened,storage};
+}
+test('first feed is silent, all research categories generate new alerts only once',async()=>{
+ const {f,delivery,opened}=deliveryFixture();await delivery.observe([record('old')]);assert.equal(f.shown.length,0);
+ const fresh=[record('paper'),record('poster','conferences'),record('meeting','meetingInfo'),record('private','funds'),record('old')];
+ await delivery.observe(fresh);assert.equal(f.shown.length,3);assert.equal(f.requests,0);assert.equal(new Set(f.shown.map(n=>n.options.tag)).size,3);await delivery.observe(fresh);assert.equal(f.shown.length,3);
+ const alert=f.shown.find(n=>n.options.body.includes('poster'));alert.onclick();assert.equal(opened[0].id,'poster');assert.equal(f.assigned,undefined);
+});
+test('denied events are not replayed on later permission grant or reload',async()=>{
+ const {f,delivery}=deliveryFixture('denied');await delivery.observe([]);await delivery.observe([record('blocked')]);assert.equal(f.shown.length,0);f.Notification.permission='granted';await delivery.observe([record('blocked')]);assert.equal(f.shown.length,0);await delivery.observe([record('new'),record('blocked')]);assert.equal(f.shown.length,1);
+ const reloaded=api.NISMLNotifications.createFeedDelivery(f.controller,'student@example.test',()=>{},f.env);await reloaded.observe([record('new'),record('blocked')]);assert.equal(f.shown.length,1);
+});
+test('large change batches generate one summary and open notification center',async()=>{
+ const {f,delivery,opened}=deliveryFixture();await delivery.observe([]);const rows=Array.from({length:8},(_,i)=>record(String(i)));await delivery.observe(rows);assert.equal(f.shown.length,1);assert.match(f.shown[0].options.body,/8건/);f.shown[0].onclick();assert.equal(opened[0],null);await delivery.observe(rows);assert.equal(f.shown.length,1);
+});
+test('multiple tabs deduplicate using shared storage and lock; another computer still receives',async()=>{
+ const storage=new Map(),a=deliveryFixture('granted',storage),b=deliveryFixture('granted',storage);let lockQueue=Promise.resolve();const locks={request:(key,fn)=>(lockQueue=lockQueue.then(fn))};a.f.env.navigator.locks=locks;b.f.env.navigator.locks=locks;
+ await Promise.all([a.delivery.observe([]),b.delivery.observe([])]);await Promise.all([a.delivery.observe([record('one')]),b.delivery.observe([record('one')])]);assert.equal(a.f.shown.length+b.f.shown.length,1);
+ const another=deliveryFixture();await another.delivery.observe([]);await another.delivery.observe([record('one')]);assert.equal(another.f.shown.length,1);
+});
+test('storage unavailable still deduplicates in this page without interrupting dashboard',async()=>{
+ const {f,delivery}=deliveryFixture();f.env.localStorage={getItem:()=>{throw Error();},setItem:()=>{throw Error();}};await delivery.observe([]);await delivery.observe([record('one')]);await delivery.observe([record('one')]);assert.equal(f.shown.length,1);
 });
