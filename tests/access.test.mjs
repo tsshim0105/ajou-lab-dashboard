@@ -162,3 +162,12 @@ test('account preferences survive reload, isolate users and preserve research re
  const stale={notifications:{read:[],hidden:[]}};await worker.fetch(req('student@example.test','/api/preferences','PUT',stale),env);
  const again=await (await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(again.preferences.notifications,{read:['n1'],hidden:['n2']});
 });
+
+test('paper deletion records title aliases and preserves unrelated records; only owner saves',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm'),source=await readFile(new URL('../app.js',import.meta.url),'utf8');
+ const context=vm.createContext({Error});vm.runInContext(source.slice(source.indexOf('function removePaperRecord('),source.indexOf('function editPaperAuthor(')),context);
+ const {worker,env}=fixture(),before=await (await worker.fetch(req(OWNER),env)).json(),next=structuredClone(before.data);next.papers[0]={...next.papers[0],id:'paper',titleAliases:['Earlier title']};
+ context.removePaperRecord(next,next.papers[0]);assert.equal(next.papers.length,0);assert.deepEqual(Array.from(next.removedPapers,r=>r.title),['A','Earlier title']);assert.deepEqual(next.funds,before.data.funds);assert.deepEqual(next.payroll,before.data.payroll);
+ assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:0,data:next}),env)).status,403);
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env)).status,200);const saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.papers.length,0);assert.equal(saved.notifications[0].action,'삭제');
+});

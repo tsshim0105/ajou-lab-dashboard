@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
-const source=await readFile(new URL('../notifications.js',import.meta.url),'utf8');
+const iconBytes=await readFile(new URL('../assets/notification-icon.png',import.meta.url));
+const source=(await readFile(new URL('../notifications.js',import.meta.url),'utf8')).replace('__NISML_ICON__','data:image/png;base64,'+iconBytes.toString('base64'));
 const api=vm.createContext({URL});vm.runInContext(source,api);
 function fixture(permission='default',answer='granted'){
  const shown=[],updates=[],events=new Map();let requests=0,focused=false,assigned;
@@ -22,7 +23,7 @@ test('no permission prompt or test notification during startup',()=>{
 });
 test('permission gesture grants once and presents exact local test',async()=>{
  const f=fixture();const work=f.controller.enable();assert.equal(f.requests,1);assert.equal(f.controller.state().pending,true);await work;
- assert.equal(f.shown.length,1);assert.equal(f.shown[0].title,'NISML 연구실');assert.equal(f.shown[0].options.body,'연구실 알림 설정이 완료되었습니다.');assert.match(f.shown[0].options.icon,/^data:image\/png;base64,/);assert.equal(f.controller.state().label,'🔔 알림 켜짐');assert.equal(f.controller.state().pending,false);
+ assert.equal(f.shown.length,1);assert.equal(f.shown[0].title,'NISML 대시보드');assert.equal(f.shown[0].options.body,'연구실 알림 설정이 완료되었습니다.');assert.match(f.shown[0].options.icon,/^data:image\/png;base64,/);assert.equal(f.controller.state().label,'🔔 알림 켜짐');assert.equal(f.controller.state().pending,false);
 });
 test('duplicate clicks do not prompt twice or duplicate the completion notification',async()=>{
  const f=fixture();await Promise.all([f.controller.enable(),f.controller.enable()]);assert.equal(f.requests,1);assert.equal(f.shown.length,1);
