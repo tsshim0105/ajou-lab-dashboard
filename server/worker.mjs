@@ -1,9 +1,13 @@
 import {pushConfigured,pushTables,validateSubscription,sendPush,dispatchPendingPush} from './web-push.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
-export const fresh=()=>({version:0,data:{papers:[],conferences:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[]};}
+export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[]};}
 export function validateData(d){
  if(!d||typeof d!=='object')throw Error('자료 형식이 올바르지 않습니다.');
+ if(d.reagents!==undefined){
+  if(!Array.isArray(d.reagents)||d.reagents.length>20000)throw Error('시약 목록을 확인해주세요.');
+  const ids=new Set();for(const r of d.reagents){if(!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||r.id.length>200||ids.has(r.id)||typeof r.name!=='string'||!r.name.trim())throw Error('시약 이름과 식별자를 확인해주세요.');ids.add(r.id);for(const k of ['name','unit','capacity','quantity','location','note'])if(typeof r[k]!=='string'||r[k].length>2000)throw Error('시약 항목은 2000자 이하의 텍스트로 입력해주세요.');}
+ }
  for(const key of ['papers','conferences','funds','payroll','standards','sources','issues'])if(!Array.isArray(d[key])||d[key].length>20000)throw Error('필수 자료 목록이 없거나 너무 큽니다.');
  for(const row of [...d.papers,...d.conferences,...d.funds,...d.payroll,...d.standards,...d.sources,...d.issues])if(!row||typeof row!=='object'||Array.isArray(row))throw Error('자료 행 형식이 올바르지 않습니다.');
  if(d.authorAliases!==undefined&&(!Array.isArray(d.authorAliases)||d.authorAliases.length>1000||d.authorAliases.some(a=>!a||typeof a.korean!=='string'||!a.korean.trim()||a.korean.length>100||!/[가-힣]/.test(a.korean)||typeof a.english!=='string'||!a.english.trim()||a.english.length>200||/[가-힣]/.test(a.english)||!/[A-Za-z]/.test(a.english))))throw Error('학생 국문·영문명 연결 정보를 확인해주세요.');

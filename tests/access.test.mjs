@@ -171,3 +171,22 @@ test('paper deletion records title aliases and preserves unrelated records; only
  assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:0,data:next}),env)).status,403);
  assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env)).status,200);const saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.papers.length,0);assert.equal(saved.notifications[0].action,'삭제');
 });
+
+test('reagent CRUD persists across reload, preserves finance and enforces administrator writes',async()=>{
+ const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();const next=structuredClone(original.data);
+ const reagent={id:'reagent-1',name:'Example reagent',unit:'mL',capacity:'100',quantity:'2',location:'냉장고 1층',note:'Manufacturer'};next.reagents=[reagent];
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env)).status,200);
+ const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.data.reagents,[reagent]);assert.deepEqual(student.data.funds,[]);
+ next.reagents[0].quantity='1';assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:1,data:next}),env)).status,403);
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:next}),env)).status,200);
+ let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].quantity,'1');assert.deepEqual(saved.data.funds,original.data.funds);assert.deepEqual(saved.data.payroll,original.data.payroll);
+ const invalid=structuredClone(next);invalid.reagents.push({...reagent});assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:2,data:invalid}),env)).status,400);
+ next.reagents=[];assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:next}),env)).status,409);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:2,data:next}),env)).status,200);
+ saved=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data.reagents,[]);assert.deepEqual(saved.data.papers,original.data.papers);
+});
+
+test('reagent import respects column order, duplicates, units and blank auxiliary sheets',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const s=await readFile(new URL('../reagents.js',import.meta.url),'utf8');const model=vm.runInNewContext(s.slice(0,s.indexOf("let reagentQuery"))+';ReagentData',{crypto});
+ const rows=model.parse({inventory:[['','化','화학물질명','단위','용량','연구실입고수량','보관위치','비고'],['','','Same','mL',100,2,'냉장고','A'],['','','Same','L',1,1,'방폭장','B']],empty:[['화학물질명','단위','용량','연구실입고수량','보관위치','비고']]});
+ assert.equal(rows.length,2);assert.notEqual(rows[0].id,rows[1].id);assert.equal(rows[0].capacity,'100');assert.equal(rows[1].unit,'L');assert.equal(model.filter(rows,'same','방폭장').length,1);assert.equal(model.filter(rows,'냉장고','all').length,1);assert.throws(()=>model.parse({bad:[['wrong header']]}));
+});
