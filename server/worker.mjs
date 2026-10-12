@@ -175,6 +175,11 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    flushPush();
    if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
   }
+  if(read&&url.pathname==='/_mobile-preview'){
+   if(!admin)return reply({error:'교수님만 확인할 수 있습니다.'},403);
+   const width=Math.max(320,Math.min(760,Number(url.searchParams.get('width'))||390)),height=Math.max(500,Math.min(1100,Number(url.searchParams.get('height'))||844));
+   return reply(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모바일 화면 검증</title><style>body{margin:0;background:#edf1f5;display:grid;place-items:start center;padding:20px}iframe{border:0;border-radius:16px;background:white;box-shadow:0 4px 30px #0002}</style></head><body><iframe title="모바일 대시보드" src="/" width="${width}" height="${height}"></iframe></body></html>`,200,'text/html; charset=utf-8');
+  }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/research'].includes(url.pathname)){
