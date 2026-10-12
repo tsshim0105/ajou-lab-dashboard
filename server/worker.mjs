@@ -18,12 +18,12 @@ export function validateData(d){
  const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
  const partialDateOK=s=>{if(typeof s!=='string'||!/^\d{4}(-\d{2}(-\d{2})?)?$/.test(s)||s.slice(0,4)<'1900'||s.slice(0,4)>'2200')return false;return dateOK(s.length===4?s+'-01-01':s.length===7?s+'-01':s);};
  for(const p of d.papers){
-  if(p.sci!==undefined&&!['','Y','N'].includes(p.sci))throw Error('SCI 여부를 확인해주세요.');
+  if(p.sci!==undefined&&!['','Y','N','SCI','KCI','해당사항없음'].includes(p.sci))throw Error('SCI 여부를 확인해주세요.');
   if(p.authorCount!==undefined&&p.authorCount!==null&&(!Number.isInteger(p.authorCount)||p.authorCount<1||p.authorCount>100000))throw Error('총저자수는 1 이상의 정수여야 합니다.');
-  for(const k of ['correspondingAuthor','volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');
+  for(const k of ['correspondingAuthor','coauthors','volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');
   for(const k of ['issueDate','onlineDate'])if(p[k]&&!partialDateOK(p[k]))throw Error('논문 출판일을 확인해주세요.');
   if(p.publicationUrl&&!/^https:\/\//i.test(p.publicationUrl))throw Error('논문 링크는 https 주소여야 합니다.');
-  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['title','year','journal','firstAuthor','correspondingAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation','sci','authorCount'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
+  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation','sci','authorCount'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
   if(p.paperEditedFields?.length&&(!p.title.trim()||p.year<1900||p.year>2200))throw Error('논문 제목과 게재 연도를 확인해주세요.');
  }
  const amountOK=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000;
@@ -38,7 +38,7 @@ export function validateData(d){
  return d;
 }
 const notificationFields={
- papers:['title','year','journal','firstAuthor','correspondingAuthor','authorList','volume','issue','pages','articleNumber','issueDate','onlineDate','sci','authorCount','authors','doi','publicationUrl'],
+ papers:['title','year','journal','firstAuthor','correspondingAuthor','coauthors','authorList','volume','issue','pages','articleNumber','issueDate','onlineDate','sci','authorCount','authors','doi','publicationUrl'],
  conferences:['title','year','date','presenter','coauthors','conference','scope','city','region','venue','kind','note'],
  meetingInfo:['name','start','end','venue','abstracts','registration','url','note']
 };
@@ -51,7 +51,7 @@ export function recordNotifications(state,before,after,type,actor='교수님'){
  const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.kind,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
  state.notifications=[...added.reverse(),...(state.notifications||[])].slice(0,200);
 }
-const researchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
+const researchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
 export function applyResearchChanges(data,changes){
  if(!Array.isArray(changes)||!changes.length||changes.length>100)throw Error('변경할 연구 기록을 확인해주세요.');
  const next=structuredClone(data),seen=new Set();
@@ -63,7 +63,7 @@ export function applyResearchChanges(data,changes){
   const index=next[c.type].findIndex(r=>r.id===c.id);if(c.action==='add'?index>=0:index<0)throw Error('기록이 변경되었습니다. 새로고침해주세요.');
   const old=index>=0?next[c.type][index]:{},r={...old,...c.values,id:c.id};
   if(c.type==='papers'){
-   if(!r.title?.trim()||!r.journal?.trim()||/[가-힣]/.test((r.firstAuthor||'')+(r.correspondingAuthor||'')))throw Error('논문 제목, 학술지와 영문 저자를 확인해주세요.');
+   if(!r.title?.trim()||!r.journal?.trim()||/[가-힣]/.test((r.firstAuthor||'')+(r.correspondingAuthor||'')+(r.coauthors||'')))throw Error('논문 제목, 학술지와 영문 저자를 확인해주세요.');
    if(old.title&&r.title!==old.title)r.titleAliases=[...new Set([...(old.titleAliases||[]),old.title])];
    r.paperEditedFields=[...new Set([...(old.paperEditedFields||[]),...keys])];r.paperEditedAt=new Date().toISOString();
   }else{r.manual=true;r.locationEdited=true;}
@@ -151,6 +151,18 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    if(!changed.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
   }
+  if(admin&&read&&url.pathname==='/api/data'&&((env.PAPER_COAUTHORS_REVISION&&state.paperCoauthorsRevision!==env.PAPER_COAUTHORS_REVISION)||(env.PAPER_SCI_REVISION&&state.paperSciRevision!==env.PAPER_SCI_REVISION))){
+   const next=structuredClone(state);
+   if(env.PAPER_COAUTHORS_REVISION&&state.paperCoauthorsRevision!==env.PAPER_COAUTHORS_REVISION){
+    const count=Number(env.PAPER_COAUTHORS_CHUNKS);if(!Number.isInteger(count)||count<1||count>16)throw Error('공동저자 자료 설정을 확인해주세요.');
+    const bytes=Uint8Array.from(atob(Array.from({length:count},(_,i)=>env['PAPER_COAUTHORS_GZIP_'+(i+1)]||'').join('')),c=>c.charCodeAt(0));
+    const catalog=JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());if(catalog.revision!==env.PAPER_COAUTHORS_REVISION)throw Error('공동저자 자료 버전이 일치하지 않습니다.');
+    const result=mergePaperCoauthors(next.data,catalog);next.data=result.data;next.paperCoauthorsSummary=result.summary;next.paperCoauthorsRevision=catalog.revision;
+   }
+   if(env.PAPER_SCI_REVISION&&state.paperSciRevision!==env.PAPER_SCI_REVISION){next.data.papers=next.data.papers.map(p=>({...p,sci:'SCI'}));next.paperSciRevision=env.PAPER_SCI_REVISION;}
+   validateData(next.data);const changed=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();if(!changed.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
+   row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+  }
   if(url.pathname==='/api/preferences'&&req.method==='PUT'){
    const raw=await req.text();if(raw.length>16000)return reply({error:'설정이 너무 큽니다.'},413);
    const input=JSON.parse(raw),next={};
@@ -199,6 +211,12 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
  }catch(e){return reply({error:e instanceof SyntaxError?'자료 형식을 확인해주세요.':e.message||'처리 중 오류가 발생했습니다.'},400);}
 }};}
 
+export function mergePaperCoauthors(data,catalog){
+ if(catalog.source!=='https://nisml.ajou.ac.kr/?page_id=234'||!Array.isArray(catalog.papers)||catalog.papers.length>2000)throw Error('공동저자 출처와 목록을 확인해주세요.');
+ const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');let matched=0,preserved=0;
+ const papers=data.papers.map(p=>{const incoming=catalog.papers.find(r=>(p.metadataSource===catalog.source&&p.websiteNumber===r.websiteNumber)||[p.title,...(p.titleAliases||[])].some(t=>key(t)===key(r.title)));if(!incoming)return p;matched++;if(p.paperEditedFields?.includes('coauthors')){preserved++;return p;}if(typeof incoming.coauthors!=='string'||incoming.coauthors.length>2000)throw Error('공동저자 정보를 확인해주세요.');return {...p,coauthors:incoming.coauthors,coauthorsSource:catalog.source,coauthorsChecked:catalog.checked};});
+ return {data:{...data,papers},summary:{matched,filled:matched-preserved,preserved,unmatched:papers.length-matched}};
+}
 export function mergePaperCatalog(data,catalog){
  if(!Array.isArray(catalog.papers)||catalog.papers.length>2000)throw Error('논문 갱신 목록을 확인해주세요.');
  const key=s=>String(s||'').normalize('NFKC').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');

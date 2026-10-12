@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible} from '../server/worker.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {createWorker,fresh,visible,mergePaperCoauthors} from '../server/worker.mjs';
 const OWNER='owner@example.test';
 test('students add and edit research while financial and administrative data remain intact',async()=>{
  const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();original.data.papers[0].id='existing';original.data.papers[0].fund='private fund';
@@ -40,17 +40,17 @@ test('conference deployment notifications establish baseline and detect future e
 });
 test('paper form adds and edits SCI and author count with persistent validation',async()=>{
  const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');let submit;
- const data=fresh().data,context=vm.createContext({data,crypto,Date,admin:()=>true,esc:s=>String(s??''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
+ const data=fresh().data,context=vm.createContext({data,crypto,Date,admin:()=>true,esc:s=>String(s??''),searchKey:s=>String(s||'').toLowerCase().replace(/\s/g,''),paperFirst:r=>r.firstAuthor||'',englishAuthorText:s=>s||'',field:()=>'',editor:(title,fields,save)=>{submit=save;}});
  vm.runInContext(source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function editPaperAuthor(')),context);
  assert.equal(context.paperAuthorCount({authors:7}),7);assert.equal(context.paperAuthorCount({authorList:[{},{}]}),2);assert.equal(context.paperAuthorCount({authorCount:null,authors:7}),null);
- const values={title:'New paper',year:'2026',journal:'Test journal',firstAuthor:'First Author',correspondingAuthor:'Lead Author',volume:'1',issue:'2',pages:'3–4',articleNumber:'',sci:'Y',authorCount:'5',issueDate:'2026-09',onlineDate:'',doi:'',publicationUrl:'',fund:''};
+ const values={title:'New paper',year:'2026',journal:'Test journal',firstAuthor:'First Author',correspondingAuthor:'Lead Author',volume:'1',issue:'2',pages:'3–4',articleNumber:'',sci:'SCI',authorCount:'5',issueDate:'2026-09',onlineDate:'',doi:'',publicationUrl:'',fund:''};
  context.editPaper();submit({...values},data);assert.equal(data.papers.length,1);assert.ok(data.papers[0].id);assert.equal(data.papers[0].authorCount,5);
  const {worker,env}=fixture();assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data}),env)).status,200);
- context.editPaper(0);submit({...values,sci:'N',authorCount:'6'},data);assert.equal(data.papers.length,1);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data}),env)).status,200);
- const saved=(await (await worker.fetch(req('student@example.test'),env)).json()).data;assert.equal(saved.papers[0].sci,'N');assert.equal(saved.papers[0].authorCount,6);
+ context.editPaper(0);submit({...values,sci:'KCI',authorCount:'6'},data);assert.equal(data.papers.length,1);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data}),env)).status,200);
+ const saved=(await (await worker.fetch(req('student@example.test'),env)).json()).data;assert.equal(saved.papers[0].sci,'KCI');assert.equal(saved.papers[0].authorCount,6);
  for(const bad of [{sci:'yes'},{authorCount:0},{authorCount:1.5},{authorCount:'5'}]){const invalid=structuredClone(data);Object.assign(invalid.papers[0],bad);assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:2,data:invalid}),env)).status,400);}
  const adapter=vm.createContext({structuredClone});vm.runInContext(await readFile(new URL('../data.js',import.meta.url),'utf8')+'\nthis.adapter=LabData;',adapter);
- const merged=adapter.adapter.merge(data,{type:'papers',data:{papers:[],sources:[],issues:[]}});assert.equal(merged.papers[0].sci,'N');assert.equal(merged.papers[0].authorCount,6);
+ const merged=adapter.adapter.merge(data,{type:'papers',data:{papers:[],sources:[],issues:[]}});assert.equal(merged.papers[0].sci,'KCI');assert.equal(merged.papers[0].authorCount,6);
 });
 function fixture(){const state=fresh();state.students=['student@example.test'];state.data.papers=[{title:'A',year:2026,points:100,engineeringPoints:200}];state.data.payroll=[{name:'PRIVATE_PERSON',monthly:100}];state.data.funds=[{balance:500,months:[]}];let row={version:0,payload:JSON.stringify(state)};const DB={prepare(sql){return {bind(...a){this.a=a;return this;},async first(){return {...row};},async run(){if(sql.startsWith('UPDATE')){if(this.a[1]!==row.version)return {meta:{changes:0}};row={version:row.version+1,payload:this.a[0]};return {meta:{changes:1}};}return {meta:{changes:0}};}};}};return {env:{DB,ADMIN_EMAIL:OWNER},worker:createWorker('<p>Dashboard</p>')};}
 const req=(email,path='/api/data',method='GET',body)=>new Request('https://lab.example'+path,{method,headers:{...(email?{'oai-authenticated-user-id':'verified-id','oai-authenticated-user-email':email}:{}),...(method==='PUT'?{'Origin':'https://lab.example','Content-Type':'application/json','X-Lab-Request':'1'}:{})},...(body?{body:JSON.stringify(body)}:{})});
@@ -189,4 +189,15 @@ test('reagent import respects column order, duplicates, units and blank auxiliar
  const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const s=await readFile(new URL('../reagents.js',import.meta.url),'utf8');const model=vm.runInNewContext(s.slice(0,s.indexOf("let reagentQuery"))+';ReagentData',{crypto});
  const rows=model.parse({inventory:[['','化','화학물질명','단위','용량','연구실입고수량','보관위치','비고'],['','','Same','mL',100,2,'냉장고','A'],['','','Same','L',1,1,'방폭장','B']],empty:[['화학물질명','단위','용량','연구실입고수량','보관위치','비고']]});
  assert.equal(rows.length,2);assert.notEqual(rows[0].id,rows[1].id);assert.equal(rows[0].capacity,'100');assert.equal(rows[1].unit,'L');assert.equal(model.filter(rows,'same','방폭장').length,1);assert.equal(model.filter(rows,'냉장고','all').length,1);assert.throws(()=>model.parse({bad:[['wrong header']]}));
+});
+
+test('coauthor enrichment only patches matching live papers and preserves manual authors and finance',()=>{
+ const data=fresh().data;data.papers=[{id:'a',title:'A edited title',titleAliases:['A original'],year:2026,fund:'private',firstAuthor:'First',correspondingAuthor:'Lead'},{id:'b',title:'B',year:2025,coauthors:'Manual Author',paperEditedFields:['coauthors']},{id:'c',title:'Unpublished',year:2026}];data.funds=[{title:'PRIVATE',months:[]}];
+ const catalog={source:'https://nisml.ajou.ac.kr/?page_id=234',checked:'2026-10-13',papers:[{title:'A original',coauthors:'Second, Third'},{title:'B',coauthors:'Website Author'},{title:'Deleted paper',coauthors:'No revival'}]};
+ const r=mergePaperCoauthors(data,catalog);assert.equal(r.data.papers.length,3);assert.equal(r.data.papers[0].coauthors,'Second, Third');assert.equal(r.data.papers[0].fund,'private');assert.equal(r.data.papers[1].coauthors,'Manual Author');assert.equal(r.data.papers[2].coauthors,undefined);assert.deepEqual(r.data.funds,data.funds);assert.deepEqual(r.summary,{matched:2,filled:1,preserved:1,unmatched:1});
+});
+test('SCI initialization is once only and future KCI or non-indexed selections persist',async()=>{
+ const {worker,env}=fixture();env.PAPER_SCI_REVISION='initial-sci-v1';const initial=await (await worker.fetch(req(OWNER),env)).json();assert.equal(initial.data.papers[0].sci,'SCI');
+ for(const sci of ['KCI','해당사항없음','SCI']){const current=await (await worker.fetch(req(OWNER),env)).json();current.data.papers[0].sci=sci;current.data.papers[0].coauthors='Another Author';assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:current.version,data:current.data}),env)).status,200);assert.equal((await (await worker.fetch(req(OWNER),env)).json()).data.papers[0].sci,sci);}
+ const before=await (await worker.fetch(req(OWNER),env)).json();const changes=[{type:'papers',id:'new',action:'add',values:{title:'New',year:2026,journal:'Journal',sci:'KCI',coauthors:'Author Two'}}];assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:before.version,changes}),env)).status,200);const saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.papers[1].sci,'KCI');assert.equal(saved.data.papers[1].coauthors,'Author Two');
 });

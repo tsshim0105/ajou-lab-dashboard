@@ -17,3 +17,10 @@ function openMobileSettings(){
  content.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const id=b.dataset.action;if(id==='theme'){$('theme').click();b.firstChild.textContent=$('theme').textContent;return;}d.close();$(id).click();});
 }
 document.getElementById('mobileSettings').onclick=openMobileSettings;
+function openMainMenu(){
+ const d=mobileSheet('메뉴');d.classList.add('main-menu-dialog');
+ const allowed=menu.filter(([key])=>admin()||mobileLabels[key]);
+ d.querySelector('.mobile-sheet-content').innerHTML='<div class="main-menu-grid">'+allowed.map(([key,label])=>`<button type="button" class="secondary main-menu-item" data-open="${key}" aria-current="${key===tab?'page':'false'}"><span aria-hidden="true">${mobileLabels[key]?.[1]||({funds:'₩',payroll:'▦',settings:'⚙'})[key]}</span>${esc(label)}</button>`).join('')+'</div>';
+ d.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{if(busy)return;const key=b.dataset.open;if(!admin()&&!mobileLabels[key])return;if(key==='papers'&&tab!=='papers')$('year').value='all';tab=key;d.close();render();window.scrollTo({top:0});});
+}
+document.getElementById('mainMenuToggle').onclick=openMainMenu;
