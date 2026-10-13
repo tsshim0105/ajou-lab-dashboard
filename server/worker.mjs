@@ -71,6 +71,31 @@ export function applyResearchChanges(data,changes){
  }
  return validateData(next);
 }
+export function applySharedData(current,input){
+ if(!input||typeof input!=='object'||Array.isArray(input))throw Error('자료 형식을 확인해주세요.');
+ for(const k of ['funds','payroll','standards','issues'])if(input[k]!==undefined&&(!Array.isArray(input[k])||input[k].length))throw Error('연구비·인건비 및 관리 자료는 변경할 수 없습니다.');
+ let next=structuredClone(current);
+ for(const type of ['papers','conferences']){
+  if(!Array.isArray(input[type])||input[type].length>20000)throw Error('연구 목록을 확인해주세요.');
+  const ids=new Set();
+  for(const row of input[type]){
+   if(!row||typeof row.id!=='string'||!row.id||ids.has(row.id))throw Error('연구 식별자를 확인해주세요.');ids.add(row.id);
+   const old=next[type].find(r=>r.id===row.id),values=Object.fromEntries(researchFields[type].filter(k=>row[k]!==undefined).map(k=>[k,row[k]]));
+   if(old&&Object.keys(values).every(k=>JSON.stringify(values[k])===JSON.stringify(old[k])))continue;
+   next=applyResearchChanges(next,[{type,id:row.id,action:old?'edit':'add',values}]);
+  }
+  const removed=next[type].filter(r=>!ids.has(r.id));
+  if(type==='papers'&&removed.length)next.removedPapers=[...(next.removedPapers||[]),...removed.flatMap(r=>[r.title,...(r.titleAliases||[])].filter(Boolean).map(title=>({id:r.id,title})))];
+  next[type]=input[type].map(r=>next[type].find(saved=>saved.id===r.id));
+ }
+ if(!Array.isArray(input.reagents))throw Error('시약 목록을 확인해주세요.');
+ next.reagents=input.reagents.map(r=>({id:r.id,...Object.fromEntries(['name','unit','capacity','quantity','location','note'].map(k=>[k,r[k]]))}));
+ next.authorAliases=input.authorAliases||[];
+ if(!Array.isArray(input.sources)||input.sources.some(r=>!r||!['papers','conferences','reagents'].includes(r.type)))throw Error('공용 자료의 출처를 확인해주세요.');
+ next.sources=[...current.sources.filter(r=>!['papers','conferences','reagents'].includes(r.type)),...input.sources];
+ return validateData(next);
+}
+
 export function createWorker(html,meetingEvents=null,serviceWorkerSource='',notificationIcon=''){return {async fetch(req,env,ctx){const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
  const reply=(body,status=200,type)=>new Response(req.method==='HEAD'?null:typeof body==='string'?body:JSON.stringify(body),{status,headers:{...headers,...(type?{'Content-Type':type}:{})}});
  try{
@@ -194,12 +219,13 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students','/api/research','/api/reagents'].includes(url.pathname)){
-   if(!admin&&!['/api/research','/api/reagents'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/research','/api/reagents','/api/shared'].includes(url.pathname)){
+   if(!admin&&!['/api/research','/api/reagents','/api/shared'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
-   if(url.pathname==='/api/reagents'){
+   if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
+   else if(url.pathname==='/api/reagents'){
     const fields=['name','unit','capacity','quantity','location','note'];
     if(!Array.isArray(input.changes)||!input.changes.length||input.changes.length>50||Object.keys(input).some(k=>!['version','changes'].includes(k)))throw Error('시약 수정 항목을 확인해주세요.');
     const next=structuredClone(state.data),seen=new Set();

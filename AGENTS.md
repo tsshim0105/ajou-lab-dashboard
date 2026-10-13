@@ -14,3 +14,10 @@
 - Keep online deployment coordinated with the source revision after GitHub saving succeeds. This workflow runs during requested tasks; it is not unattended continuous synchronization.
 
 - The user explicitly renewed authorization on 2026-09-20 to automatically save requested dashboard code changes to this GitHub repository and deploy after validation. Do not ask for routine approval again; report actual tool-enforced blocks if any.
+
+## Default student feature parity (user instruction, 2026-10-13)
+- Apply requested dashboard content and UI features equally to approved students and the professor unless the user explicitly requests a restriction.
+- Research funds and payroll remain professor-only, including server reads/writes and imports.
+- Shared research and reagent content supports add/edit/delete/import/export and shared name mappings for students. Keep financial records and hidden paper metadata intact during student saves.
+- Account access grants/revocations and private device subscription administration remain security administration; never silently expose them as content management.
+- Verify both student UI and server permissions for each applicable change.

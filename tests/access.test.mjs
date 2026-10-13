@@ -216,3 +216,21 @@ test('students edit existing reagents only, preserving records and rejecting una
  assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:2,changes,data:{funds:[]}}),env)).status,400);
  saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.version,2);assert.equal(saved.data.reagents.length,1);
 });
+
+test('shared content parity lets students add/delete/import reagents and manage papers and aliases without financial access',async()=>{
+ const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();original.data.papers[0].id='existing-paper';await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:original.data}),env);let student=await (await worker.fetch(req('student@example.test'),env)).json();
+ student.data.reagents=[{id:'new-r',name:'Student reagent',unit:'g',capacity:'10',quantity:'1',location:'새 장소',note:'added'}];
+ student.data.authorAliases=[{korean:'홍길동',english:'Gil Dong Hong'}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:1,data:student.data}),env)).status,200);
+ let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].name,'Student reagent');assert.equal(saved.data.authorAliases[0].english,'Gil Dong Hong');
+ for(const k of ['funds','payroll','standards'])assert.deepEqual(saved.data[k],original.data[k]);assert.equal(saved.data.papers[0].points,original.data.papers[0].points);
+ student=await (await worker.fetch(req('student@example.test'),env)).json();const removed=student.data.papers.shift();student.data.reagents=[];
+ assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:2,data:student.data}),env)).status,200);
+ saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents.length,0);assert.ok(saved.data.removedPapers.some(r=>r.title===removed.title));
+ for(const k of ['funds','payroll','standards']){const bad=structuredClone(student.data);bad[k]=[{title:'blocked'}];assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:3,data:bad}),env)).status,400);}
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/shared','PUT',{version:3,data:student.data}),env)).status,403);
+ assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:2,data:student.data}),env)).status,409);
+ student=await (await worker.fetch(req('student@example.test'),env)).json();student.data.reagents=[{id:'import-r',name:'Imported reagent',unit:'mL',capacity:'50',quantity:'3',location:'냉장고',note:''}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:3,data:student.data}),env)).status,200);
+ saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].id,'import-r');assert.deepEqual(saved.data.funds,original.data.funds);assert.deepEqual(saved.data.payroll,original.data.payroll);
+});
