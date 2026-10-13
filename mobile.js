@@ -10,13 +10,6 @@ function openMobileMore(){
  if(!admin())return;const d=mobileSheet('관리 메뉴');d.querySelector('.mobile-sheet-content').innerHTML=menu.filter(([key])=>!mobileLabels[key]).map(([key,label])=>`<button type="button" class="secondary mobile-menu-entry" data-open="${key}" aria-current="${key===tab?'page':'false'}">${esc(label)}<span aria-hidden="true">›</span></button>`).join('');
  d.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{if(!admin()||busy)return;tab=b.dataset.open;d.close();render();window.scrollTo({top:0});});
 }
-function openMobileSettings(){
- const d=mobileSheet('화면·알림 설정'),content=d.querySelector('.mobile-sheet-content');
- const actions=[['personalization','개인화'],['theme',$('theme').textContent],...(!$('browserNotificationPermission').classList.contains('hidden')?[['browserNotificationPermission',$('browserNotificationPermission').textContent]]:[])];
- content.innerHTML=actions.map(([id,label])=>`<button class="secondary mobile-menu-entry" type="button" data-action="${id}">${esc(label)}<span aria-hidden="true">›</span></button>`).join('')+`<p class="muted">${esc($('browserNotificationStatus').textContent||'알림 설정은 이 기기의 브라우저에 적용됩니다.')}</p>`;
- content.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{const id=b.dataset.action;if(id==='theme'){$('theme').click();b.firstChild.textContent=$('theme').textContent;return;}d.close();$(id).click();});
-}
-document.getElementById('mobileSettings').onclick=openMobileSettings;
 function openMainMenu(){
  const d=mobileSheet('메뉴');d.classList.add('main-menu-dialog');
  const allowed=menu.filter(([key])=>admin()||mobileLabels[key]);

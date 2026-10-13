@@ -4,7 +4,7 @@
 @media(max-width:760px){
  html{scroll-padding-bottom:90px}body{font-size:15px;line-height:1.5}.app{width:100%;max-width:100%;margin:0;min-height:100dvh;border-radius:0;box-shadow:none;padding-bottom:calc(78px + env(safe-area-inset-bottom))}
  .header-bar{padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top));gap:8px;flex-wrap:nowrap;align-items:center}.header-bar>div:first-of-type{min-width:0;flex:1}.header-title{font-size:15px;line-height:1.35;overflow-wrap:break-word}.eyebrow{font-size:0;letter-spacing:1px}.eyebrow::after{content:'NISML DASHBOARD';font-size:10px}
- .user-info{width:auto;flex:none;gap:6px;flex-wrap:nowrap}#userLabel,#personalization,#theme,#browserNotificationPermission,#browserNotificationStatus{display:none!important}#mobileSettings{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}#notificationToggle{min-height:44px;padding:7px 9px;font-size:13px}
+ .user-info{width:auto;flex:none;gap:6px;flex-wrap:nowrap}#userLabel{display:none!important}#mobileSettings{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px}#notificationToggle{min-height:44px;padding:7px 9px;font-size:13px}
  #tabs{position:fixed;inset:auto 0 0;z-index:40;display:grid;grid-template-columns:repeat(var(--mobile-tabs,5),minmax(0,1fr));padding:5px max(6px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));gap:3px;overflow:visible;border:0;border-top:1px solid var(--edge);background:var(--surface);box-shadow:0 -4px 16px #0f172a0c}
  #tabs .tab{border:0;border-radius:10px;padding:6px 1px;min-height:54px;min-width:0;font-size:11px;line-height:1.3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text);background:transparent}#tabs .tab.active{background:var(--menu-bg);color:var(--menu-ink);font-weight:800}#tabs .tab-icon{display:block;font-size:21px;line-height:1;font-family:Arial,sans-serif}#tabs .tab-short{display:block;white-space:nowrap}#tabs .tab-label,#tabs .mobile-secondary{display:none}#tabs .mobile-more{display:flex}
  .panel{padding:16px 12px}.panel>h1{font-size:20px}h1{line-height:1.4}.research-title{gap:8px;margin-bottom:12px;padding-bottom:10px}.research-title h1{font-size:20px}.research-title-actions{gap:6px;flex-wrap:wrap;max-width:100%}.research-title-actions :is(button,.reagent-upload){min-height:44px;padding:9px 11px;font-size:13px;display:inline-flex;align-items:center;justify-content:center}
@@ -36,3 +36,30 @@
  #tabs .tab{display:flex;flex:0 0 clamp(68px,18vw,92px);min-height:58px;border:0;scroll-snap-align:center;font-size:12px;gap:5px}#tabs .tab-icon{display:block;font-size:22px}#tabs .tab-short{display:block}#tabs .tab-label{display:none}#tabs::-webkit-scrollbar{height:3px}#tabs::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
  .notification-center{max-height:calc(100dvh - 180px - env(safe-area-inset-bottom))}
 }
+
+/* Compact display controls live beside desktop notification permission. */
+.icon-control{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0!important;flex:none;font-size:23px!important;line-height:1}
+.icon-control[aria-pressed=true]{background:var(--menu-bg);border-color:var(--menu-ink);color:var(--menu-ink)}
+#browserNotificationPermission{white-space:nowrap;min-height:40px}
+[data-layout=vertical] .main-menu-grid{grid-template-columns:minmax(0,1fr)}
+@media(max-width:760px){
+ .header-bar{flex-wrap:wrap}.header-bar>div:first-of-type{width:100%}.user-info{width:100%;display:flex;flex-wrap:wrap;gap:5px}
+ .icon-control{width:44px;height:44px}.user-info #browserNotificationPermission:not(.hidden){display:inline-flex!important;align-items:center;min-height:44px;padding:7px 8px;font-size:12px}
+ #mobileSettings{display:none!important}.browser-notification-status{padding:8px 12px;font-size:13px}
+}
+
+@media(min-width:761px){
+ [data-layout=vertical] .app{display:grid;grid-template-columns:220px minmax(0,1fr)}
+ [data-layout=vertical] .header-bar{grid-column:1/-1}
+ [data-layout=vertical] #mainMenuToggle{display:none!important}
+ [data-layout=vertical] #tabs{display:flex!important;grid-column:1;grid-row:2/4;position:sticky;top:16px;align-self:start;flex-direction:column;gap:8px;padding:14px 10px;overflow-x:hidden;overflow-y:auto;max-height:calc(100dvh - 32px);border-right:1px solid var(--edge);border-bottom:0;border-radius:0 0 14px 0;background:var(--menu-bg)}
+ [data-layout=vertical] #tabs .tab{display:flex;align-items:center;gap:12px;flex:none;padding:14px 12px;border:0;border-radius:10px;white-space:normal;text-align:left;font-size:18px;line-height:1.4;min-height:56px}
+ [data-layout=vertical] #tabs .tab-icon{display:block;font-size:24px;order:-1;flex:none}
+ [data-layout=vertical] #tabs .tab-short{display:none}
+ [data-layout=vertical] #filters{grid-column:2;grid-row:2}
+ [data-layout=vertical] #panel{grid-column:2;grid-row:3;min-width:0}
+ [data-layout=vertical] :is(.foot,#preferenceStatus,#previewNotice,.browser-notification-status){grid-column:1/-1}
+}
+
+.research-year-charts{grid-template-columns:repeat(2,minmax(0,1fr))}.research-year-charts .section-card{min-width:0}.research-year-charts .bar-row{grid-template-columns:58px minmax(0,1fr) 32px}
+@media(max-width:760px){.research-year-charts{grid-template-columns:minmax(0,1fr)}}

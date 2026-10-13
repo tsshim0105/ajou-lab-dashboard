@@ -19,20 +19,20 @@ function fixture(permission='default',answer='granted'){
  return {controller,env,Notification,shown,updates,events,get requests(){return requests;},get focused(){return focused;},get assigned(){return assigned;}};
 }
 test('no permission prompt or test notification during startup',()=>{
- const f=fixture();f.controller.start();assert.equal(f.requests,0);assert.equal(f.shown.length,0);assert.equal(f.updates.at(-1).label,'🔔 알림 허용');
+ const f=fixture();f.controller.start();assert.equal(f.requests,0);assert.equal(f.shown.length,0);assert.equal(f.updates.at(-1).label,'🔔 데스크톱알림');
 });
 test('permission gesture grants once and presents exact local test',async()=>{
  const f=fixture();const work=f.controller.enable();assert.equal(f.requests,1);assert.equal(f.controller.state().pending,true);await work;
- assert.equal(f.shown.length,1);assert.equal(f.shown[0].title,'NISML 대시보드');assert.equal(f.shown[0].options.body,'연구실 알림 설정이 완료되었습니다.');assert.match(f.shown[0].options.icon,/^data:image\/png;base64,/);assert.equal(f.controller.state().label,'🔔 알림 켜짐');assert.equal(f.controller.state().pending,false);
+ assert.equal(f.shown.length,1);assert.equal(f.shown[0].title,'NISML 대시보드');assert.equal(f.shown[0].options.body,'연구실 알림 설정이 완료되었습니다.');assert.match(f.shown[0].options.icon,/^data:image\/png;base64,/);assert.equal(f.controller.state().label,'🔔 데스크톱알림 켜짐');assert.equal(f.controller.state().pending,false);
 });
 test('duplicate clicks do not prompt twice or duplicate the completion notification',async()=>{
  const f=fixture();await Promise.all([f.controller.enable(),f.controller.enable()]);assert.equal(f.requests,1);assert.equal(f.shown.length,1);
 });
 test('granted state survives fresh controller and allows retest without request',async()=>{
- const f=fixture('granted');f.controller.start();assert.equal(f.controller.state().label,'🔔 알림 켜짐');assert.equal(f.shown.length,0);await f.controller.enable();assert.equal(f.requests,0);assert.equal(f.shown.length,1);
+ const f=fixture('granted');f.controller.start();assert.equal(f.controller.state().label,'🔔 데스크톱알림 켜짐');assert.equal(f.shown.length,0);await f.controller.enable();assert.equal(f.requests,0);assert.equal(f.shown.length,1);
 });
 test('denial shows instructions and never requests again',async()=>{
- const f=fixture('default','denied');await f.controller.enable();await f.controller.enable();assert.equal(f.requests,1);assert.equal(f.shown.length,0);assert.equal(f.controller.state().label,'🔕 알림 차단됨');assert.equal(f.controller.state().message,'브라우저에서 NISML 대시보드의 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.');
+ const f=fixture('default','denied');await f.controller.enable();await f.controller.enable();assert.equal(f.requests,1);assert.equal(f.shown.length,0);assert.equal(f.controller.state().label,'🔕 데스크톱알림 차단됨');assert.equal(f.controller.state().message,'브라우저에서 NISML 대시보드의 알림 권한이 차단되어 있습니다. 브라우저 설정에서 알림을 허용해주세요.');
 });
 test('dismissal remains requestable and sends no notification',async()=>{
  const f=fixture('default','default');await f.controller.enable();assert.equal(f.controller.state().permission,'default');assert.equal(f.shown.length,0);assert.match(f.controller.state().message,/완료되지/);

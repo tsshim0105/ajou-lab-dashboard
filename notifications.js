@@ -14,7 +14,7 @@ globalThis.NISMLNotifications = (() => {
     const state = () => {
       const permission = supported() ? env.Notification.permission : 'unsupported';
       return {permission, pending, remote:!!remote?.active,
-        label: permission === 'granted' ? '🔔 알림 켜짐' : permission === 'denied' ? '🔕 알림 차단됨' : permission === 'default' ? '🔔 알림 허용' : '🔕 알림 미지원',
+        label: permission === 'granted' ? '🔔 데스크톱알림 켜짐' : permission === 'denied' ? '🔕 데스크톱알림 차단됨' : permission === 'default' ? '🔔 데스크톱알림' : '🔕 데스크톱알림 미지원',
         message: permission === 'denied' ? blocked : permission === 'unsupported' ? (env.isSecureContext ? '이 브라우저에서는 데스크톱 알림을 지원하지 않습니다. Mac/PC의 Safari, Chrome 또는 Edge에서 열어주세요.' : '브라우저 알림은 HTTPS로 접속해야 사용할 수 있습니다.') : message};
     };
     const refresh = () => onState(state());
@@ -103,7 +103,7 @@ globalThis.NISMLNotifications = (() => {
 
   function mount(button, status) {
     const controller = createController(globalThis, value => {
-      button.textContent = value.pending ? '알림 권한 확인 중…' : value.label;
+      button.textContent = value.pending ? '데스크톱알림 확인 중…' : value.label;
       button.disabled = value.pending || value.permission === 'unsupported';
       button.dataset.permission = value.permission;
       button.title = value.permission === 'granted' ? '테스트 알림 다시 표시' : value.permission === 'denied' ? blocked : '이 브라우저에서 연구실 알림 허용';
