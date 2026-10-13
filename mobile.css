@@ -24,12 +24,12 @@
 @media(max-width:359px){.header-title{font-size:14px}#notificationToggle{padding:7px;font-size:12px}.research-title-actions{width:100%;margin-left:0}.research-title-actions button{flex:1}.meeting-blocks{grid-template-columns:minmax(0,1fr)}.meeting-location,.meeting-schedule{grid-column:auto}.view-controls{flex-wrap:wrap}.view-controls #viewSettings{width:100%}}
 
 /* Main navigation is a rounded hamburger menu on every screen. */
-#tabs{display:none!important}.hamburger-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;flex:none}.hamburger-button span{font-size:22px;line-height:1}.main-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.main-menu-item{display:flex;align-items:center;gap:10px;white-space:normal!important;min-height:60px;font-size:14px!important;text-align:left}.main-menu-item>span{font-size:24px;color:var(--menu-ink);flex:none}.main-menu-item[aria-current=page]{background:var(--menu-bg);border-color:var(--menu-ink);font-weight:800}.main-menu-dialog{width:min(440px,calc(100vw - 32px));margin:auto;border-radius:20px;max-height:80dvh}
+#tabs{display:flex}.hamburger-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:44px;min-height:44px;flex:none}.hamburger-button span{font-size:22px;line-height:1}.main-menu-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.main-menu-item{display:flex;align-items:center;gap:10px;white-space:normal!important;min-height:60px;font-size:14px!important;text-align:left}.main-menu-item>span{font-size:24px;color:var(--menu-ink);flex:none}.main-menu-item[aria-current=page]{background:var(--menu-bg);border-color:var(--menu-ink);font-weight:800}.main-menu-dialog{width:min(440px,calc(100vw - 32px));margin:auto;border-radius:20px;max-height:80dvh}
 @media(min-width:900px){[data-layout=vertical] .app{display:block}}
 @media(max-width:760px){.app{padding-bottom:env(safe-area-inset-bottom)}html{scroll-padding-bottom:20px}.header-title{font-size:14px}.header-bar{gap:6px}.hamburger-button{padding:7px!important}.hamburger-label{display:none!important}.main-menu-dialog{width:calc(100vw - 32px)!important;max-width:440px!important;margin:auto!important;border-radius:20px!important;padding:18px!important}.main-menu-item{min-height:64px}.notification-center{max-height:calc(100dvh - 100px - env(safe-area-inset-bottom))}}
 @media(min-width:761px) and (max-width:1000px){.header-bar{flex-wrap:wrap}.header-bar>div:first-of-type{flex:1;min-width:0}.user-info{width:100%;justify-content:flex-end;flex-wrap:wrap}}
 
-/* Mobile keeps a swipeable bottom bar; desktop uses the hamburger menu. */
+/* Mobile keeps a swipeable bottom bar; desktop displays horizontal or vertical navigation. */
 @media(max-width:760px){
  .app{padding-bottom:calc(86px + env(safe-area-inset-bottom))}html{scroll-padding-bottom:calc(86px + env(safe-area-inset-bottom))}#mainMenuToggle{display:none!important}
  #tabs{display:flex!important;position:fixed;inset:auto 0 0;z-index:40;gap:4px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;padding:5px max(8px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));border-top:1px solid var(--edge);background:var(--surface);box-shadow:0 -4px 16px #0f172a0c;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
@@ -67,3 +67,9 @@
 .desktop-controls,.display-icons{display:flex;align-items:center;gap:6px}.display-icons{flex:none}
 @media(max-width:760px){.user-info{justify-content:flex-start}.desktop-controls{width:100%;flex-wrap:wrap;gap:4px}.display-icons{gap:4px}}
 @media(max-width:359px){.desktop-controls #browserNotificationPermission:not(.hidden){font-size:11px;padding:7px 6px}}
+
+@media(min-width:761px){
+ [data-layout=horizontal] #tabs{display:flex!important;flex-direction:row;gap:4px;padding:8px 10px;background:var(--menu-bg);overflow-x:auto;overscroll-behavior-x:contain}
+ [data-layout=horizontal] #tabs .tab{flex:1 0 auto;min-height:48px;padding:10px 14px;border:0;border-radius:9px;font-size:16px;white-space:nowrap}
+ [data-layout=horizontal] #tabs .tab-icon,[data-layout=horizontal] #tabs .tab-short{display:none}
+}

@@ -10,10 +10,3 @@ function openMobileMore(){
  if(!admin())return;const d=mobileSheet('관리 메뉴');d.querySelector('.mobile-sheet-content').innerHTML=menu.filter(([key])=>!mobileLabels[key]).map(([key,label])=>`<button type="button" class="secondary mobile-menu-entry" data-open="${key}" aria-current="${key===tab?'page':'false'}">${esc(label)}<span aria-hidden="true">›</span></button>`).join('');
  d.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{if(!admin()||busy)return;tab=b.dataset.open;d.close();render();window.scrollTo({top:0});});
 }
-function openMainMenu(){
- const d=mobileSheet('메뉴');d.classList.add('main-menu-dialog');
- const allowed=menu.filter(([key])=>admin()||mobileLabels[key]);
- d.querySelector('.mobile-sheet-content').innerHTML='<div class="main-menu-grid">'+allowed.map(([key,label])=>`<button type="button" class="secondary main-menu-item" data-open="${key}" aria-current="${key===tab?'page':'false'}"><span aria-hidden="true">${mobileLabels[key]?.[1]||({funds:'₩',payroll:'▦',settings:'⚙'})[key]}</span>${esc(label)}</button>`).join('')+'</div>';
- d.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{if(busy)return;const key=b.dataset.open;if(!admin()&&!mobileLabels[key])return;if(key==='papers'&&tab!=='papers')$('year').value='all';tab=key;d.close();render();window.scrollTo({top:0});});
-}
-document.getElementById('mainMenuToggle').onclick=openMainMenu;

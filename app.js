@@ -28,7 +28,6 @@ function table(headers,rows,classes=[],rowClasses=[]){if(!rows.length)return '<d
 const card=(label,value,note)=>`<div class="card"><span class="label">${esc(label)}</span><span class="value">${esc(value)}</span>${note?`<small>${esc(note)}</small>`:''}</div>`;
 function bar(label,value,max,light=false){return `<div class="bar-row"><span>${esc(label)}</span><div class="track"><div class="fill ${light?'light':''}" style="width:${max?value/max*100:0}%"></div></div><strong>${count(value)}</strong></div>`;}
 function nav(){
- $('mainMenuToggle').disabled=false;
  const allowed=menu.filter(([k])=>admin()||['home','papers','conferences','meetingInfo','reagents'].includes(k));
  const navLabels={...mobileLabels,funds:['연구비','₩'],payroll:['인건비','▦'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
  $('tabs').innerHTML=allowed.map(([k,v])=>`<button class="tab ${k===tab?'active':''}" data-tab="${k}" aria-label="${esc(v)}" aria-current="${k===tab?'page':'false'}"><span class="tab-label">${v}</span><span class="tab-icon" aria-hidden="true">${navLabels[k][1]}</span><span class="tab-short" aria-hidden="true">${navLabels[k][0]}</span></button>`).join('');
@@ -84,7 +83,7 @@ function render(){if(!admin()&&!['home','papers','conferences','meetingInfo','re
  if($('addConference'))$('addConference').onclick=()=>editConference();panel.querySelectorAll('[data-conf]').forEach(b=>b.onclick=()=>editConference(Number(b.dataset.conf)));if($('addFund'))$('addFund').onclick=addFund;panel.querySelectorAll('[data-expense]').forEach(b=>b.onclick=()=>editExpense(Number(b.dataset.expense),b.dataset.entry===undefined?null:Number(b.dataset.entry)));
  if($('term'))$('term').onchange=e=>{term=e.target.value;render();};if($('csv'))$('csv').onclick=download;
  if($('upload'))$('upload').onchange=upload;if($('saveStudents'))$('saveStudents').onclick=saveStudents;panel.querySelectorAll('[data-remove-student]').forEach(b=>b.onclick=()=>removeStudent(b.dataset.removeStudent));
- const dates=data.sources.filter(s=>admin()||['papers','conferences'].includes(s.type)).map(s=>s.importedAt).sort();$('sourceDate').textContent=dates.length?'자료 갱신 '+dates.at(-1).slice(0,10)+' · v37 · 수정 2026-10-13':'v37 · 수정 2026-10-13';
+ const dates=data.sources.filter(s=>admin()||['papers','conferences'].includes(s.type)).map(s=>s.importedAt).sort();$('sourceDate').textContent=dates.length?'자료 갱신 '+dates.at(-1).slice(0,10)+' · v38 · 수정 2026-10-13':'v38 · 수정 2026-10-13';
 }
 function toolbar(n){return `<div class="toolbar"><span class="muted">${count(n)}개 기록</span>${['papers','conferences'].includes(tab)?'':'<button class="secondary" id="csv">현재 표 CSV 저장</button>'}</div>`;}
 function download(){const cell=v=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const b=new Blob(['\ufeff'+exportRows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='연구실_'+tab+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
