@@ -33,7 +33,7 @@ function drawReagents(){
  const all=data.reagents||[],rows=ReagentData.filter(all,reagentQuery,reagentLocation);
  exportRows=[ReagentData.headers,...rows.map(r=>ReagentData.fields.map(k=>r[k]))];
  $('reagentCount').textContent=`${rows.length}개 항목 / 전체 ${all.length}개`;
- $('reagentList').innerHTML=table([...ReagentData.headers,...(admin()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>esc(r[k]||'—')),...(admin()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
+ $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
  $('reagentList').querySelectorAll('[data-reagent-edit]').forEach(b=>b.onclick=()=>editReagent(b.dataset.reagentEdit));
 }
 function bindReagents(){
@@ -47,12 +47,12 @@ function reagentLocationField(record){
  return `<label style="display:grid;gap:6px">보관위치<select name="location" style="width:100%;padding:10px"><option value="">미지정</option>${locations.map(l=>`<option value="${esc(l)}" ${l===current?'selected':''}>${esc(l)}</option>`).join('')}<option value="__custom__">＋ 새 장소 직접 입력</option></select></label><label data-custom-location hidden style="gap:6px">새 보관위치<input name="newLocation" maxlength="2000" placeholder="새 장소 이름" disabled style="width:100%;box-sizing:border-box;padding:10px"></label>`;
 }
 function editReagent(id=null){
- if(!admin())return;const record=(data.reagents||[]).find(r=>r.id===id);if(id&&!record)return;
+ if(!canEditResearch()||(!id&&!admin()))return;const record=(data.reagents||[]).find(r=>r.id===id);if(id&&!record)return;
  editor(id?'시약 정보 수정':'시약 추가',ReagentData.fields.map((k,i)=>k==='location'?reagentLocationField(record):field(k,ReagentData.headers[i]+(k==='name'?' *':''),record?.[k]||'','text',`${k==='name'?'required':''} maxlength="2000"`)).join(''),(values,next)=>{
   const location=values.location==='__custom__'?String(values.newLocation||'').trim():String(values.location||'').trim();if(values.location==='__custom__'&&!location)throw Error('새 보관위치를 입력해주세요.');
   const reagent={id:id||crypto.randomUUID(),...Object.fromEntries(ReagentData.fields.map(k=>[k,String(values[k]||'').trim()])),location};if(!reagent.name)throw Error('화학물질명을 입력해주세요.');
   next.reagents=next.reagents||[];if(id){const index=next.reagents.findIndex(r=>r.id===id);if(index<0)throw Error('시약이 삭제되었습니다. 새로고침해주세요.');next.reagents[index]=reagent;}else next.reagents.push(reagent);
- },false,id?next=>{next.reagents=(next.reagents||[]).filter(r=>r.id!==id);}:null,{
+ },true,id&&admin()?next=>{next.reagents=(next.reagents||[]).filter(r=>r.id!==id);}:null,{
   removeLabel:'시약 삭제',removeConfirm:`「${record?.name||''}」 시약 항목을 삭제할까요?`,
   onMount:form=>{const select=form.elements.location,input=form.elements.newLocation,wrapper=form.querySelector('[data-custom-location]');select.onchange=()=>{const custom=select.value==='__custom__';wrapper.hidden=!custom;wrapper.style.display=custom?'grid':'';input.disabled=!custom;input.required=custom;if(custom)input.focus();};}
  });

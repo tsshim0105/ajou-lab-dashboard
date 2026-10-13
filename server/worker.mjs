@@ -194,12 +194,23 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student'},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students','/api/research'].includes(url.pathname)){
-   if(!admin&&url.pathname!=='/api/research')return reply({error:'교수님만 변경할 수 있습니다.'},403);
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/research','/api/reagents'].includes(url.pathname)){
+   if(!admin&&!['/api/research','/api/reagents'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
-   if(url.pathname==='/api/research'){const next=applyResearchChanges(state.data,input.changes);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');state.data=next;}
+   if(url.pathname==='/api/reagents'){
+    const fields=['name','unit','capacity','quantity','location','note'];
+    if(!Array.isArray(input.changes)||!input.changes.length||input.changes.length>50||Object.keys(input).some(k=>!['version','changes'].includes(k)))throw Error('시약 수정 항목을 확인해주세요.');
+    const next=structuredClone(state.data),seen=new Set();
+    for(const change of input.changes){
+     if(!change||Object.keys(change).some(k=>!['id','values'].includes(k))||typeof change.id!=='string'||seen.has(change.id)||!change.values||typeof change.values!=='object'||Array.isArray(change.values)||!Object.keys(change.values).length||Object.keys(change.values).some(k=>!fields.includes(k)))throw Error('시약 수정 항목을 확인해주세요.');
+     seen.add(change.id);const index=(next.reagents||[]).findIndex(r=>r.id===change.id);if(index<0)throw Error('시약이 삭제되었거나 존재하지 않습니다. 새로고침해주세요.');
+     next.reagents[index]={...next.reagents[index],...change.values};
+    }
+    state.data=validateData(next);
+   }
+   else if(url.pathname==='/api/research'){const next=applyResearchChanges(state.data,input.changes);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
    else {if(!Array.isArray(input.students)||input.students.length>100||input.students.some(s=>typeof s!=='string'||!/^\S+@\S+\.\S+$/.test(s)||s.length>254))return reply({error:'이메일 목록을 확인해주세요.'},400);state.students=[...new Set(input.students.map(s=>s.trim().toLowerCase()))];}
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();

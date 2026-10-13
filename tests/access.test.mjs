@@ -201,3 +201,18 @@ test('SCI initialization is once only and future KCI or non-indexed selections p
  for(const sci of ['KCI','해당사항없음','SCI']){const current=await (await worker.fetch(req(OWNER),env)).json();current.data.papers[0].sci=sci;current.data.papers[0].coauthors='Another Author';assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:current.version,data:current.data}),env)).status,200);assert.equal((await (await worker.fetch(req(OWNER),env)).json()).data.papers[0].sci,sci);}
  const before=await (await worker.fetch(req(OWNER),env)).json();const changes=[{type:'papers',id:'new',action:'add',values:{title:'New',year:2026,journal:'Journal',sci:'KCI',coauthors:'Author Two'}}];assert.equal((await worker.fetch(req('student@example.test','/api/research','PUT',{version:before.version,changes}),env)).status,200);const saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.papers[1].sci,'KCI');assert.equal(saved.data.papers[1].coauthors,'Author Two');
 });
+
+test('students edit existing reagents only, preserving records and rejecting unauthorized or stale changes',async()=>{
+ const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();const next=structuredClone(original.data);
+ next.reagents=[{id:'r1',name:'Example',unit:'mL',capacity:'100',quantity:'2',location:'냉장고',note:'old'}];
+ await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env);
+ const changes=[{id:'r1',values:{quantity:'1',location:'시약장',note:'updated'}}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:1,changes}),env)).status,200);
+ let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].quantity,'1');assert.equal(saved.data.reagents[0].location,'시약장');assert.equal(saved.data.reagents[0].note,'updated');
+ for(const k of ['papers','conferences','funds','payroll','sources'])assert.deepEqual(saved.data[k],next[k]);
+ assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:1,changes}),env)).status,409);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/reagents','PUT',{version:2,changes}),env)).status,403);
+ for(const change of [{id:'new',values:{name:'New'}},{id:'r1',action:'delete',values:{}},{id:'r1',values:{id:'other'}},{id:'r1',values:{quantity:5}},{id:'r1',values:{name:''}},{id:'r1',values:{funds:[]}}])assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:2,changes:[change]}),env)).status,400);
+ assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:2,changes,data:{funds:[]}}),env)).status,400);
+ saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.version,2);assert.equal(saved.data.reagents.length,1);
+});
