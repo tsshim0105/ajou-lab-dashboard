@@ -28,3 +28,11 @@
 @media(min-width:900px){[data-layout=vertical] .app{display:block}}
 @media(max-width:760px){.app{padding-bottom:env(safe-area-inset-bottom)}html{scroll-padding-bottom:20px}.header-title{font-size:14px}.header-bar{gap:6px}.hamburger-button{padding:7px!important}.hamburger-label{display:none!important}.main-menu-dialog{width:calc(100vw - 32px)!important;max-width:440px!important;margin:auto!important;border-radius:20px!important;padding:18px!important}.main-menu-item{min-height:64px}.notification-center{max-height:calc(100dvh - 100px - env(safe-area-inset-bottom))}}
 @media(min-width:761px) and (max-width:1000px){.header-bar{flex-wrap:wrap}.header-bar>div:first-of-type{flex:1;min-width:0}.user-info{width:100%;justify-content:flex-end;flex-wrap:wrap}}
+
+/* Mobile keeps a swipeable bottom bar; desktop uses the hamburger menu. */
+@media(max-width:760px){
+ .app{padding-bottom:calc(86px + env(safe-area-inset-bottom))}html{scroll-padding-bottom:calc(86px + env(safe-area-inset-bottom))}#mainMenuToggle{display:none!important}
+ #tabs{display:flex!important;position:fixed;inset:auto 0 0;z-index:40;gap:4px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x;padding:5px max(8px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));border-top:1px solid var(--edge);background:var(--surface);box-shadow:0 -4px 16px #0f172a0c;scrollbar-width:thin;scrollbar-color:var(--edge) transparent}
+ #tabs .tab{display:flex;flex:0 0 clamp(68px,18vw,92px);min-height:58px;border:0;scroll-snap-align:center;font-size:12px;gap:5px}#tabs .tab-icon{display:block;font-size:22px}#tabs .tab-short{display:block}#tabs .tab-label{display:none}#tabs::-webkit-scrollbar{height:3px}#tabs::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
+ .notification-center{max-height:calc(100dvh - 180px - env(safe-area-inset-bottom))}
+}
