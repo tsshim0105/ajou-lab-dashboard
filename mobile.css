@@ -63,3 +63,7 @@
 
 .research-year-charts{grid-template-columns:repeat(2,minmax(0,1fr))}.research-year-charts .section-card{min-width:0}.research-year-charts .bar-row{grid-template-columns:58px minmax(0,1fr) 32px}
 @media(max-width:760px){.research-year-charts{grid-template-columns:minmax(0,1fr)}}
+
+.desktop-controls,.display-icons{display:flex;align-items:center;gap:6px}.display-icons{flex:none}
+@media(max-width:760px){.user-info{justify-content:flex-start}.desktop-controls{width:100%;flex-wrap:wrap;gap:4px}.display-icons{gap:4px}}
+@media(max-width:359px){.desktop-controls #browserNotificationPermission:not(.hidden){font-size:11px;padding:7px 6px}}
