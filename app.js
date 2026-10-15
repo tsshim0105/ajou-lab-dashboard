@@ -7,7 +7,7 @@ let data=LabData.empty(),user={role:'student'},version=0,students=[],studentName
 let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
-const menu=[['home','연구실 현황'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리']];
+const menu=[['home','연구실 현황'],['groupMeetings','그룹미팅'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -28,7 +28,7 @@ function table(headers,rows,classes=[],rowClasses=[]){if(!rows.length)return '<d
 const card=(label,value,note)=>`<div class="card"><span class="label">${esc(label)}</span><span class="value">${esc(value)}</span>${note?`<small>${esc(note)}</small>`:''}</div>`;
 function bar(label,value,max,light=false){return `<div class="bar-row"><span>${esc(label)}</span><div class="track"><div class="fill ${light?'light':''}" style="width:${max?value/max*100:0}%"></div></div><strong>${count(value)}</strong></div>`;}
 function nav(){
- const allowed=menu.filter(([k])=>admin()||['home','papers','conferences','meetingInfo','reagents','settings'].includes(k));
+ const allowed=menu.filter(([k])=>admin()||['home','groupMeetings','papers','conferences','meetingInfo','reagents','settings'].includes(k));
  const navLabels={...mobileLabels,funds:['연구비','₩'],payroll:['인건비','▦'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
  $('tabs').innerHTML=allowed.map(([k,v])=>`<button class="tab ${k===tab?'active':''}" data-tab="${k}" aria-label="${esc(v)}" aria-current="${k===tab?'page':'false'}"><span class="tab-label">${v}</span><span class="tab-icon" aria-hidden="true">${navLabels[k][1]}</span><span class="tab-short" aria-hidden="true">${navLabels[k][0]}</span></button>`).join('');
  $('tabs').scrollLeft=navScroll;
@@ -37,8 +37,9 @@ function nav(){
  $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='papers'&&tab!=='papers')$('year').value='all';const changed=tab!==b.dataset.tab;tab=b.dataset.tab;render();if(changed&&matchMedia('(max-width:760px)').matches)window.scrollTo({top:0});});
 }
 function years(){const old=$('year').value;const list=[...new Set([...data.papers,...data.conferences].map(r=>r.year).filter(Boolean))].sort((a,b)=>b-a);$('year').innerHTML='<option value="all">전체 연도</option>'+list.map(y=>`<option>${y}</option>`).join('');$('year').value=list.includes(Number(old))?old:'all';}
-function render(){if(!admin()&&!['home','papers','conferences','meetingInfo','reagents','settings'].includes(tab))tab='home';$('userLabel').innerHTML=badge(studentPreview?'학생 화면 미리보기':admin()?'교수님':'연구실 구성원');nav();exportRows=[];const panel=$('panel'),p=tab==='home'?homePeriod(data.papers):filter(data.papers),c=tab==='home'?homePeriod(data.conferences):filter(data.conferences);const title=tab==='home'?'연구실 현황 (2015년~현재)':menu.find(([k])=>k===tab)[1];let html=['papers','conferences'].includes(tab)?`<div class="research-title"><h1>${title}</h1><div class="research-title-actions">${canEditResearch()?`<button class="primary" id="${tab==='papers'?'addPaper':'addConference'}">${tab==='papers'?'논문추가':'발표 내역 추가'}</button>`:''}<button class="secondary" id="csv">CSV 저장</button></div></div>`:`<h1>${title}</h1>`;
+function render(){if(!admin()&&!['home','groupMeetings','papers','conferences','meetingInfo','reagents','settings'].includes(tab))tab='home';$('userLabel').innerHTML=badge(studentPreview?'학생 화면 미리보기':admin()?'교수님':'연구실 구성원');nav();exportRows=[];const panel=$('panel'),p=tab==='home'?homePeriod(data.papers):filter(data.papers),c=tab==='home'?homePeriod(data.conferences):filter(data.conferences);const title=tab==='home'?'연구실 현황 (2015년~현재)':menu.find(([k])=>k===tab)[1];let html=['papers','conferences'].includes(tab)?`<div class="research-title"><h1>${title}</h1><div class="research-title-actions">${canEditResearch()?`<button class="primary" id="${tab==='papers'?'addPaper':'addConference'}">${tab==='papers'?'논문추가':'발표 내역 추가'}</button>`:''}<button class="secondary" id="csv">CSV 저장</button></div></div>`:`<h1>${title}</h1>`;
  if(tab==='home'){
+  html+=groupMeetingCards();
   const awards=c.filter(r=>/우수|수상|최우수/.test(r.note));html+=`<div class="cards">${card('등록 논문',p.length+'건','2015년~현재')}${card('학회 발표 기록',c.length+'건','2015년~현재')}${card('발표자',new Set(c.map(r=>r.presenter)).size+'명','해당 기간의 고유 발표자')}${card('수상 표시 기록',awards.length+'건','비고에 수상·우수 표시')}</div>`;
   const ys=[...new Set([...p,...c].map(r=>r.year))].sort((a,b)=>b-a),counts=ys.map(y=>({year:y,p:p.filter(r=>r.year===y).length,c:c.filter(r=>r.year===y).length})),max=Math.max(1,...counts.flatMap(r=>[r.p,r.c]));
   const recent=p.filter(r=>labPaperRole(r).recent).sort((a,b)=>b.year-a.year||(b.issueDate||b.onlineDate||'').localeCompare(a.issueDate||a.onlineDate||'')||(b.websiteNumber||0)-(a.websiteNumber||0)).slice(0,4);
@@ -54,6 +55,8 @@ function render(){if(!admin()&&!['home','papers','conferences','meetingInfo','re
    if(canEditResearch())cells.push(`<button class="primary green" data-edit-paper="${data.papers.indexOf(r)}">수정</button>`);return cells;}),['nowrap','nowrap','title','title','title','title','title','nowrap','nowrap','nowrap','nowrap','nowrap','nowrap','nowrap','nowrap'],records.map(r=>labPaperRole(r).highlight?'lab-paper':''));
  }else if(tab==='conferences'){
   const records=c.slice().sort((a,b)=>b.year-a.year||(b.date||'').localeCompare(a.date||''));const headers=['발표일','발표자','학회명','국내/국제','지역','장소','발표 제목','유형','비고'];const rows=records.map(r=>[r.date||'미기재',r.presenter,r.conference,conferenceScope(r)||'미기재',conferenceCity(r)||'미기재',r.venue||'미기재',r.title||'미기재',r.kind,r.note]);exportRows=[headers,...rows];html+=toolbar(rows.length)+table([...headers,...(canEditResearch()?['관리']:[])],rows.map((r,i)=>[...r.map(esc),...(canEditResearch()?[`<button class="secondary" style="white-space:nowrap" data-conf="${data.conferences.indexOf(records[i])}">수정</button>`]:[])]),['nowrap','nowrap','title','nowrap','nowrap','title','title','nowrap','']);
+ }else if(tab==='groupMeetings'){
+  html+=groupMeetingSchedule();
  }else if(tab==='meetingInfo'){
   html+=renderMeetingInfo();
  }else if(tab==='reagents'){
@@ -331,3 +334,42 @@ function openPushTarget(value){
  const view=url.searchParams.get('view');if(['papers','conferences','meetingInfo'].includes(view))openResearchNotification({id:'push-link',type:view,action:'수정',title:(url.searchParams.get('q')||'').slice(0,500)});
 }
 navigator.serviceWorker?.addEventListener('message',event=>{if(event.data?.type==='NISML_PUSH_OPEN'&&event.origin===location.origin)openPushTarget(event.data.url);});
+
+// Shared schedule transcribed from the supplied 2026–2027 group meeting workbook.
+const groupMeetingDates=[
+ ['2026-10-29','랩세미나','오치영'],
+ ['2026-11-12','논문발표','박진혁 · 손은지 · 박준하'],
+ ['2026-11-26','랩세미나','박진혁'],
+ ['2026-12-10','논문발표','오치영 · 손은지 · 박준하'],
+ ['2026-12-24','랩세미나','박준하'],
+ ['2027-01-07','논문발표','오치영 · 박진혁 · 손은지'],
+ ['2027-01-21','랩세미나','손은지'],
+ ['2027-02-04','논문발표','오치영 · 박진혁 · 박준하'],
+ ['2027-02-18','랩세미나','김혜림 · 이윤서 · 김태희']
+];
+function upcomingGroupMeetings(now=new Date()){
+ return groupMeetingDates.filter(([date])=>Date.parse(date+'T15:00:00+09:00')>now.getTime());
+}
+function groupMeetingCountdown(date,now=new Date()){
+ const parts=new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
+ const value=key=>parts.find(p=>p.type===key).value;
+ const day=value('year')+'-'+value('month')+'-'+value('day');
+ const days=Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(day+'T00:00:00Z'))/86400000);
+ return days===0?'오늘':'D−'+days;
+}
+function groupMeetingCards(now=new Date()){
+ const upcoming=upcomingGroupMeetings(now);
+ return `<section aria-label="다가오는 그룹미팅" class="group-meeting-summary"><div class="group-meeting-heading"><h2>다가오는 그룹미팅</h2><button type="button" class="secondary" data-group-schedule>전체 일정 보기 →</button></div><div class="group-meeting-pair">${[0,1].map(i=>{const r=upcoming[i];return `<article class="group-speaker ${i===0?'group-speaker-next':''}"><div class="group-speaker-label"><span>${i===0?'다음':'다다음'} 그룹미팅</span>${r?`<span>${esc(groupMeetingCountdown(r[0],now))}</span>`:''}</div>${r?`<h3>${esc(r[2])}</h3><div>${esc(r[0].replaceAll('-','.'))} 목 · 15:00</div><p class="muted">${esc(r[1])} · ${r[1]==='논문발표'?'논문당 20분 미만':'발표 30분 미만'}</p>`:'<h3>등록된 일정 없음</h3><p class="muted">새로운 일정이 등록되면 표시됩니다.</p>'}</article>`;}).join('')}</div></section>`;
+}
+function groupMeetingSchedule(now=new Date()){
+ const rows=upcomingGroupMeetings(now);
+ return `<section class="section-card group-schedule"><div class="group-meeting-heading"><div><h2>앞으로의 그룹미팅</h2><p class="muted">2026–2027 · 격주 목요일 15:00 (한국 시간)</p></div>${badge('남은 미팅 '+rows.length+'회')}</div>${rows.length?table(['날짜','유형','발표자'],rows.map((r,i)=>[esc(r[0].replaceAll('-','.'))+(i<2?`<div class="muted">${i===0?'다음 미팅':'다다음 미팅'}</div>`:''),esc(r[1]),esc(r[2])]),['nowrap','',''],rows.map((r,i)=>i===0?'group-next-row':'')):'<div class="empty">등록된 그룹미팅 일정이 모두 지났습니다.</div>'}<p class="muted group-schedule-foot">논문발표 20분 미만 / 논문 · 랩세미나 30분 미만 / 발표<br>시작 시간이 지난 미팅은 자동으로 숨겨집니다.</p></section>`;
+}
+document.addEventListener('click',event=>{if(event.target.closest('[data-group-schedule]')){tab='groupMeetings';render();}});
+let groupMeetingUpcomingKey=upcomingGroupMeetings().map(r=>r[0]).join(',');
+function refreshGroupMeetingSchedule(){
+ const key=upcomingGroupMeetings().map(r=>r[0]).join(',')+'|'+new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date());
+ if(key!==groupMeetingUpcomingKey){groupMeetingUpcomingKey=key;if(['home','groupMeetings'].includes(tab)&&!busy)render();}
+}
+setInterval(refreshGroupMeetingSchedule,30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGroupMeetingSchedule();});
