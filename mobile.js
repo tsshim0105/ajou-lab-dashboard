@@ -13,25 +13,28 @@ function openMobileMore(){
 
 // Horizontal section gestures use the visible, permission-filtered navigation.
 (()=>{
- const panel=document.getElementById('panel');if(!panel?.addEventListener)return;let gesture=null,animating=false;
+ const panel=document.getElementById('panel');if(!panel?.addEventListener)return;let gesture=null,animating=false,suppressClickUntil=0;
  const mobile=()=>matchMedia('(max-width:760px)').matches;
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
  const reset=()=>{panel.style.transform='';panel.style.willChange='';};
- panel.addEventListener('touchstart',e=>{
-  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||e.target.closest('input,textarea,select,button,a,iframe,[contenteditable],.table-wrap'))return;
-  const t=e.touches[0];if(t.clientX<20||t.clientX>innerWidth-20)return;
-  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab};
- },{passive:true});
- panel.addEventListener('touchmove',e=>{
+ document.addEventListener('touchstart',e=>{
+  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||e.target.closest('input,textarea,select,[contenteditable],.notification-center'))return;
+  const t=e.touches[0];
+  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,scroller:e.target.closest('.table-wrap,#tabs')};
+ },{passive:true,capture:true});
+ document.addEventListener('touchmove',e=>{
   if(!gesture)return;if(e.touches.length!==1){gesture=null;reset();return;}
   const t=e.touches[0],dx=t.clientX-gesture.x,dy=t.clientY-gesture.y;
   if(!gesture.axis&&Math.max(Math.abs(dx),Math.abs(dy))>10)gesture.axis=Math.abs(dx)>Math.abs(dy)*1.3?'x':'y';
-  if(gesture.axis!=='x')return;e.preventDefault();
+  if(gesture.axis!=='x')return;
+  const scroller=gesture.scroller;
+  if(scroller&&scroller.scrollWidth>scroller.clientWidth+2&&((dx>0&&scroller.scrollLeft>1)||(dx<0&&scroller.scrollLeft+scroller.clientWidth<scroller.scrollWidth-1))){gesture=null;reset();return;}
+  e.preventDefault();suppressClickUntil=performance.now()+500;
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),index=keys.indexOf(tab),next=keys[index+(dx<0?1:-1)];
   gesture.dx=next?dx:dx*.2;panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
- },{passive:false});
+ },{passive:false,capture:true});
  const finish=cancel=>{
-  const g=gesture;gesture=null;if(!g)return;
+  const g=gesture;gesture=null;if(!g)return;if(g.axis!=='x'){reset();return;}
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),next=keys[keys.indexOf(tab)+(g.dx<0?1:-1)];
   const commit=!cancel&&g.axis==='x'&&g.tab===tab&&next&&(Math.abs(g.dx)>Math.min(80,innerWidth*.22)||(Math.abs(g.dx)>30&&Math.abs(g.dx)/(performance.now()-g.time)>.45));
   const duration=reduced()?0:300,opts={duration,easing:'cubic-bezier(.22,.8,.25,1)',fill:'both'};
@@ -45,5 +48,6 @@ function openMobileMore(){
   const incoming=panel.animate([{transform:`translateX(${-direction*width+g.dx}px)`,opacity:.25},{transform:'translateX(0)',opacity:1}],opts);
   Promise.all([outgoing.finished,incoming.finished]).finally(()=>{outgoing.cancel();incoming.cancel();copy.remove();reset();animating=false;});
  };
- panel.addEventListener('touchend',()=>finish(false),{passive:true});panel.addEventListener('touchcancel',()=>finish(true),{passive:true});
+ document.addEventListener('touchend',()=>finish(false),{passive:true,capture:true});document.addEventListener('touchcancel',()=>finish(true),{passive:true,capture:true});
+ document.addEventListener('click',e=>{if(performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
