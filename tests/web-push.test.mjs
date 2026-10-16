@@ -31,14 +31,16 @@ test('subscription rejects arbitrary destinations and malformed encryption keys'
 test('send uses encrypted body, VAPID, no redirects and TTL',async()=>{
  const s=await subscription(),env=await keys();let request;const status=await sendPush(s,{title:'NISML 대시보드',body:'Confidential test'},env,async(url,options)=>{request={url,...options};return new Response(null,{status:201});});assert.equal(status,201);assert.equal(request.redirect,'manual');assert.equal(request.headers['Content-Encoding'],'aes128gcm');assert.equal(request.headers.TTL,'86400');assert.match(request.headers.Authorization,/^vapid t=/);assert.ok(!new TextDecoder().decode(request.body).includes('Confidential'));
 });
-test('authorized subscriptions are private and student cannot administer other accounts',async()=>{
- const {worker,env}=await fixture(),s=await subscription();assert.equal((await worker.fetch(req(null,'/api/push/config'),env)).status,401);assert.equal((await worker.fetch(req('other@example.test','/api/push/config'),env)).status,403);
- assert.equal((await worker.fetch(req(STUDENT,'/api/push/subscription','PUT',{subscription:s}),env)).status,200);
- const data=await (await worker.fetch(req(STUDENT,'/api/data'),env)).text();assert.ok(!data.includes('test-token'));assert.ok(!data.includes(s.keys.auth));assert.ok(!data.includes('WEB_PUSH_PRIVATE'));
- assert.equal((await worker.fetch(req(STUDENT,'/api/push/admin'),env)).status,403);
- const admin=await (await worker.fetch(req(OWNER,'/api/push/admin'),env)).json();assert.equal(admin.accounts[0].devices,1);assert.ok(!JSON.stringify(admin).includes('test-token'));
- assert.equal((await worker.fetch(req(OWNER,'/api/push/test','POST',{endpoint:s.endpoint}),env)).status,404);
- assert.equal((await worker.fetch(req(STUDENT,'/api/push/subscription','DELETE',{endpoint:s.endpoint}),env)).status,200);assert.equal((await (await worker.fetch(req(STUDENT,'/api/push/status'),env)).json()).devices,0);
+test('retired push routes reject subscriptions and delivery while research feeds remain available',async()=>{
+ const {worker,env}=await fixture();
+ assert.equal((await worker.fetch(req(null,'/api/push/config'),env)).status,401);
+ assert.equal((await worker.fetch(req('other@example.test','/api/push/config'),env)).status,403);
+ for(const email of [OWNER,STUDENT]){
+  for(const path of ['config','status','admin'])assert.equal((await worker.fetch(req(email,'/api/push/'+path),env)).status,410);
+  for(const [path,method] of [['subscription','PUT'],['test','POST']])assert.equal((await worker.fetch(req(email,'/api/push/'+path,method,{}),env)).status,410);
+  assert.equal((await worker.fetch(req(email,'/api/data'),env)).status,200);
+  assert.equal((await worker.fetch(req(email,'/api/notifications'),env)).status,200);
+ }
 });
 test('service worker has correct MIME/scope and subscription mutation requires origin',async()=>{
  const {worker,env}=await fixture();const sw=await worker.fetch(req(STUDENT,'/service-worker.js'),env);assert.equal(sw.status,200);assert.match(sw.headers.get('Content-Type'),/javascript/);assert.equal(sw.headers.get('Service-Worker-Allowed'),'/');
