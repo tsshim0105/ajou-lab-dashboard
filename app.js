@@ -8,7 +8,7 @@ let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['homepage','홈페이지 관리'],['home','연구실 현황'],['groupMeetings','그룹미팅'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리']];
+const menu=[['home','연구실 현황'],['groupMeetings','그룹미팅'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -30,7 +30,7 @@ const card=(label,value,note)=>`<div class="card"><span class="label">${esc(labe
 function bar(label,value,max,light=false){return `<div class="bar-row"><span>${esc(label)}</span><div class="track"><div class="fill ${light?'light':''}" style="width:${max?value/max*100:0}%"></div></div><strong>${count(value)}</strong></div>`;}
 function nav(){
  const allowed=menu.filter(([k])=>k==='homepage'?canManageHomepage():admin()||['home','groupMeetings','papers','conferences','meetingInfo','reagents','settings'].includes(k));
- const navLabels={...mobileLabels,homepage:['홈페이지','⌂'],funds:['연구비','₩'],payroll:['인건비','▦'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
+ const navLabels={...mobileLabels,homepage:['홈페이지','⚒'],funds:['연구비','₩'],payroll:['인건비','▦'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
  $('tabs').innerHTML=allowed.map(([k,v])=>`<button class="tab ${k===tab?'active':''}" data-tab="${k}" aria-label="${esc(v)}" aria-current="${k===tab?'page':'false'}"><span class="tab-label">${v}</span><span class="tab-icon" aria-hidden="true">${navLabels[k][1]}</span><span class="tab-short" aria-hidden="true">${navLabels[k][0]}</span></button>`).join('');
  $('tabs').scrollLeft=navScroll;
  if(typeof matchMedia==='function'&&matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>{$('tabs').querySelector('.active')?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});});
