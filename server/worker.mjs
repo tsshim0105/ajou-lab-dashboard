@@ -1,3 +1,4 @@
+import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 import {pushConfigured,pushTables,validateSubscription,sendPush,dispatchPendingPush} from './web-push.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
@@ -96,7 +97,7 @@ export function applySharedData(current,input){
  return validateData(next);
 }
 
-export function createWorker(html,meetingEvents=null,serviceWorkerSource='',notificationIcon=''){return {async fetch(req,env,ctx){const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
+export function createWorker(html,meetingEvents=null,serviceWorkerSource='',notificationIcon=''){return {async fetch(req,env,ctx){const gateway=await gatewayRequest(req,env);if(gateway instanceof Response)return gateway;if(gateway){const response=await createWorker(html,meetingEvents,serviceWorkerSource,notificationIcon).fetch(gateway,env,ctx);const type=response.headers.get('Content-Type')||'';if(type.includes('text/html')||type.includes('javascript')){const h=new Headers(response.headers);if(type.includes('javascript'))h.set('Service-Worker-Allowed','/dashboard/');return new Response(req.method==='HEAD'?null:mountDashboardText(await response.text()),{status:response.status,headers:h});}return response;}const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
  const reply=(body,status=200,type)=>new Response(req.method==='HEAD'?null:typeof body==='string'?body:JSON.stringify(body),{status,headers:{...headers,...(type?{'Content-Type':type}:{})}});
  try{
   if(url.pathname==='/notification-icon.png'&&['GET','HEAD'].includes(req.method))return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(notificationIcon),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600'}});
