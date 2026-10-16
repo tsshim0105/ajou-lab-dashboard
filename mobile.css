@@ -73,3 +73,15 @@
  [data-layout=horizontal] #tabs .tab{flex:1 0 auto;min-height:48px;padding:10px 14px;border:0;border-radius:9px;font-size:16px;white-space:nowrap}
  [data-layout=horizontal] #tabs .tab-icon,[data-layout=horizontal] #tabs .tab-short{display:none}
 }
+
+/* Papers use the available desktop width; long titles/authors wrap rather than widen the sheet. */
+@media(min-width:761px){
+ html[data-active-tab="papers"] .app{width:calc(100% - 28px);max-width:calc(100% - 28px)}
+ .table-wrap:has(.paper-sheet):not(.card-layout){max-height:none;overflow:visible}
+ .table-wrap:not(.card-layout) .paper-sheet{width:100%;min-width:0;table-layout:fixed}
+ .table-wrap:not(.card-layout) .paper-sheet :is(th,td){min-width:0!important;max-width:none!important;white-space:normal!important;overflow-wrap:anywhere;word-break:normal;padding:10px 5px;font-size:clamp(11px,.78vw,14px);line-height:1.5}
+ .table-wrap:not(.card-layout) .paper-sheet :is(th,td):nth-child(3){font-weight:600}
+ .table-wrap:not(.card-layout) .paper-sheet button{min-width:0;max-width:100%;padding:5px 3px;font-size:inherit;white-space:normal}
+}
+@media(max-width:760px){.paper-sheet colgroup{display:none}}
+.card-layout .paper-sheet colgroup{display:none}
