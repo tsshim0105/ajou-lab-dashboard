@@ -87,3 +87,24 @@
 .card-layout .paper-sheet colgroup{display:none}
 
 .desktop-downloads{margin-top:24px}.desktop-downloads h2{margin-top:0}.download-options{display:flex;flex-wrap:wrap;gap:24px;margin:22px 0 12px}.download-options>div{flex:1;min-width:220px}.desktop-download{display:inline-flex;align-items:center;gap:28px;text-decoration:none;padding:12px 20px;border-radius:10px}.desktop-download.hidden{display:none}.download-options button{padding:12px 20px;border-radius:10px}.download-options .muted{margin-top:10px}
+
+/* Shared laboratory identity; Dashboard follows the same type treatment. */
+.dashboard-brand{display:flex;align-items:center;gap:12px;min-width:0;font-family:Arial,'Apple SD Gothic Neo',sans-serif;color:#172b3b}
+.dashboard-logo{width:48px;height:48px;object-fit:contain;flex:none}
+.dashboard-lab-name{font-size:18px;line-height:1.15;letter-spacing:-.6px;white-space:nowrap}
+.dashboard-lab-name span{display:block;color:#587a67;font-weight:500}
+.dashboard-lab-name strong{display:block;font-weight:700}
+.dashboard-wordmark{border-left:1px solid #cdd7db;margin-left:6px;padding-left:20px;font-size:18px;font-weight:700;letter-spacing:-.6px;line-height:1.4;white-space:nowrap}
+[data-theme=dark] .dashboard-brand{color:#e5edf3}[data-theme=dark] .dashboard-lab-name span{color:#aacdb8}[data-theme=dark] .dashboard-wordmark{border-color:#52616c}
+@media(max-width:760px){
+ .header-bar{flex-wrap:wrap;gap:8px}
+ .header-bar>.dashboard-brand{flex:0 0 100%;width:100%;gap:8px}
+ .dashboard-logo{width:36px;height:40px}
+ .dashboard-lab-name,.dashboard-wordmark{font-size:13px;letter-spacing:-.45px}
+ .dashboard-wordmark{margin-left:2px;padding-left:10px}
+ .header-bar>.user-info{width:100%;flex:0 0 100%;display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:6px}
+ .user-info .notification-anchor{flex:none}
+ .user-info .desktop-controls{width:auto;display:flex;flex:none;flex-wrap:nowrap;gap:6px}
+ .user-info .display-icons{display:flex;flex-wrap:nowrap;gap:6px}
+ .user-info .icon-control{width:44px;height:44px;min-height:44px}
+}
