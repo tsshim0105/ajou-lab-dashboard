@@ -112,3 +112,15 @@
  .user-info #notificationToggle::before{content:'🔔';font-size:18px}
  .user-info #notificationCount{position:absolute;top:1px;right:1px;min-width:14px;font-size:10px;line-height:14px;padding:0 3px}
 }
+
+@media(max-width:760px){
+ .group-meeting-heading{margin-bottom:10px}.group-meeting-summary{margin-bottom:18px}
+ .group-meeting-pair{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .group-speaker{padding:12px 10px;border-radius:10px;font-size:12px}
+ .group-speaker-label{font-size:11px;gap:4px;flex-wrap:wrap}
+ .group-speaker h3{font-size:18px;margin:12px 0 8px;overflow-wrap:anywhere}
+ .group-speaker p{font-size:11px;line-height:1.5}
+ #panel{touch-action:pan-y pinch-zoom}
+ .section-swipe-copy{pointer-events:none!important;z-index:5;overflow:hidden;background:var(--surface,#fff)}
+ [data-theme=dark] .section-swipe-copy{background:#1e293b}
+}
