@@ -13,7 +13,14 @@ globalThis.NISMLWebPush=(()=>{
    if(!supported()){notify('이 브라우저에서는 원격 알림을 지원하지 않습니다.',true);return;}
    config=await request('/api/push/config','GET');if(!config.ready)throw Error('원격 알림 서버 설정이 필요합니다.');
    registration=await navigator.serviceWorker.register('/service-worker.js',{scope:'/'});
-   registration=await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>setTimeout(()=>reject(Error('Service Worker activation timeout')),15000))]);
+   // Wait for this registration, not for a worker controlling the slashless /dashboard URL.
+   if(!registration.active)await new Promise((resolve,reject)=>{
+    const worker=registration.installing||registration.waiting;if(!worker){reject(Error('알림 서비스 워커를 찾을 수 없습니다.'));return;}
+    const timeout=setTimeout(()=>finish(Error('알림 준비 시간이 초과됐습니다. 새로고침 후 다시 시도해주세요.')),15000);
+    const changed=()=>{if(worker.state==='activated')finish();else if(worker.state==='redundant')finish(Error('알림 서비스 워커를 활성화하지 못했습니다.'));};
+    function finish(error){clearTimeout(timeout);worker.removeEventListener('statechange',changed);error?reject(error):resolve();}
+    worker.addEventListener('statechange',changed);changed();
+   });
    const subscription=await registration.pushManager.getSubscription();
    if(subscription&&Notification.permission==='granted')await save(subscription);else notify('상단 알림 허용 버튼을 눌러 페이지를 닫아도 받는 원격 알림을 켜세요.');
   }
@@ -32,7 +39,7 @@ globalThis.NISMLWebPush=(()=>{
    const subscription=await registration?.pushManager.getSubscription();if(subscription){await request('/api/push/subscription','DELETE',{endpoint:subscription.endpoint});await subscription.unsubscribe();}
    active=false;notify('이 브라우저의 원격 알림을 껐습니다. 다시 켜려면 상단 알림 버튼을 누르세요.');
   }
-  preparing=prepare().catch(()=>notify('원격 알림 연결을 준비하지 못했습니다. 상단 알림 버튼으로 다시 시도해주세요.',true));
+  preparing=prepare().catch(error=>notify(error.message||'원격 알림 연결을 준비하지 못했습니다. 상단 알림 버튼으로 다시 시도해주세요.',true));
   return {supported,enable,disable,get active(){return active;},retry:()=>{preparing=prepare();return preparing;}};
  }
  return {create};

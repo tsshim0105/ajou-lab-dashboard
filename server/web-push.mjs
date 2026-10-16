@@ -45,10 +45,10 @@ export async function pushTables(DB){
  await DB.prepare('CREATE TABLE IF NOT EXISTS push_subscriptions (endpoint TEXT PRIMARY KEY, account_id TEXT NOT NULL, email TEXT NOT NULL, subscription TEXT NOT NULL, created_at TEXT NOT NULL, last_status INTEGER, last_test INTEGER DEFAULT 0)').run();
  await DB.prepare('CREATE TABLE IF NOT EXISTS push_delivery (event_id TEXT NOT NULL, endpoint TEXT NOT NULL, status TEXT NOT NULL DEFAULT \'pending\', attempts INTEGER NOT NULL DEFAULT 0, retry_at INTEGER NOT NULL DEFAULT 0, locked_until INTEGER NOT NULL DEFAULT 0, token TEXT, PRIMARY KEY(event_id,endpoint))').run();
 }
-export function researchPushPayload(events,origin){
+export function researchPushPayload(events,origin,basePath=''){
  const single=events.length===1,record=events[0],q=single&&record.action!=='삭제'?record.title:'';
  const target=single?'/?view='+encodeURIComponent(record.type)+'&q='+encodeURIComponent(q):'/?inbox=1';
- return {title:'NISML 대시보드',body:single?[record.label,record.title,record.detail].filter(Boolean).join('\n').slice(0,700):events.length+'건의 논문·학회 정보가 변경되었습니다. 알림 센터에서 확인해주세요.',url:new URL(target,origin).href,tag:'nisml-'+record.id,ids:events.map(n=>n.id)};
+ return {title:'NISML 대시보드',body:single?[record.label,record.title,record.detail].filter(Boolean).join('\n').slice(0,700):events.length+'건의 논문·학회 정보가 변경되었습니다. 알림 센터에서 확인해주세요.',url:new URL(basePath+target,origin).href,tag:'nisml-'+record.id,ids:events.map(n=>n.id)};
 }
 export async function dispatchPendingPush(env,state,origin){
  if(!pushConfigured(env))return;
@@ -68,7 +68,7 @@ export async function dispatchPendingPush(env,state,origin){
   await env.DB.batch(statements);
   const claimed=new Set(((await env.DB.prepare('SELECT event_id FROM push_delivery WHERE endpoint=? AND token=?').bind(sub.endpoint,token).all()).results||[]).map(r=>r.event_id));
   const fresh=events.filter(n=>claimed.has(n.id));if(!fresh.length)return;
-  let status=0;try{status=await sendPush(JSON.parse(sub.subscription),researchPushPayload(fresh,origin),env);}catch{}
+  let status=0;try{status=await sendPush(JSON.parse(sub.subscription),researchPushPayload(fresh,origin,env.DASHBOARD_BASE_PATH||''),env);}catch{}
   await env.DB.prepare('UPDATE push_subscriptions SET last_status=? WHERE endpoint=?').bind(status,sub.endpoint).run();
   if(status===404||status===410){await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(sub.endpoint).run();}
   const done=status>=200&&status<300,transient=status===0||status===429||status>=500;

@@ -1,3 +1,4 @@
+import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
 import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 import {pushConfigured,pushTables,validateSubscription,sendPush,dispatchPendingPush} from './web-push.mjs';
@@ -160,7 +161,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     const sub=await env.DB.prepare('SELECT * FROM push_subscriptions WHERE endpoint=? AND account_id=?').bind(input.endpoint,id).first();if(!sub)return reply({error:'이 계정의 기기 구독이 없습니다.'},404);
     if(Date.now()-(sub.last_test||0)<10000)return reply({error:'잠시 후 다시 테스트해주세요.'},429);
     await env.DB.prepare('UPDATE push_subscriptions SET last_test=? WHERE endpoint=?').bind(Date.now(),sub.endpoint).run();
-    let status=0;try{status=await sendPush(JSON.parse(sub.subscription),{title:'NISML 대시보드',body:'연구실 원격 알림 설정이 완료되었습니다.',url:url.origin+'/',tag:'nisml-push-test',ids:[]},env);}catch{}
+    let status=0;try{status=await sendPush(JSON.parse(sub.subscription),{title:'NISML 대시보드',body:'연구실 원격 알림 설정이 완료되었습니다.',url:url.origin+(env.DASHBOARD_BASE_PATH||'')+'/',tag:'nisml-push-test',ids:[]},env);}catch{}
     await env.DB.prepare('UPDATE push_subscriptions SET last_status=? WHERE endpoint=?').bind(status,sub.endpoint).run();
     if(status===404||status===410)await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint=?').bind(sub.endpoint).run();
     return reply(status>=200&&status<300?{accepted:true}:{error:'Push 서비스가 알림을 접수하지 못했습니다. 다시 연결해 주세요.',status},status>=200&&status<300?200:502);
@@ -212,7 +213,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   flushPush();
+   await flushPush();
    if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
   }
   if(read&&url.pathname==='/_mobile-preview'){
@@ -221,8 +222,8 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    return reply(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모바일 화면 검증</title><style>body{margin:0;background:#edf1f5;display:grid;place-items:start center;padding:20px}iframe{border:0;border-radius:16px;background:white;box-shadow:0 4px 30px #0002}</style></head><body><iframe title="모바일 대시보드" src="/" width="${width}" height="${height}"></iframe></body></html>`,200,'text/html; charset=utf-8');
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&['tsshim@ajou.ac.kr','soneunji2002@ajou.ac.kr'].includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students','/api/research','/api/reagents','/api/shared'].includes(url.pathname)){
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
@@ -241,10 +242,11 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    }
    else if(url.pathname==='/api/research'){const next=applyResearchChanges(state.data,input.changes);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
+   else if(url.pathname==='/api/homepage-admins'){state.homepageAdmins=updateHomepageManagers(state,input.emails,env.ADMIN_EMAIL);}
    else {if(!Array.isArray(input.students)||input.students.length>100||input.students.some(s=>typeof s!=='string'||!/^\S+@\S+\.\S+$/.test(s)||s.length>254))return reply({error:'이메일 목록을 확인해주세요.'},400);state.students=[...new Set(input.students.map(s=>s.trim().toLowerCase()))];}
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
-   flushPush();
+   await flushPush();
    return reply({version:row.version+1,notifications:state.notifications||[]});
   }
   return reply({error:'페이지를 찾을 수 없습니다.'},404);
