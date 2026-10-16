@@ -12,5 +12,5 @@ export async function gatewayRequest(req,env){
  return new Request(input.origin+input.path,{method:input.method,headers,...(!read?{body:input.body}:{})});
 }
 export function mountDashboardText(text){
- return text.replaceAll('/api/','/dashboard/api/').replaceAll('/service-worker.js','/dashboard/service-worker.js').replaceAll('/notification-icon.png','/dashboard/notification-icon.png').replaceAll("scope:'/'","scope:'/dashboard/'").replaceAll("new URL('/',self.location.origin)","new URL('/dashboard/',self.location.origin)").replaceAll('src="/"','src="/dashboard/"');
+ return text.replaceAll('/api/','/dashboard/api/').replaceAll('/service-worker.js','/dashboard/service-worker.js').replaceAll('/notification-icon.png','/dashboard/notification-icon.png').replaceAll("scope:'/'","scope:'/dashboard/'").replaceAll("new URL('/',self.location.origin)","new URL('/dashboard/',self.location.origin)").replaceAll('src="/"','src="/dashboard/"').replaceAll('if(candidate.origin===self.location.origin)target=candidate',"if(candidate.origin===self.location.origin){if(candidate.pathname==='/')candidate.pathname='/dashboard/';target=candidate}").replaceAll("new URL(client.url).origin===self.location.origin","new URL(client.url).origin===self.location.origin&&new URL(client.url).pathname.startsWith('/dashboard')");
 }
