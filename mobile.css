@@ -85,3 +85,5 @@
 }
 @media(max-width:760px){.paper-sheet colgroup{display:none}}
 .card-layout .paper-sheet colgroup{display:none}
+
+.desktop-downloads{margin-top:24px}.desktop-downloads h2{margin-top:0}.download-options{display:flex;flex-wrap:wrap;gap:24px;margin:22px 0 12px}.download-options>div{flex:1;min-width:220px}.desktop-download{display:inline-flex;align-items:center;gap:28px;text-decoration:none;padding:12px 20px;border-radius:10px}.desktop-download.hidden{display:none}.download-options button{padding:12px 20px;border-radius:10px}.download-options .muted{margin-top:10px}
