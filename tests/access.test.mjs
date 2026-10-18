@@ -258,3 +258,14 @@ test('game night is shared editable content with validation and private-data pre
  assert.equal((await worker.fetch(req('unapproved@example.test','/api/game-night','PUT',{version:saved.version,gameNight}),env)).status,403);
  assert.equal((await worker.fetch(req(null,'/api/game-night','PUT',{version:saved.version,gameNight}),env)).status,401);
 });
+
+test('monthly Game Night archive preserves seasons and validates month/date boundaries',async()=>{
+ const {worker,env}=fixture();const before=await(await worker.fetch(req(OWNER),env)).json();const gameNights=[{month:'2026-06',date:'2026-06-30',game:'Spring'},{month:'2026-07',date:'',game:'Summer'},{month:'2027-01',date:'2027-01-12',game:'New year'}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/game-nights','PUT',{version:before.version,gameNights}),env)).status,200);
+ const saved=await(await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data.gameNights,gameNights);assert.deepEqual(saved.data.funds,before.data.funds);
+ assert.deepEqual((await(await worker.fetch(req('student@example.test'),env)).json()).data.gameNights,gameNights);
+ for(const rows of [[{month:'2026-06',date:'2026-07-01',game:'Bad'}],[gameNights[0],gameNights[0]],[{month:'2026-13',date:'',game:'Bad'}]])assert.equal((await worker.fetch(req(OWNER,'/api/game-nights','PUT',{version:saved.version,gameNights:rows}),env)).status,400);
+ assert.equal((await worker.fetch(req(OWNER,'/api/game-nights','PUT',{version:before.version,gameNights}),env)).status,409);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/game-nights','PUT',{version:saved.version,gameNights}),env)).status,403);
+ assert.equal((await worker.fetch(req(null,'/api/game-nights','PUT',{version:saved.version,gameNights}),env)).status,401);
+});

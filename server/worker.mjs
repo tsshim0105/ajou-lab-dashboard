@@ -3,7 +3,7 @@ import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,gameNight:data.gameNight};}
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,gameNight:data.gameNight,gameNights:data.gameNights};}
 export function validateGroupMeetings(rows){
  if(!Array.isArray(rows)||rows.length>1000)throw Error('일정은 1,000개까지 저장할 수 있습니다.');
  const ids=new Set();return rows.map(r=>{
@@ -20,7 +20,12 @@ export function validateGameNight(value){
  if(value.date&&(!/^\d{4}-\d{2}-\d{2}$/.test(value.date)||!Number.isFinite(Date.parse(value.date))||new Date(value.date).toISOString().slice(0,10)!==value.date||value.date<'2000-01-01'||value.date>'2200-12-31'))throw Error('날짜를 확인해주세요.');
  return {date:value.date,game:value.game.trim()};
 }
+export function validateGameNights(rows){
+ if(!Array.isArray(rows)||rows.length>2412)throw Error('게임나잇 기록을 확인해주세요.');const months=new Set();
+ return rows.map(r=>{if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).some(k=>!['month','date','game'].includes(k))||typeof r.month!=='string'||!/^\d{4}-(0[1-9]|1[0-2])$/.test(r.month)||r.month<'2000-01'||r.month>'2200-12'||months.has(r.month))throw Error('월별 기록은 한 개씩 입력해주세요.');months.add(r.month);const value=validateGameNight({date:r.date,game:r.game});if(value.date&&!value.date.startsWith(r.month+'-'))throw Error('해당 월의 날짜를 입력해주세요.');return {month:r.month,...value};}).sort((a,b)=>a.month.localeCompare(b.month));
+}
 export function validateData(d){
+ if(d?.gameNights!==undefined)d.gameNights=validateGameNights(d.gameNights);
  if(d?.gameNight!==undefined)d.gameNight=validateGameNight(d.gameNight);
  if(d?.groupMeetings!==undefined)d.groupMeetings=validateGroupMeetings(d.groupMeetings);
  if(!d||typeof d!=='object')throw Error('자료 형식이 올바르지 않습니다.');
@@ -204,12 +209,13 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night'].includes(url.pathname)){
-   if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
+   if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
-   if(url.pathname==='/api/game-night'){if(Object.keys(input).some(k=>!['version','gameNight'].includes(k)))throw Error('게임나잇 항목만 수정할 수 있습니다.');state.data.gameNight=validateGameNight(input.gameNight);}
+   if(url.pathname==='/api/game-nights'){if(Object.keys(input).some(k=>!['version','gameNights'].includes(k)))throw Error('게임나잇 기록만 수정할 수 있습니다.');state.data.gameNights=validateGameNights(input.gameNights);}
+   else if(url.pathname==='/api/game-night'){if(Object.keys(input).some(k=>!['version','gameNight'].includes(k)))throw Error('게임나잇 항목만 수정할 수 있습니다.');state.data.gameNight=validateGameNight(input.gameNight);}
    else if(url.pathname==='/api/group-meetings'){if(Object.keys(input).some(k=>!['version','groupMeetings'].includes(k)))throw Error('그룹미팅 항목만 수정할 수 있습니다.');state.data.groupMeetings=validateGroupMeetings(input.groupMeetings);}
    else if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/reagents'){
