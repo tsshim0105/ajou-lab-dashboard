@@ -11,7 +11,7 @@ export function validateGroupMeetings(rows){
   for(const k of ['id','date','time','presenter','kind','location','note'])if(typeof r[k]!=='string'||r[k].length>({note:1000,presenter:300,location:300}[k]||100))throw Error('그룹미팅 입력값을 확인해주세요.');
   if(!r.id||ids.has(r.id))throw Error('일정 식별자가 중복되었습니다.');ids.add(r.id);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||!Number.isFinite(Date.parse(r.date))||new Date(r.date).toISOString().slice(0,10)!==r.date||r.date<'2000-01-01'||r.date>'2200-12-31')throw Error('날짜를 확인해주세요.');
-  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time)||!r.presenter.trim()||!['랩세미나','논문발표','특별 미팅'].includes(r.kind))throw Error('시간, 발표자, 발표 종류를 확인해주세요.');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time)||!r.presenter.trim()||!['랩세미나','논문발표'].includes(r.kind))throw Error('시간, 발표자, 발표 종류를 확인해주세요.');
   return {...r,presenter:r.presenter.trim(),location:r.location.trim(),note:r.note.trim()};
  }).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 }

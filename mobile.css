@@ -137,3 +137,5 @@
 }
 
 .meeting-sheet-wrap{overflow-x:auto;border:1px solid #dce4ee;border-radius:8px}.meeting-sheet{width:100%;border-collapse:collapse;table-layout:fixed}.meeting-sheet th,.meeting-sheet td{padding:10px 6px;border-bottom:1px solid #dce4ee;text-align:left}.meeting-sheet th{font-size:13px;background:var(--tint,#f1f5f9)}.meeting-sheet input,.meeting-sheet select{width:100%;padding:8px 5px;font-size:14px}.meeting-sheet th:first-child{width:150px}.meeting-sheet th:nth-child(2){width:140px}.meeting-sheet th:nth-child(4){width:115px}.meeting-sheet th:nth-child(3){width:23%}@media(max-width:760px){.meeting-sheet{min-width:850px}.meeting-sheet th:nth-child(3){width:190px}.group-schedule .toolbar{align-items:flex-start}.group-schedule .toolbar>div{display:flex;gap:6px;flex-wrap:wrap}}
+
+.group-schedule>.toolbar:first-child{justify-content:flex-end}@media(max-width:760px){.meeting-sheet{min-width:740px}}
