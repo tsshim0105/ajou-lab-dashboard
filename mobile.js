@@ -18,7 +18,7 @@ function openMobileMore(){
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
  const reset=()=>{panel.style.transform='';panel.style.willChange='';};
  document.addEventListener('touchstart',e=>{
-  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||e.target.closest('input,textarea,select,[contenteditable],.notification-center'))return;
+  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
   const t=e.touches[0];
   gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
  },{passive:true,capture:true});
@@ -29,6 +29,7 @@ function openMobileMore(){
   if(gesture.axis!=='x')return;
   const scroller=gesture.scroller;
   if(scroller&&scroller.scrollWidth>scroller.clientWidth+2&&((dx>0&&scroller.scrollLeft>1)||(dx<0&&scroller.scrollLeft+scroller.clientWidth<scroller.scrollWidth-1))){gesture=null;reset();return;}
+  if(e.target.closest('.group-schedule,.game-night-editor')&&document.activeElement?.matches('input,textarea,select'))document.activeElement.blur();
   e.preventDefault();suppressClickUntil=performance.now()+500;
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),index=keys.indexOf(tab),next=keys[index+(dx<0?1:-1)];
   gesture.dx=next?dx:dx*.2;panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
