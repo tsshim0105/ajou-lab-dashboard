@@ -234,3 +234,16 @@ test('shared content parity lets students add/delete/import reagents and manage 
  assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:3,data:student.data}),env)).status,200);
  saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].id,'import-r');assert.deepEqual(saved.data.funds,original.data.funds);assert.deepEqual(saved.data.payroll,original.data.payroll);
 });
+
+test('group meeting sheet saves for approved members, rejects invalid and stale changes, and preserves private data',async()=>{
+ const {worker,env}=fixture();const before=await(await worker.fetch(req(OWNER),env)).json();
+ const meetings=[{id:'meeting-1',date:'2026-11-03',time:'14:30',presenter:'Student',kind:'랩세미나',location:'Room',note:'Topic'}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/group-meetings','PUT',{version:before.version,groupMeetings:meetings}),env)).status,200);
+ const saved=await(await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data.groupMeetings,meetings);assert.deepEqual(saved.data.funds,before.data.funds);assert.deepEqual(saved.data.payroll,before.data.payroll);
+ const student=await(await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.data.groupMeetings,meetings);assert.deepEqual(student.data.funds,[]);
+ assert.equal((await worker.fetch(req('student@example.test','/api/group-meetings','PUT',{version:before.version,groupMeetings:meetings}),env)).status,409);
+ for(const patch of [{date:'2026-02-30'},{time:'25:00'},{presenter:''},{kind:'invalid'}])assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',{version:saved.version,groupMeetings:[{...meetings[0],...patch}]}),env)).status,400);
+ assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',{version:saved.version,groupMeetings:meetings,data:{funds:[]}}),env)).status,400);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/group-meetings','PUT',{version:saved.version,groupMeetings:meetings}),env)).status,403);
+ assert.equal((await worker.fetch(req(null,'/api/group-meetings','PUT',{version:saved.version,groupMeetings:meetings}),env)).status,401);
+});

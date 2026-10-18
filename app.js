@@ -350,7 +350,7 @@ const groupMeetingDates=[
  ['2027-02-18','랩세미나','김혜림 · 이윤서 · 김태희']
 ];
 function upcomingGroupMeetings(now=new Date()){
- return groupMeetingDates.filter(([date])=>Date.parse(date+'T15:00:00+09:00')>now.getTime());
+ return savedGroupMeetings().map(r=>[r.date,r.kind,r.presenter,r.time,r.location,r.note]).filter(r=>Date.parse(r[0]+'T'+r[3]+':00+09:00')>now.getTime());
 }
 function groupMeetingCountdown(date,now=new Date()){
  const parts=new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
@@ -361,17 +361,30 @@ function groupMeetingCountdown(date,now=new Date()){
 }
 function groupMeetingCards(now=new Date()){
  const upcoming=upcomingGroupMeetings(now);
- return `<section aria-label="그룹미팅 일정" class="group-meeting-summary"><div class="group-meeting-heading"><h2>그룹미팅 일정</h2></div><div class="group-meeting-pair">${[0,1].map(i=>{const r=upcoming[i];return `<article class="group-speaker ${i===0?'group-speaker-next':''}"><div class="group-speaker-label"><span>${i===0?'다음':'다다음'} 그룹미팅</span>${r?`<span>${esc(groupMeetingCountdown(r[0],now))}</span>`:''}</div>${r?`<h3>${esc(r[2])}</h3><div>${esc(r[0].replaceAll('-','.'))} 목 · 15:00</div><p class="muted">${esc(r[1])} · ${r[1]==='논문발표'?'논문당 20분 미만':'발표 30분 미만'}</p>`:'<h3>등록된 일정 없음</h3><p class="muted">새로운 일정이 등록되면 표시됩니다.</p>'}</article>`;}).join('')}</div></section>`;
+ return `<section aria-label="그룹미팅 일정" class="group-meeting-summary"><div class="group-meeting-heading"><h2>그룹미팅 일정</h2></div><div class="group-meeting-pair">${[0,1].map(i=>{const r=upcoming[i];return `<article class="group-speaker ${i===0?'group-speaker-next':''}"><div class="group-speaker-label"><span>${i===0?'다음':'다다음'} 그룹미팅</span>${r?`<span>${esc(groupMeetingCountdown(r[0],now))}</span>`:''}</div>${r?`<h3>${esc(r[2])}</h3><div>${esc(r[0].replaceAll('-','.'))} ${groupWeekday(r[0])} · ${esc(r[3])}</div><p class="muted">${esc(r[1])} · ${r[1]==='논문발표'?'논문당 20분 미만':'발표 30분 미만'}</p>`:'<h3>등록된 일정 없음</h3><p class="muted">새로운 일정이 등록되면 표시됩니다.</p>'}</article>`;}).join('')}</div></section>`;
 }
-function groupMeetingSchedule(now=new Date()){
- const rows=upcomingGroupMeetings(now);
- return `<section class="section-card group-schedule"><div class="group-meeting-heading"><div><h2>앞으로의 그룹미팅</h2><p class="muted">2026–2027 · 격주 목요일 15:00 (한국 시간)</p></div>${badge('남은 미팅 '+rows.length+'회')}</div>${rows.length?table(['날짜','유형','발표자'],rows.map((r,i)=>[esc(r[0].replaceAll('-','.'))+(i<2?`<div class="muted">${i===0?'다음 미팅':'다다음 미팅'}</div>`:''),esc(r[1]),esc(r[2])]),['nowrap','',''],rows.map((r,i)=>i===0?'group-next-row':'')):'<div class="empty">등록된 그룹미팅 일정이 모두 지났습니다.</div>'}<p class="muted group-schedule-foot">논문발표 20분 미만 / 논문 · 랩세미나 30분 미만 / 발표<br>시작 시간이 지난 미팅은 자동으로 숨겨집니다.</p></section>`;
+let groupDraft=null,groupTerm='';
+function savedGroupMeetings(){return (data.groupMeetings===undefined?groupMeetingDates.map((r,i)=>({id:'initial-'+i,date:r[0],kind:r[1],presenter:r[2],time:'15:00',location:'',note:''})):data.groupMeetings).slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));}
+function groupWeekday(date){return ['일','월','화','수','목','금','토'][new Date(date+'T12:00:00+09:00').getUTCDay()];}
+function meetingTerm(date){const y=Number(date.slice(0,4)),m=Number(date.slice(5,7));return m<=2?(y-1)+'-2':y+'-'+(m<=8?'1':'2');}
+function groupMeetingSchedule(){
+ const rows=groupDraft||savedGroupMeetings(),today=calendarDay('Asia/Seoul',new Date());if(!groupTerm)groupTerm=meetingTerm(today);
+ const terms=[...new Set([groupTerm,meetingTerm(today),...rows.map(r=>meetingTerm(r.date))])].sort().reverse(),shown=rows.filter(r=>meetingTerm(r.date)===groupTerm);
+ return `<section class="group-schedule"><div class="toolbar"><label>학기 <select id="groupTerm">${terms.map(t=>`<option value="${t}" ${t===groupTerm?'selected':''}>${t.split('-')[0]}학년도 ${t.split('-')[1]}학기</option>`).join('')}</select></label><div><button class="secondary" data-meeting-add>＋ 일정 행 추가</button> <button class="primary" data-meeting-save ${offline||studentPreview?'disabled':''}>변경 저장</button></div></div><p class="muted">날짜·시간은 한국 시간 기준입니다. 1학기는 3–8월, 2학기는 9–다음 해 2월입니다.</p><div class="meeting-sheet-wrap"><table class="meeting-sheet"><thead><tr><th>날짜</th><th>시간</th><th>발표자</th><th>종류</th><th>장소</th><th>메모</th></tr></thead><tbody>${shown.map(r=>`<tr data-meeting-id="${esc(r.id)}">${['date','time','presenter','kind','location','note'].map(k=>`<td>${k==='kind'?`<select data-meeting-field="kind" aria-label="발표 종류">${['랩세미나','논문발표','특별 미팅'].map(v=>`<option ${v===r.kind?'selected':''}>${v}</option>`).join('')}</select>`:`<input data-meeting-field="${k}" aria-label="${{date:'날짜',time:'시간',presenter:'발표자',location:'장소',note:'메모'}[k]}" type="${['date','time'].includes(k)?k:'text'}" value="${esc(r[k])}" ${['date','time','presenter'].includes(k)?'required':''} ${k==='date'?'min="2000-01-01" max="2200-12-31"':''}>`}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${!shown.length?'<p class="empty">이 학기에 등록된 일정이 없습니다. 일정 행을 추가해주세요.</p>':''}<div class="toolbar"><span id="meetingSaveStatus" role="status">${groupDraft?'저장하지 않은 변경사항이 있습니다.':'일정을 수정한 뒤 변경 저장을 눌러주세요.'}</span><button class="secondary" data-meeting-cancel>변경 취소</button></div></section>`;
 }
+function captureGroupDraft(){if(!groupDraft)groupDraft=structuredClone(savedGroupMeetings());document.querySelectorAll('[data-meeting-id]').forEach(row=>{const r=groupDraft.find(r=>r.id===row.dataset.meetingId);if(r)row.querySelectorAll('[data-meeting-field]').forEach(input=>r[input.dataset.meetingField]=input.value);});}
+document.addEventListener('input',e=>{if(e.target.matches('[data-meeting-field]')){captureGroupDraft();$('meetingSaveStatus').textContent='저장하지 않은 변경사항이 있습니다.';}});
+document.addEventListener('change',e=>{if(e.target.id==='groupTerm'){if(groupDraft)captureGroupDraft();groupTerm=e.target.value;render();}});
+document.addEventListener('click',async e=>{
+ if(e.target.closest('[data-meeting-add]')){captureGroupDraft();const [y,t]=groupTerm.split('-');groupDraft.push({id:crypto.randomUUID(),date:y+(t==='1'?'-03-01':'-09-01'),time:'15:00',presenter:'',kind:'랩세미나',location:'',note:''});render();const inputs=document.querySelectorAll('[data-meeting-field="presenter"]');inputs[inputs.length-1]?.focus();}
+ if(e.target.closest('[data-meeting-cancel]')){if(groupDraft&&!confirm('저장하지 않은 일정 변경을 취소할까요?'))return;groupDraft=null;render();}
+ if(e.target.closest('[data-meeting-save]')){if(busy||offline||studentPreview)return;const invalid=[...document.querySelectorAll('[data-meeting-field]')].find(i=>!i.checkValidity());if(invalid){invalid.reportValidity();return;}captureGroupDraft();busy=true;const button=e.target.closest('button');button.disabled=true;try{await put('/api/group-meetings',{groupMeetings:groupDraft});data.groupMeetings=structuredClone(groupDraft);groupDraft=null;render();$('meetingSaveStatus').textContent='일정을 저장했습니다. 현황 카드에도 반영됩니다.';}catch(error){$('meetingSaveStatus').textContent=error.message;}finally{busy=false;button.disabled=false;}}
+});
 document.addEventListener('click',event=>{if(event.target.closest('[data-group-schedule]')){tab='groupMeetings';render();}});
 let groupMeetingUpcomingKey=upcomingGroupMeetings().map(r=>r[0]).join(',');
 function refreshGroupMeetingSchedule(){
  const key=upcomingGroupMeetings().map(r=>r[0]).join(',')+'|'+new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date());
- if(key!==groupMeetingUpcomingKey){groupMeetingUpcomingKey=key;if(['home','groupMeetings'].includes(tab)&&!busy)render();}
+ if(key!==groupMeetingUpcomingKey){groupMeetingUpcomingKey=key;if(['home','groupMeetings'].includes(tab)&&!busy&&!groupDraft)render();}
 }
 setInterval(refreshGroupMeetingSchedule,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGroupMeetingSchedule();});

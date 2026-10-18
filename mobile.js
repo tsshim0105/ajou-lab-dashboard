@@ -20,7 +20,7 @@ function openMobileMore(){
  document.addEventListener('touchstart',e=>{
   if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||e.target.closest('input,textarea,select,[contenteditable],.notification-center'))return;
   const t=e.touches[0];
-  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,scroller:e.target.closest('.table-wrap,#tabs')};
+  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
  },{passive:true,capture:true});
  document.addEventListener('touchmove',e=>{
   if(!gesture)return;if(e.touches.length!==1){gesture=null;reset();return;}

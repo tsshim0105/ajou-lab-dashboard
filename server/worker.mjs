@@ -3,8 +3,20 @@ import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[]};}
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings};}
+export function validateGroupMeetings(rows){
+ if(!Array.isArray(rows)||rows.length>1000)throw Error('일정은 1,000개까지 저장할 수 있습니다.');
+ const ids=new Set();return rows.map(r=>{
+  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).some(k=>!['id','date','time','presenter','kind','location','note'].includes(k)))throw Error('그룹미팅 항목을 확인해주세요.');
+  for(const k of ['id','date','time','presenter','kind','location','note'])if(typeof r[k]!=='string'||r[k].length>({note:1000,presenter:300,location:300}[k]||100))throw Error('그룹미팅 입력값을 확인해주세요.');
+  if(!r.id||ids.has(r.id))throw Error('일정 식별자가 중복되었습니다.');ids.add(r.id);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||!Number.isFinite(Date.parse(r.date))||new Date(r.date).toISOString().slice(0,10)!==r.date||r.date<'2000-01-01'||r.date>'2200-12-31')throw Error('날짜를 확인해주세요.');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time)||!r.presenter.trim()||!['랩세미나','논문발표','특별 미팅'].includes(r.kind))throw Error('시간, 발표자, 발표 종류를 확인해주세요.');
+  return {...r,presenter:r.presenter.trim(),location:r.location.trim(),note:r.note.trim()};
+ }).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+}
 export function validateData(d){
+ if(d?.groupMeetings!==undefined)d.groupMeetings=validateGroupMeetings(d.groupMeetings);
  if(!d||typeof d!=='object')throw Error('자료 형식이 올바르지 않습니다.');
  if(d.reagents!==undefined){
   if(!Array.isArray(d.reagents)||d.reagents.length>20000)throw Error('시약 목록을 확인해주세요.');
@@ -186,12 +198,13 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
-  if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared'].includes(url.pathname)){
-   if(!admin&&!['/api/research','/api/reagents','/api/shared'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
+  if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings'].includes(url.pathname)){
+   if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
-   if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
+   if(url.pathname==='/api/group-meetings'){if(Object.keys(input).some(k=>!['version','groupMeetings'].includes(k)))throw Error('그룹미팅 항목만 수정할 수 있습니다.');state.data.groupMeetings=validateGroupMeetings(input.groupMeetings);}
+   else if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/reagents'){
     const fields=['name','unit','capacity','quantity','location','note'];
     if(!Array.isArray(input.changes)||!input.changes.length||input.changes.length>50||Object.keys(input).some(k=>!['version','changes'].includes(k)))throw Error('시약 수정 항목을 확인해주세요.');
