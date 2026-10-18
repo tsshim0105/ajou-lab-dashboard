@@ -219,3 +219,5 @@
  :is([data-active-tab=papers],[data-active-tab=conferences]) #reset{grid-column:3;grid-row:1;padding:8px;min-width:0}
  :is([data-active-tab=papers],[data-active-tab=conferences]) #filters :is(input,select,button){height:44px;box-sizing:border-box}
 }
+.research-title-label{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;min-width:0}.research-title-label h1{margin:0}.paper-title-note{font-size:12px;font-weight:400;color:var(--muted,#64748b)}.research-title-actions .view-controls{margin:0;padding:0;display:flex;flex:none}.research-title-actions .layout-options{display:flex;gap:5px}.research-title-actions .layout-options button{white-space:nowrap}
+@media(max-width:760px){.research-title-label{gap:4px 8px}.paper-title-note{font-size:11px}.research-title-actions{width:100%;justify-content:flex-start}.research-title-actions .view-controls{width:auto}.research-title-actions .layout-options button{padding:8px;font-size:12px}}
