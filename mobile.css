@@ -249,3 +249,7 @@
  .game-night-editor>.game-season-toolbar>div{flex-wrap:nowrap}
  .game-night-editor>.game-season-board{grid-column:1/-1;margin-top:0}
 }
+
+/* Tech Minimal typography is scoped to navigation; icon glyphs keep their font. */
+#tabs .tab,.main-menu-item,.mobile-menu-entry{font-family:"IBM Plex Sans KR","Noto Sans KR","Malgun Gothic",sans-serif;font-weight:500;letter-spacing:-.45px}
+#tabs .tab.active,.main-menu-item[aria-current=page],.mobile-menu-entry[aria-current=page]{font-weight:700}
