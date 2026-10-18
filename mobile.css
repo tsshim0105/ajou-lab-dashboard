@@ -249,7 +249,16 @@
  .game-night-editor>.game-season-toolbar>div{flex-wrap:nowrap}
  .game-night-editor>.game-season-board{grid-column:1/-1;margin-top:0}
 }
-
-/* Tech Minimal typography is scoped to navigation; icon glyphs keep their font. */
-#tabs .tab,.main-menu-item,.mobile-menu-entry{font-family:"IBM Plex Sans KR","Noto Sans KR","Malgun Gothic",sans-serif;font-weight:500;letter-spacing:-.45px}
-#tabs .tab.active,.main-menu-item[aria-current=page],.mobile-menu-entry[aria-current=page]{font-weight:700}
+.archive-mobile-actions{display:none}
+@media(max-width:760px){
+ .paper-archive-list{gap:16px}.paper-archive{border-radius:16px;border-color:#dfe8e9;box-shadow:0 5px 18px #183b5006;color:#203546;background:#fff}
+ .archive-main{padding:19px 20px 18px}.archive-meta{gap:9px;font-size:11px;margin-bottom:14px;color:#637987}.archive-sci{margin-left:auto;padding:4px 7px;border-radius:5px;background:#e8f2ec;color:#386e55;font-weight:600}
+ .paper-archive h2{font-size:21px;line-height:1.38;letter-spacing:-.45px;margin:0 0 10px;font-weight:700;overflow-wrap:break-word}.archive-journal{font-size:13px;line-height:1.5;margin:0 0 18px;color:#597286}
+ .archive-authors{gap:12px}.archive-authors>div{grid-template-columns:64px minmax(0,1fr);gap:7px}.paper-archive .archive-authors dt{font-size:11px;line-height:1.5;color:#6a8290;padding-top:2px}.archive-authors dd{font-size:13px;line-height:1.5}
+ .archive-main>.archive-edit{display:none}.archive-facts{padding:17px 20px;gap:13px 18px;background:#f5f8fa;border-top:1px solid #e5ecef;grid-template-columns:repeat(2,minmax(0,1fr))}.archive-facts>div{min-width:0}.archive-facts>div:nth-child(5),.archive-facts>div:nth-child(6){grid-column:auto}.paper-archive .archive-facts dt{font-size:11px;color:#6a8190;margin-bottom:4px}.archive-facts dd{font-size:13px;line-height:1.4}
+ .archive-mobile-actions{display:flex;justify-content:flex-end;padding:0 18px 14px;background:#f5f8fa}.archive-mobile-actions button{font-size:12px;min-height:44px;padding:8px 12px;border:1px solid #cbdce8;border-radius:7px;background:#fff;color:#346d9b}
+ .paper-archive.lab-paper .archive-main{background:#fff}.paper-archive.lab-paper{border-top:3px solid #d1e8da}.paper-archive.lab-paper .archive-sci{background:#e8f2ec;color:#386e55}
+ [data-theme=dark] .paper-archive{background:#18232d;color:#edf3f8;border-color:#3a4b59;box-shadow:none}[data-theme=dark] .paper-archive.lab-paper{border-top-color:#527e68}[data-theme=dark] .paper-archive.lab-paper .archive-main{background:#18232d}
+ [data-theme=dark] .archive-facts,[data-theme=dark] .archive-mobile-actions{background:#22313e;border-color:#3a4b59}[data-theme=dark] .paper-archive dt,[data-theme=dark] .archive-meta,[data-theme=dark] .archive-journal{color:#a5b8c8}[data-theme=dark] .archive-mobile-actions button{background:#18232d;color:#b2d1e8;border-color:#4b6579}[data-theme=dark] .archive-sci,[data-theme=dark] .paper-archive.lab-paper .archive-sci{background:#294738;color:#b0e7cc}
+}
+@media(max-width:760px){.archive-mobile-actions .edit-action{background:#fff!important;color:#346d9b!important}[data-theme=dark] .archive-mobile-actions .edit-action{background:#18232d!important;color:#b2d1e8!important}}
