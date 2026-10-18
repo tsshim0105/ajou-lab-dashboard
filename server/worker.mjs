@@ -1,3 +1,4 @@
+import {recordScheduleAdditions,recordScheduleDay} from './schedule-notifications.mjs';
 import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
 import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
@@ -192,6 +193,11 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    return reply({preferences:state.preferences[email],previousVersion:row.version,version:row.version+1});
   }
   if(read&&['/api/notifications','/api/data'].includes(url.pathname)){
+   if(recordScheduleDay(state)){
+    const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
+    if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
+    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+   }
    const snapshot=(meetingEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
    if(meetingEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot)){
     if(state.meetingNotificationSnapshot)recordNotifications(state,state.meetingNotificationSnapshot,snapshot,'meetingInfo','자동 갱신');
@@ -214,6 +220,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
    while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>2500000){await reader.cancel();return reply({error:'자료가 너무 큽니다.'},413);}parts.push(value);}
    const input=JSON.parse(await new Blob(parts).text());if(input.version!==row.version)return reply({error:'다른 곳에서 자료가 변경되었습니다. 새로고침 후 다시 시도해주세요.'},409);
+   const beforeSchedules=structuredClone(state.data);
    if(url.pathname==='/api/game-nights'){if(Object.keys(input).some(k=>!['version','gameNights'].includes(k)))throw Error('게임나잇 기록만 수정할 수 있습니다.');state.data.gameNights=validateGameNights(input.gameNights);}
    else if(url.pathname==='/api/game-night'){if(Object.keys(input).some(k=>!['version','gameNight'].includes(k)))throw Error('게임나잇 항목만 수정할 수 있습니다.');state.data.gameNight=validateGameNight(input.gameNight);}
    else if(url.pathname==='/api/group-meetings'){if(Object.keys(input).some(k=>!['version','groupMeetings'].includes(k)))throw Error('그룹미팅 항목만 수정할 수 있습니다.');state.data.groupMeetings=validateGroupMeetings(input.groupMeetings);}
@@ -233,6 +240,8 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    else if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
    else if(url.pathname==='/api/homepage-admins'){state.homepageAdmins=updateHomepageManagers(state,input.emails,env.ADMIN_EMAIL);}
    else {if(!Array.isArray(input.students)||input.students.length>100||input.students.some(s=>typeof s!=='string'||!/^\S+@\S+\.\S+$/.test(s)||s.length>254))return reply({error:'이메일 목록을 확인해주세요.'},400);state.students=[...new Set(input.students.map(s=>s.trim().toLowerCase()))];}
+   recordScheduleAdditions(state,beforeSchedules,state.data,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');
+   recordScheduleDay(state);
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
    return reply({version:row.version+1,notifications:state.notifications||[]});

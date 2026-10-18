@@ -269,3 +269,10 @@ test('monthly Game Night archive preserves seasons and validates month/date boun
  assert.equal((await worker.fetch(req('unapproved@example.test','/api/game-nights','PUT',{version:saved.version,gameNights}),env)).status,403);
  assert.equal((await worker.fetch(req(null,'/api/game-nights','PUT',{version:saved.version,gameNights}),env)).status,401);
 });
+test('schedule registration notices are shared by owner and students including the author',async()=>{
+ const {worker,env}=fixture();const initial=await (await worker.fetch(req(OWNER),env)).json();
+ const response=await worker.fetch(req('student@example.test','/api/game-nights','PUT',{version:initial.version,gameNights:[{month:'2099-06',date:'2099-06-10',game:'Shared game'}]}),env);assert.equal(response.status,200);
+ const owner=await (await worker.fetch(req(OWNER),env)).json(),student=await (await worker.fetch(req('student@example.test'),env)).json();
+ const notice=owner.notifications.find(n=>n.type==='groupMeetings'&&n.action==='등록'&&n.detail.includes('Shared game'));assert.ok(notice);assert.ok(student.notifications.some(n=>n.id===notice.id));
+ assert.equal((await worker.fetch(req('outsider@example.test','/api/notifications'),env)).status,403);
+});

@@ -281,7 +281,7 @@ function renderNotifications(){
 async function openResearchNotification(n){
  if(busy)return;
  if(!n){$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');renderNotifications();return;}
- if(!['papers','conferences','meetingInfo'].includes(n.type))return;
+ if(!['papers','conferences','meetingInfo','groupMeetings'].includes(n.type))return;
  if(!offline&&n.type!=='meetingInfo'){
   try{const res=await fetch('/api/data',{cache:'no-store'});if(!res.ok)throw Error();const result=await res.json();data=result.data;version=result.version;years();}
   catch{$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');$('notificationList').innerHTML='<p role="alert">자료를 불러오지 못했습니다. 알림을 다시 열어 시도해주세요.</p>';return;}
@@ -341,7 +341,7 @@ for(const [id,layout] of [['menuHorizontal','horizontal'],['menuVertical','verti
 function openPushTarget(value){
  let url;try{url=new URL(value,location.origin);}catch{return;}if(url.origin!==location.origin)return;
  if(url.searchParams.get('inbox')==='1'){openResearchNotification(null);return;}
- const view=url.searchParams.get('view');if(['papers','conferences','meetingInfo'].includes(view))openResearchNotification({id:'push-link',type:view,action:'수정',title:(url.searchParams.get('q')||'').slice(0,500)});
+ const view=url.searchParams.get('view');if(['papers','conferences','meetingInfo','groupMeetings'].includes(view))openResearchNotification({id:'push-link',type:view,action:'수정',title:(url.searchParams.get('q')||'').slice(0,500)});
 }
 
 // Shared schedule transcribed from the supplied 2026–2027 group meeting workbook.
