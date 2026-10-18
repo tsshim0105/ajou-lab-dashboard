@@ -276,3 +276,15 @@ test('schedule registration notices are shared by owner and students including t
  const notice=owner.notifications.find(n=>n.type==='groupMeetings'&&n.action==='등록'&&n.detail.includes('Shared game'));assert.ok(notice);assert.ok(student.notifications.some(n=>n.id===notice.id));
  assert.equal((await worker.fetch(req('outsider@example.test','/api/notifications'),env)).status,403);
 });
+test('annual plan saves atomically, shares one notice and preserves other data',async()=>{
+ const {worker,env}=fixture();const before=await(await worker.fetch(req(OWNER),env)).json();
+ const plan={year:2027,start:'2027-03-04',time:'15:00',location:'Room',kind:'랩세미나',names:['A','B'],first:'A'};
+ const groupMeetings=[{id:'annual-a',date:'2027-03-04',time:'15:00',kind:'랩세미나',presenter:'A',location:'Room',note:'',academicYear:2027,locked:false},{id:'annual-b',date:'2027-03-18',time:'15:00',kind:'논문발표',presenter:'B',location:'Room',note:'',academicYear:2027,locked:false}];
+ const body={version:before.version,planYear:2027,plan,groupMeetings};
+ const response=await worker.fetch(req('student@example.test','/api/group-meetings','PUT',body),env);assert.equal(response.status,200,await response.text());
+ const owner=await(await worker.fetch(req(OWNER),env)).json(),student=await(await worker.fetch(req('student@example.test'),env)).json();
+ assert.deepEqual(owner.data.groupPlans['2027'],plan);assert.deepEqual(student.data.groupPlans,owner.data.groupPlans);assert.deepEqual(owner.data.funds,before.data.funds);assert.deepEqual(owner.data.payroll,before.data.payroll);
+ const notices=owner.notifications.filter(n=>n.label==='그룹미팅 일정 확정');assert.equal(notices.length,1);assert.ok(student.notifications.some(n=>n.id===notices[0].id));
+ assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',body),env)).status,409);
+ assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',{...body,version:owner.version,plan:{...plan,names:['A','A']}}),env)).status,400);
+});

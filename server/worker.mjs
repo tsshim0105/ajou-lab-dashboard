@@ -4,15 +4,17 @@ import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,gameNight:data.gameNight,gameNights:data.gameNights};}
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
 export function validateGroupMeetings(rows){
  if(!Array.isArray(rows)||rows.length>1000)throw Error('일정은 1,000개까지 저장할 수 있습니다.');
  const ids=new Set();return rows.map(r=>{
-  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).some(k=>!['id','date','time','presenter','kind','location','note'].includes(k)))throw Error('그룹미팅 항목을 확인해주세요.');
+  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).some(k=>!['id','date','time','presenter','kind','location','note','academicYear','locked'].includes(k)))throw Error('그룹미팅 항목을 확인해주세요.');
   for(const k of ['id','date','time','presenter','kind','location','note'])if(typeof r[k]!=='string'||r[k].length>({note:1000,presenter:300,location:300}[k]||100))throw Error('그룹미팅 입력값을 확인해주세요.');
   if(!r.id||ids.has(r.id))throw Error('일정 식별자가 중복되었습니다.');ids.add(r.id);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(r.date)||!Number.isFinite(Date.parse(r.date))||new Date(r.date).toISOString().slice(0,10)!==r.date||r.date<'2000-01-01'||r.date>'2200-12-31')throw Error('날짜를 확인해주세요.');
-  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time)||!r.presenter.trim()||!['랩세미나','논문발표'].includes(r.kind))throw Error('시간, 발표자, 발표 종류를 확인해주세요.');
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time)||!r.presenter.trim()||!['랩세미나','논문발표','학부생 발표','특별 발표'].includes(r.kind))throw Error('시간, 발표자, 발표 종류를 확인해주세요.');
+  if(r.academicYear!==undefined&&(!Number.isInteger(r.academicYear)||r.academicYear<2026||r.academicYear>2199))throw Error('학년도를 확인해주세요.');
+  if(r.locked!==undefined&&typeof r.locked!=='boolean')throw Error('고정 상태를 확인해주세요.');
   return {...r,presenter:r.presenter.trim(),location:r.location.trim(),note:r.note.trim()};
  }).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 }
@@ -223,7 +225,13 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    const beforeSchedules=structuredClone(state.data);
    if(url.pathname==='/api/game-nights'){if(Object.keys(input).some(k=>!['version','gameNights'].includes(k)))throw Error('게임나잇 기록만 수정할 수 있습니다.');state.data.gameNights=validateGameNights(input.gameNights);}
    else if(url.pathname==='/api/game-night'){if(Object.keys(input).some(k=>!['version','gameNight'].includes(k)))throw Error('게임나잇 항목만 수정할 수 있습니다.');state.data.gameNight=validateGameNight(input.gameNight);}
-   else if(url.pathname==='/api/group-meetings'){if(Object.keys(input).some(k=>!['version','groupMeetings'].includes(k)))throw Error('그룹미팅 항목만 수정할 수 있습니다.');state.data.groupMeetings=validateGroupMeetings(input.groupMeetings);}
+   else if(url.pathname==='/api/group-meetings'){
+    if(Object.keys(input).some(k=>!['version','groupMeetings','planYear','plan'].includes(k)))throw Error('그룹미팅 항목만 수정할 수 있습니다.');
+    state.data.groupMeetings=validateGroupMeetings(input.groupMeetings);
+    if(input.plan!==undefined){const p=input.plan,y=input.planYear;if(!Number.isInteger(y)||y<2026||y>2199||!p||p.year!==y||Object.keys(p).some(k=>!['year','start','time','location','kind','names','first'].includes(k))||!Array.isArray(p.names)||p.names.length<1||p.names.length>100||p.names.some(n=>typeof n!=='string'||!n.trim()||n.length>60)||new Set(p.names).size!==p.names.length||!p.names.includes(p.first)||!['랩세미나','논문발표'].includes(p.kind)||typeof p.start!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(p.start)||!Number.isFinite(Date.parse(p.start))||new Date(p.start).toISOString().slice(0,10)!==p.start||p.start<y+'-03-01'||p.start>=(y+1)+'-03-01'||typeof p.time!=='string'||!/^([01]\d|2[0-3]):[0-5]\d$/.test(p.time)||typeof p.location!=='string'||p.location.length>300)throw Error('학년도 편성 설정을 확인해주세요.');
+     state.data.groupPlans={...(state.data.groupPlans||{}),[y]:p};
+    }else if(input.planYear!==undefined)throw Error('편성 설정이 필요합니다.');
+   }
    else if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/reagents'){
     const fields=['name','unit','capacity','quantity','location','note'];
@@ -240,7 +248,8 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    else if(url.pathname==='/api/data'){const next=validateData(input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type);state.data=next;}
    else if(url.pathname==='/api/homepage-admins'){state.homepageAdmins=updateHomepageManagers(state,input.emails,env.ADMIN_EMAIL);}
    else {if(!Array.isArray(input.students)||input.students.length>100||input.students.some(s=>typeof s!=='string'||!/^\S+@\S+\.\S+$/.test(s)||s.length>254))return reply({error:'이메일 목록을 확인해주세요.'},400);state.students=[...new Set(input.students.map(s=>s.trim().toLowerCase()))];}
-   recordScheduleAdditions(state,beforeSchedules,state.data,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');
+   if(url.pathname==='/api/group-meetings'&&input.plan&&JSON.stringify(beforeSchedules)!==JSON.stringify(state.data)){state.notifications=[{id:crypto.randomUUID(),at:new Date().toISOString(),actor:admin?'교수님':'연구실 구성원',type:'groupMeetings',action:'수정',label:'그룹미팅 일정 확정',title:input.planYear+'학년도 그룹미팅',detail:'학년도 일정이 등록 또는 변경되었습니다.'},...(state.notifications||[])].slice(0,200);}
+   else recordScheduleAdditions(state,beforeSchedules,state.data,admin?'교수님':state.studentNames?.[email]||'연구실 구성원');
    recordScheduleDay(state);
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
