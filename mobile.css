@@ -142,3 +142,19 @@
 
 /* Keep native selectors aligned with the schedule's date and text inputs. */
 .meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-height:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
+
+/* Compact aurora schedule cards; stack cards before their text could wrap. */
+.aurora-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.aurora-meeting{min-width:0;padding:9px 9px 13px;border-radius:12px;background:radial-gradient(ellipse at 0 0,#d2e9f3,transparent 80%),radial-gradient(ellipse at 100% 100%,#dfe9d3,transparent 80%),#edf5f2;color:#263747}
+.aurora-meeting:nth-child(2){background:radial-gradient(ellipse at 0 0,#e0dcf7,transparent 80%),radial-gradient(ellipse at 100% 100%,#f5dfdf,transparent 80%),#f2edf9}
+.aurora-meeting-top{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#ffffff88;border-radius:7px;padding:4px 4px 4px 8px;min-width:0}
+.aurora-meeting-when{min-width:0}.aurora-meeting-when time{display:flex;align-items:baseline;gap:9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.aurora-meeting-date{font-size:20px;font-weight:750}.aurora-meeting-time{font-size:17px;font-weight:650}
+.aurora-meeting-place{font-size:13px;font-weight:650;background:#ffffffd9;padding:7px 9px;border-radius:5px;white-space:nowrap;min-width:0;overflow-x:auto;scrollbar-width:none}
+.aurora-meeting-bottom{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:9px 5px 0;min-width:0}
+.aurora-meeting-bottom h3,.aurora-meeting-names{font-size:15px;line-height:1.5;margin:0;white-space:nowrap}.aurora-meeting-bottom h3{font-weight:650;flex:none}.aurora-meeting-names{font-weight:500;text-align:right;min-width:0;overflow-x:auto;scrollbar-width:none}.aurora-meeting-empty{padding:18px 8px;font-size:14px}
+[data-theme="dark"] .aurora-meeting{color:#edf2fa;background:radial-gradient(ellipse at 0 0,#294651,transparent 80%),radial-gradient(ellipse at 100% 100%,#394b36,transparent 80%),#263a3a}
+[data-theme="dark"] .aurora-meeting:nth-child(2){background:radial-gradient(ellipse at 0 0,#3a3554,transparent 80%),radial-gradient(ellipse at 100% 100%,#513b48,transparent 80%),#382e46}
+[data-theme="dark"] .aurora-meeting-top{background:#12202b66}[data-theme="dark"] .aurora-meeting-place{background:#526774}[data-theme="dark"] .aurora-meeting:nth-child(2) .aurora-meeting-place{background:#655675}
+@media(max-width:760px){.group-meeting-pair.aurora-meetings{grid-template-columns:1fr;gap:8px}.aurora-meeting{padding:8px 8px 11px}.aurora-meeting-bottom h3,.aurora-meeting-names{font-size:14px}.aurora-meeting-date{font-size:19px}.aurora-meeting-time{font-size:16px}}
+@media(max-width:360px){.aurora-meeting-top{gap:5px;padding-left:6px}.aurora-meeting-when time{gap:6px}.aurora-meeting-place{font-size:12px;padding:7px 6px}.aurora-meeting-bottom{gap:7px}.aurora-meeting-bottom h3,.aurora-meeting-names{font-size:13px}}
