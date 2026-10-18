@@ -8,7 +8,7 @@ let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['home','연구실 현황'],['groupMeetings','그룹미팅'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
+const menu=[['home','연구실 현황'],['groupMeetings','그룹미팅/게임나잇'],['papers','논문'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -42,7 +42,7 @@ function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homep
  if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';return;}
  if(tab==='home'){
   html+=groupMeetingCards();
-  const awards=c.filter(r=>/우수|수상|최우수/.test(r.note));html+=`<div class="cards">${card('등록 논문',p.length+'건','2015년~현재')}${card('학회 발표 기록',c.length+'건','2015년~현재')}${card('발표자',new Set(c.map(r=>r.presenter)).size+'명','해당 기간의 고유 발표자')}${card('수상 표시 기록',awards.length+'건','비고에 수상·우수 표시')}</div>`;
+  html+=yearAndGameNight();
   const ys=[...new Set([...p,...c].map(r=>r.year))].sort((a,b)=>b-a),counts=ys.map(y=>({year:y,p:p.filter(r=>r.year===y).length,c:c.filter(r=>r.year===y).length})),max=Math.max(1,...counts.flatMap(r=>[r.p,r.c]));
   html+=`<div class="grid research-year-charts"><section class="section-card" aria-label="연도별 논문 그래프"><h2>연도별 논문</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.p,max)).join(''):'<p class="muted">등록된 논문이 없습니다.</p>'}</section><section class="section-card" aria-label="연도별 학회 발표 그래프"><h2>연도별 학회 발표</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.c,max,true)).join(''):'<p class="muted">등록된 학회 발표가 없습니다.</p>'}</section></div>`;
  }else if(tab==='papers'){
@@ -56,7 +56,7 @@ function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homep
  }else if(tab==='conferences'){
   const records=c.slice().sort((a,b)=>b.year-a.year||(b.date||'').localeCompare(a.date||''));const headers=['발표일','발표자','학회명','국내/국제','지역','장소','발표 제목','유형','비고'];const rows=records.map(r=>[r.date||'미기재',r.presenter,r.conference,conferenceScope(r)||'미기재',conferenceCity(r)||'미기재',r.venue||'미기재',r.title||'미기재',r.kind,r.note]);exportRows=[headers,...rows];html+=toolbar(rows.length)+table([...headers,...(canEditResearch()?['관리']:[])],rows.map((r,i)=>[...r.map(esc),...(canEditResearch()?[`<button class="secondary" style="white-space:nowrap" data-conf="${data.conferences.indexOf(records[i])}">수정</button>`]:[])]),['nowrap','nowrap','title','nowrap','nowrap','title','title','nowrap','']);
  }else if(tab==='groupMeetings'){
-  html+=groupMeetingSchedule();
+  html+=groupMeetingSchedule()+gameNightEditor();
  }else if(tab==='meetingInfo'){
   html+=renderMeetingInfo();
  }else if(tab==='reagents'){
@@ -381,7 +381,7 @@ document.addEventListener('click',event=>{if(event.target.closest('[data-group-s
 let groupMeetingUpcomingKey=upcomingGroupMeetings().map(r=>r[0]).join(',');
 function refreshGroupMeetingSchedule(){
  const key=upcomingGroupMeetings().map(r=>r[0]).join(',')+'|'+new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date());
- if(key!==groupMeetingUpcomingKey){groupMeetingUpcomingKey=key;if(['home','groupMeetings'].includes(tab)&&!busy&&!groupDraft)render();}
+ if(key!==groupMeetingUpcomingKey){groupMeetingUpcomingKey=key;if(['home','groupMeetings'].includes(tab)&&!busy&&!groupDraft&&!gameNightDraft)render();}
 }
 setInterval(refreshGroupMeetingSchedule,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshGroupMeetingSchedule();});
@@ -409,3 +409,12 @@ async function loadDesktopDownloads(){
  if(Object.values(releases).some(r=>r?.preview))section.querySelector('#downloadNotice').textContent='최신 배포 버전으로 연결됩니다. 현재 Mac 앱은 시험 버전이며 정식 서명·공증 전입니다.';
  }catch{if(section.isConnected){for(const label of ['Mac','PC','Android'])section.querySelector('#download'+label+'Pending').textContent=label+'용 · 확인 불가';section.querySelector('#downloadNotice').textContent='다운로드 정보를 불러오지 못했습니다. 잠시 후 다시 접속해주세요.';}}
 }
+
+function yearAndGameNight(){
+ const year=Number(calendarDay('Asia/Seoul',new Date()).slice(0,4)),papers=data.papers.filter(r=>Number(r.year)===year).length,conferences=data.conferences.filter(r=>Number(r.year)===year).length,g=data.gameNight||{};
+ return `<div class="year-game-row"><section class="year-aurora" aria-label="올해 연구 실적"><h2>${year}년 연구 활동</h2><div class="year-metrics"><span>등록 논문 <b>${papers}</b>건</span><span>학회 발표 <b>${conferences}</b>건</span></div></section><section class="game-galaxy" aria-label="NISML Game Night"><h2>NISML Game Night</h2><div class="game-facts"><div><small>날짜</small><strong>${esc(g.date?g.date.replaceAll('-','.'):'일정 미정')}</strong></div><div><small>게임 종류</small><strong>${esc(g.game||'추후 안내')}</strong></div></div><div class="game-stars" aria-hidden="true">${[[5,15],[27,8],[50,16],[72,10],[94,20],[89,78],[61,88],[32,92],[6,80]].map(([x,y],i)=>`<span style="left:${x}%;top:${y}%;animation-delay:-${i*.4}s">✦</span>`).join('')}</div></section></div>`;
+}
+let gameNightDraft=null;
+function gameNightEditor(){const g=gameNightDraft||data.gameNight||{date:'',game:''};return `<section class="game-night-editor"><h2>NISML Game Night</h2><div class="game-night-fields"><label>날짜<input id="gameNightDate" type="date" min="2000-01-01" max="2200-12-31" value="${esc(g.date)}"></label><label>게임 종류<input id="gameNightGame" maxlength="120" value="${esc(g.game)}" placeholder="예: 마리오 카트, 보드게임"></label></div><div class="toolbar"><span id="gameNightStatus" role="status">${gameNightDraft?'저장하지 않은 변경사항이 있습니다.':'미정인 항목은 비워둘 수 있습니다.'}</span><button class="primary" data-game-save ${offline||studentPreview?'disabled':''}>게임나잇 저장</button></div></section>`;}
+document.addEventListener('input',e=>{if(['gameNightDate','gameNightGame'].includes(e.target.id)){gameNightDraft={date:$('gameNightDate').value,game:$('gameNightGame').value};$('gameNightStatus').textContent='저장하지 않은 변경사항이 있습니다.';}});
+document.addEventListener('click',async e=>{const button=e.target.closest('[data-game-save]');if(!button||busy||offline||studentPreview)return;for(const id of ['gameNightDate','gameNightGame'])if(!$(id).reportValidity())return;const next={date:$('gameNightDate').value,game:$('gameNightGame').value.trim()};busy=true;button.disabled=true;try{await put('/api/game-night',{gameNight:next});data.gameNight=next;gameNightDraft=null;render();$('gameNightStatus').textContent='저장했습니다. 연구실 현황에도 반영됩니다.';}catch(error){$('gameNightStatus').textContent=error.message;}finally{busy=false;button.disabled=false;}});

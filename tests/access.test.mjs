@@ -247,3 +247,14 @@ test('group meeting sheet saves for approved members, rejects invalid and stale 
  assert.equal((await worker.fetch(req('unapproved@example.test','/api/group-meetings','PUT',{version:saved.version,groupMeetings:meetings}),env)).status,403);
  assert.equal((await worker.fetch(req(null,'/api/group-meetings','PUT',{version:saved.version,groupMeetings:meetings}),env)).status,401);
 });
+
+test('game night is shared editable content with validation and private-data preservation',async()=>{
+ const {worker,env}=fixture();const before=await(await worker.fetch(req(OWNER),env)).json();const gameNight={date:'2026-11-06',game:'Board games'};
+ assert.equal((await worker.fetch(req('student@example.test','/api/game-night','PUT',{version:before.version,gameNight}),env)).status,200);
+ const saved=await(await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data.gameNight,gameNight);assert.deepEqual(saved.data.funds,before.data.funds);assert.deepEqual(saved.data.payroll,before.data.payroll);
+ const student=await(await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.data.gameNight,gameNight);assert.deepEqual(student.data.funds,[]);
+ assert.equal((await worker.fetch(req(OWNER,'/api/game-night','PUT',{version:before.version,gameNight}),env)).status,409);
+ for(const bad of [{...gameNight,date:'2026-02-30'},{...gameNight,game:'a'.repeat(121)},{...gameNight,funds:[]}])assert.equal((await worker.fetch(req(OWNER,'/api/game-night','PUT',{version:saved.version,gameNight:bad}),env)).status,400);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/game-night','PUT',{version:saved.version,gameNight}),env)).status,403);
+ assert.equal((await worker.fetch(req(null,'/api/game-night','PUT',{version:saved.version,gameNight}),env)).status,401);
+});
