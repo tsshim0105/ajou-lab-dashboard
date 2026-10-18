@@ -283,3 +283,10 @@
 @media(max-width:760px){.startup-brand{--startup-copy-width:236px;max-width:calc(100vw - 24px)}.startup-brand>img{width:56px;height:56px}.startup-name{padding-left:12px;gap:6px}.startup-name .dashboard-lab-name,.startup-name .dashboard-wordmark{font-size:12px;letter-spacing:-.45px}.startup-name .dashboard-wordmark{margin-left:2px;padding-left:8px}}
 
 @media(prefers-reduced-motion:reduce){.startup-splash,.startup-brand>img,.startup-reveal,.startup-name,.startup-progress,.startup-progress i,.startup-splash p{animation:none;transition:none}.startup-reveal{width:var(--startup-copy-width)}.startup-progress i{width:100%}}
+
+/* Desktop trackpad navigation shares the mobile section transition. */
+@media(min-width:761px){
+ html,body{overscroll-behavior-x:none}
+ .section-swipe-copy{pointer-events:none!important;z-index:5;overflow:hidden;background:var(--surface,#fff)}
+ [data-theme=dark] .section-swipe-copy{background:#1e293b}
+}

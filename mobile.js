@@ -37,7 +37,7 @@ function openMobileMore(){
  const finish=cancel=>{
   const g=gesture;gesture=null;if(!g)return;if(g.axis!=='x'){reset();return;}
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),next=keys[keys.indexOf(tab)+(g.dx<0?1:-1)];
-  const commit=!cancel&&g.axis==='x'&&g.tab===tab&&next&&(Math.abs(g.dx)>Math.min(80,innerWidth*.22)||(Math.abs(g.dx)>30&&Math.abs(g.dx)/(performance.now()-g.time)>.45));
+  const commit=!cancel&&g.axis==='x'&&g.tab===tab&&next&&(Math.abs(g.dx)>Math.min(80,innerWidth*.22)||(!g.wheel&&Math.abs(g.dx)>30&&Math.abs(g.dx)/(performance.now()-g.time)>.45));
   const duration=reduced()?0:300,opts={duration,easing:'cubic-bezier(.22,.8,.25,1)',fill:'both'};
   if(!commit){animating=true;const a=panel.animate([{transform:`translateX(${g.dx}px)`},{transform:'translateX(0)'}],opts);a.finished.finally(()=>{a.cancel();reset();animating=false;});return;}
   animating=true;const rect=panel.getBoundingClientRect(),copy=panel.cloneNode(true);
@@ -49,6 +49,36 @@ function openMobileMore(){
   const incoming=panel.animate([{transform:`translateX(${-direction*width+g.dx}px)`,opacity:.25},{transform:'translateX(0)',opacity:1}],opts);
   Promise.all([outgoing.finished,incoming.finished]).finally(()=>{outgoing.cancel();incoming.cancel();copy.remove();reset();animating=false;});
  };
+ // Trackpads send horizontal wheel events in WebKit and desktop browsers.
+ // Keep one navigation per gesture, including the trailing momentum events.
+ let wheelSession=null,wheelTimer;
+ const horizontalScroller=target=>{
+  for(let node=target;node&&node!==document.body;node=node.parentElement){
+   if(node.scrollWidth>node.clientWidth+2&&/(auto|scroll)/.test(getComputedStyle(node).overflowX))return true;
+  }
+  return false;
+ };
+ document.addEventListener('wheel',e=>{
+  if(e.ctrlKey||e.metaKey||!e.target.closest('main.app')||e.target.closest('input,textarea,select,[contenteditable],.notification-center')||document.querySelector('dialog[open],#startupSplash')||busy)return;
+  const unit=e.deltaMode===1?16:e.deltaMode===2?panel.clientWidth:1,dx=e.deltaX*unit,dy=e.deltaY*unit;
+  if(!wheelSession){
+   if(gesture||animating)return;
+   wheelSession={x:0,y:0,axis:null,blocked:horizontalScroller(e.target),done:false};
+  }
+  clearTimeout(wheelTimer);
+  wheelTimer=setTimeout(()=>{if(gesture?.wheel)finish(false);wheelSession=null;},220);
+  const w=wheelSession;if(w.blocked)return;
+  w.x+=dx;w.y+=dy;
+  if(!w.axis&&Math.max(Math.abs(w.x),Math.abs(w.y))>8)w.axis=Math.abs(w.x)>Math.abs(w.y)*1.5?'x':'y';
+  if(w.axis!=='x')return;
+  if(e.cancelable)e.preventDefault();
+  if(w.done||animating)return;
+  if(!gesture)gesture={dx:0,axis:'x',time:performance.now(),tab,wheel:true};
+  const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),next=keys[keys.indexOf(tab)+(w.x>0?1:-1)];
+  gesture.dx=-Math.max(-180,Math.min(180,w.x))*(next?1:.2);
+  panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
+  if(Math.abs(w.x)>=100){w.done=true;finish(!next);}
+ },{passive:false});
  document.addEventListener('touchend',()=>finish(false),{passive:true,capture:true});document.addEventListener('touchcancel',()=>finish(true),{passive:true,capture:true});
  document.addEventListener('click',e=>{if(performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
