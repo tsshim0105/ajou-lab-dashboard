@@ -452,7 +452,7 @@
 /* Aurora annual charts with compact rows and a restrained entrance. */
 .research-year-charts{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .research-year-charts>.section-card{background:linear-gradient(130deg,#eaf4f4,#f4f7ed)!important;border:0;border-radius:14px;padding:18px 20px;box-shadow:none;color:#263747}
-.research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#f0edf8,#faf0ef)}
+.research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#f0edf8,#faf0ef)!important}
 .research-year-charts h2{font-size:16px;margin-bottom:14px}
 .research-year-charts .bar-row{grid-template-columns:54px minmax(0,1fr) 24px;gap:10px;margin:7px 0;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums}
 .research-year-charts .bar-row>span{color:#566b7d}
@@ -461,7 +461,7 @@
 .research-year-charts .fill{background:#579f9e;border-radius:8px;transform-origin:left center}
 .research-year-charts .fill.light{background:#9589c4}
 [data-theme=dark] .research-year-charts>.section-card{background:linear-gradient(130deg,#203b3c,#26392e)!important;color:#e4edf7}
-[data-theme=dark] .research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#342f48,#3c303a)}
+[data-theme=dark] .research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#342f48,#3c303a)!important}
 [data-theme=dark] .research-year-charts .bar-row>span{color:#bdcbd9}
 [data-theme=dark] .research-year-charts .track{background:#ffffff10}
 [data-theme=dark] .research-year-charts .fill{background:#79c5bd}
