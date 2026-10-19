@@ -394,3 +394,17 @@
  .meeting-overview-details{grid-column:2;grid-row:2}
  .meeting-overview-presenters{grid-column:3;grid-row:2;border-top:0;padding-top:0;text-align:right;min-width:0}
 }
+
+/* A shared compact rhythm across all four desktop activity cards. */
+@media(min-width:761px){
+ .meeting-overview,.year-game-row>.year-aurora,.year-game-row>.game-galaxy{min-height:104px;box-sizing:border-box;padding:11px 16px;border-radius:14px}
+ .year-game-row>.year-aurora,.year-game-row>.game-galaxy{display:flex;flex-direction:column;justify-content:space-between}
+ .year-game-row .year-aurora h2,.game-galaxy .game-overview-heading{font-size:16px;line-height:1.4;margin:0 0 8px}
+ .game-overview-title{font-size:16px}
+ .game-overview-heading .game-season-label{font-size:12px}
+ .year-metrics{flex:0;gap:20px;min-height:40px}
+ .year-metric>span{font-size:14px}.year-metric>b{font-size:30px}.year-metric>small{font-size:12px}
+ .year-game-row .game-facts{gap:14px;min-height:40px}
+ .year-game-row .game-facts small{font-size:11px;margin-bottom:2px}
+ .year-game-row .game-facts strong{font-size:20px;line-height:1.25}
+}
