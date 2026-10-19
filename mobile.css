@@ -408,3 +408,33 @@
  .year-game-row .game-facts small{font-size:11px;margin-bottom:2px}
  .year-game-row .game-facts strong{font-size:20px;line-height:1.25}
 }
+
+/* Approved live clock and enlarged compact mobile branding. */
+.header-clock{margin-left:auto;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap;color:#52677c}
+[data-theme=dark] .header-clock{color:#c1cfdf}
+@media(max-width:760px){
+ .header-bar{display:grid;grid-template-columns:minmax(0,1fr) 96px;grid-template-rows:32px 20px;gap:0 5px;padding:12px 8px}
+ .header-bar>.dashboard-brand{grid-column:1;grid-row:1/3;gap:5px}
+ .header-bar .dashboard-logo{width:40px;height:50px}
+ .header-bar .dashboard-lab-name{font-size:14px;letter-spacing:-.65px}
+ .header-bar .dashboard-wordmark{font-size:14px;letter-spacing:-.6px;margin:0;padding-left:4px}
+ .header-bar>.user-info{grid-column:2;grid-row:1;gap:0;margin:0}
+ .header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:32px;height:32px;min-height:32px;border:0}
+ .header-clock{grid-column:2;grid-row:2;margin:0;text-align:right;font-size:12px;align-self:center}
+}
+@media(max-width:380px){
+ .header-bar{grid-template-columns:minmax(0,1fr) 90px}
+ .header-bar .dashboard-logo{width:34px;height:46px}
+ .header-bar .dashboard-lab-name{font-size:12px;letter-spacing:-.55px}
+ .header-bar .dashboard-wordmark{font-size:13px}
+ .header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:30px}
+}
+@media(max-width:340px){
+ .header-bar{grid-template-columns:minmax(0,1fr) 84px;padding:10px 6px;column-gap:3px}
+ .header-bar>.dashboard-brand{gap:3px}
+ .header-bar .dashboard-logo{width:28px;height:40px}
+ .header-bar .dashboard-lab-name{font-size:11px}
+ .header-bar .dashboard-wordmark{font-size:12px;padding-left:3px}
+ .header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:28px}
+ .header-clock{font-size:11px}
+}

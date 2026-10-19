@@ -82,3 +82,21 @@ function openMobileMore(){
  document.addEventListener('touchend',()=>finish(false),{passive:true,capture:true});document.addEventListener('touchcancel',()=>finish(true),{passive:true,capture:true});
  document.addEventListener('click',e=>{if(performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
+
+/* Clock follows Korean time, independently of the visitor's timezone. */
+(()=>{
+ const clock=document.getElementById('headerClock');
+ if(!clock||clock.tagName!=='TIME')return;
+ const formatter=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+ let timer;
+ function update(){
+  clearTimeout(timer);
+  const now=new Date(),p=Object.fromEntries(formatter.formatToParts(now).map(x=>[x.type,x.value]));
+  clock.textContent=p.month+'/'+p.day+' '+p.hour+':'+p.minute;
+  clock.dateTime=now.toISOString();
+  if(!document.hidden)timer=setTimeout(update,60000-now.getSeconds()*1000-now.getMilliseconds()+50);
+ }
+ document.addEventListener('visibilitychange',update);
+ window.addEventListener('pageshow',update);
+ update();
+})();
