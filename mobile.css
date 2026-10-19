@@ -305,3 +305,30 @@
 [data-theme=dark] .meeting-overview-kind{background:#14233055}[data-theme=dark] .meeting-overview-details{border-color:#ffffff25}[data-theme=dark] .meeting-overview-presenters{border-color:#ffffff25}
 @media(max-width:760px){.meeting-overview{padding:10px 9px}.meeting-overview-header{gap:3px}.meeting-overview-header h2{font-size:11px}.meeting-overview-kind{font-size:10px;padding:2px 4px}.meeting-overview-main{gap:5px;margin:12px 0 10px}.meeting-overview-details{padding-left:6px;gap:3px}.meeting-overview-time{font-size:15px}.meeting-overview-place{font-size:10px}.meeting-overview-presenters{font-size:14px;padding-top:8px}}
 @media(max-width:360px){.meeting-overview-header h2{font-size:10px}.meeting-overview-kind{font-size:9px;padding:2px 3px}.meeting-overview-time{font-size:13px}.meeting-overview-presenters{font-size:13px}}
+
+/* Fill the activity cards with readable metrics and game details. */
+.year-game-row>.year-aurora,.year-game-row>.game-galaxy{container-type:inline-size;padding:16px 18px}
+.year-game-row .year-aurora{justify-content:flex-start}
+.year-game-row .year-aurora h2{font-size:21px;margin:0 0 12px}
+.year-metrics{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;align-items:center}
+.year-metric{display:grid;grid-template-columns:1fr auto auto;align-items:baseline;gap:5px;min-width:0}
+.year-metric>span{font-size:16px;font-weight:550}
+.year-metric>b{font-size:46px;font-weight:750;line-height:1.1;margin:0;font-variant-numeric:tabular-nums}
+.year-metric>small{font-size:13px}
+.game-galaxy .game-overview-heading{display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:nowrap;margin:0 0 13px;line-height:1.3}
+.game-overview-title{font-size:clamp(10px,7.5cqw,22px);white-space:nowrap}
+.game-overview-heading .game-season-label{display:inline;font-size:clamp(8px,5.5cqw,13px);margin:0;flex:none}
+.year-game-row .game-facts{gap:18px}
+.year-game-row .game-facts small{font-size:13px;margin-bottom:5px}
+.year-game-row .game-facts strong{font-size:24px;line-height:1.3}
+@media(max-width:760px){
+ .year-game-row>.year-aurora,.year-game-row>.game-galaxy{padding:11px 9px}
+ .year-game-row .year-aurora h2{font-size:14px;margin-bottom:10px}
+ .year-metrics{grid-template-columns:1fr;gap:8px}
+ .year-metric{gap:3px}.year-metric>span{font-size:13px}.year-metric>b{font-size:34px}.year-metric>small{font-size:11px}
+ .game-galaxy .game-overview-heading{gap:3px;margin-bottom:11px}
+ .year-game-row .game-facts{grid-template-columns:1fr;gap:10px}
+ .year-game-row .game-facts small{font-size:11px;margin-bottom:2px}
+ .year-game-row .game-facts strong{font-size:19px;line-height:1.25}
+}
+@media(max-width:360px){.year-metric>span{font-size:12px}.year-metric>b{font-size:29px}.year-game-row .game-facts strong{font-size:17px}.year-game-row .year-aurora h2{font-size:12px}}
