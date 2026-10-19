@@ -476,3 +476,21 @@
 @keyframes annual-bar-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @media(max-width:760px){.research-year-charts{grid-template-columns:1fr;gap:10px}.research-year-charts>.section-card{padding:16px}.research-year-charts .bar-row{margin:6px 0}}
 @media(prefers-reduced-motion:no-preference){#startupSplash~main .research-year-charts .fill{animation-play-state:paused}}
+
+/* Place mobile time beside the current section heading. */
+.section-clock,.mobile-section-title{display:none}
+@media(max-width:760px){
+ .header-bar{grid-template-rows:52px;grid-template-columns:minmax(0,1fr) 102px;column-gap:4px}
+ .header-bar>.dashboard-brand{grid-row:1}
+ .header-bar>.user-info{grid-row:1;align-self:center}
+ .header-bar>.header-clock{display:none}
+ .header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:34px;height:44px;min-height:44px}
+ .header-bar .user-info :is(#notificationToggle,#theme,.mobile-home-link)::before{width:20px;height:20px}
+ .has-section-clock{display:flex;align-items:center;justify-content:space-between;gap:8px}
+ .section-clock{display:block;margin-left:auto;white-space:nowrap;font-size:12px;line-height:1.4;font-weight:400;color:#52677c;font-variant-numeric:tabular-nums;letter-spacing:0}
+ .mobile-section-title{font-size:17px;font-weight:700;margin-bottom:12px}
+ .research-title-label{width:100%}.research-title-label h1{width:100%}
+ [data-theme=dark] .section-clock{color:#c1cfdf}
+}
+@media(max-width:380px){.header-bar{grid-template-columns:minmax(0,1fr) 96px}.header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:32px}.header-bar .dashboard-wordmark{font-size:12px}}
+@media(max-width:340px){.header-bar{grid-template-columns:minmax(0,1fr) 90px}.header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:30px}.header-bar .dashboard-wordmark{font-size:11px}}

@@ -94,9 +94,19 @@ function openMobileMore(){
   const now=new Date(),p=Object.fromEntries(formatter.formatToParts(now).map(x=>[x.type,x.value]));
   clock.textContent=p.month+'/'+p.day+' '+p.hour+':'+p.minute;
   clock.dateTime=now.toISOString();
+  document.querySelectorAll('.section-clock').forEach(el=>{el.textContent=clock.textContent;el.dateTime=clock.dateTime;});
   if(!document.hidden)timer=setTimeout(update,60000-now.getSeconds()*1000-now.getMilliseconds()+50);
  }
  document.addEventListener('visibilitychange',update);
  window.addEventListener('pageshow',update);
  update();
 })();
+
+function syncSectionClock(){
+ const panel=document.getElementById('panel'),clock=document.getElementById('headerClock');
+ if(!panel?.querySelector||!clock)return;
+ let heading=tab==='home'?null:panel.querySelector('h1,h2');
+ if(!heading){heading=document.createElement('div');heading.className='mobile-section-title';heading.textContent=menu.find(([key])=>key===tab)?.[1]||'';panel.prepend(heading);}
+ heading.classList.add('has-section-clock');
+ const time=document.createElement('time');time.className='section-clock';time.textContent=clock.textContent;time.dateTime=clock.dateTime;time.setAttribute('aria-label','한국 시간');heading.append(time);
+}

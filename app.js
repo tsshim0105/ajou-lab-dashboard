@@ -8,7 +8,7 @@ let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['home','연구실 활동'],['groupMeetings','그룹미팅/게임나잇'],['papers','논문Archive'],['conferences','학회 발표'],['meetingInfo','학술대회 정보'],['reagents','시약관리'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
+const menu=[['home','연구실 활동'],['groupMeetings','그룹미팅/게임나잇'],['papers','논문Archive'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -39,7 +39,7 @@ function nav(){
 }
 function years(){const old=$('year').value;const list=[...new Set([...data.papers,...data.conferences].map(r=>r.year).filter(Boolean))].sort((a,b)=>b-a);$('year').innerHTML='<option value="all">전체 연도</option>'+list.map(y=>`<option>${y}</option>`).join('');$('year').value=list.includes(Number(old))?old:'all';}
 function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homepage'&&!canManageHomepage())tab='home';if(tab!=='homepage'&&!admin()&&!['home','groupMeetings','papers','conferences','meetingInfo','reagents','settings'].includes(tab))tab='home';$('userLabel').innerHTML=badge(studentPreview?'학생 화면 미리보기':admin()?'교수님':'연구실 구성원');nav();exportRows=[];const panel=$('panel'),p=tab==='home'?homePeriod(data.papers):filter(data.papers),c=tab==='home'?homePeriod(data.conferences):filter(data.conferences);const title=tab==='home'?'연구실 활동 (2015년~현재)':menu.find(([k])=>k===tab)[1];let html=['papers','conferences'].includes(tab)?`<div class="research-title"><div class="research-title-label"><h1>${title}</h1>${tab==='papers'?'<small class="paper-title-note">연초록: 학생 제1저자·교수 교신저자 · 국문명 검색 가능</small>':''}</div><div class="research-title-actions">${canEditResearch()?`<button class="primary" id="${tab==='papers'?'addPaper':'addConference'}">${tab==='papers'?'논문추가':'발표 내역 추가'}</button>`:''}<button class="secondary" id="csv">CSV 저장</button></div></div>`:['home','groupMeetings'].includes(tab)?'':`<h1>${title}</h1>`;
- if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';return;}
+ if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';syncSectionClock();return;}
  if(tab==='home'){
   html+=groupMeetingCards();
   html+=yearAndGameNight();
@@ -73,6 +73,7 @@ function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homep
   html+=`${admin()?`<section class="section-card"><h2>학생 화면 미리보기</h2><p class="muted">학생에게 보이는 연구 탭과 시약 목록과 조회 화면을 확인합니다.</p><button class="primary" id="previewStudent">학생 화면 미리보기</button></section>`:''}`+nameMappingForm()+homepageAdminSettings()+`<div class="grid">${admin()?`<div class="stack"><div class="section-card"><h2>학생 접근 계정</h2><p class="muted">학생은 네 개 연구 탭을 이용하고 논문·학회 발표를 추가·수정할 수 있습니다.</p>${studentAccountList()}<label for="students">학생 이메일 · 한 줄에 한 명</label><textarea id="students" rows="5" style="width:100%;margin:10px 0" placeholder="student@ajou.ac.kr">${esc(students.join('\n'))}</textarea><button id="saveStudents" class="primary" ${offline?'disabled':''}>접근 목록 저장</button><p class="muted">${offline?'검토용 파일에서는 계정 설정을 저장할 수 없습니다.':'Sites에서 사이트 공유 권한도 별도로 부여해야 합니다.'}</p><p class="status" id="accountStatus" role="status"></p></div></div>`:''}</div>`+desktopDownloads();
  }
  panel.innerHTML=(studentPreview?`<div class="note" role="status" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>학생 화면 미리보기 · 저장 미적용</strong><button class="primary" id="exitStudentPreview">관리자 화면으로 돌아가기</button></div>`:'')+html;
+ syncSectionClock();
  if(tab==='reagents')bindReagents();
  enhanceView();
  if(document.getElementById('desktopDownloads'))loadDesktopDownloads();
