@@ -134,6 +134,7 @@ test('paper authors display in English and Korean search uses the saved mapping'
  vm.runInContext(source.slice(source.indexOf('const searchKey='),source.indexOf('const filter='))+source.slice(source.indexOf('function authorAliases('),source.indexOf('const badge='))+source.slice(source.indexOf('function paperAuthorName('),source.indexOf('function paperLocation(')),context);
  assert.equal(context.paperFirst(r),'Example Student');assert.equal(context.paperCorresponding(r),'Other Author');assert.equal(context.matchesResearch(r,'등록학생'),true);assert.equal(context.matchesResearch(r,'예시학생'),false);assert.equal(context.matchesResearch(r,'ExampleStudent'),true);
  assert.equal(context.englishAuthorText('예시학생 (Example Student), 다른이름 [확인 필요] (Other Author)'),'Example Student, Other Author');
+ r.fund='RS-2024-00397807, 아주대학교 연구지원';for(const q of ['RS-2024-00397807','rs202400397807','00397807','아주대학교 연구지원'])assert.equal(context.matchesResearch(r,q),true);assert.equal(context.matchesResearch(r,'RS-2099-99999999'),false);delete r.fund;assert.equal(context.matchesResearch(r,'00397807'),false);
 });
 
 test('lab paper highlighting and recent papers distinguish lead and corresponding roles',async()=>{
