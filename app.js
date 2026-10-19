@@ -79,6 +79,8 @@ function render(){const filterFocus=$('filters')?.contains(document.activeElemen
  syncSectionClock();
  if(tab==='reagents')bindReagents();
  enhanceView();
+ const gameHeading=panel.querySelector('.game-night-editor>.planner-heading'),gameToolbar=panel.querySelector('.game-season-toolbar');
+ if(gameHeading&&gameToolbar){const actions=document.createElement('div');actions.className='research-title-actions';gameHeading.append(actions);actions.append(gameToolbar,gameHeading.querySelector('[data-game-edit]'));}
  if(['papers','conferences'].includes(tab))panel.querySelector('.research-title')?.after($('filters'));
  if(filterFocus){filterFocus.focus({preventScroll:true});if(filterSelection)filterFocus.setSelectionRange(...filterSelection);}
  if(document.getElementById('desktopDownloads'))loadDesktopDownloads();

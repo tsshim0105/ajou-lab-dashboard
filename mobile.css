@@ -574,3 +574,21 @@ html:is([data-active-tab="papers"],[data-active-tab="conferences"]) #panel>#filt
  html[data-active-tab="conferences"] .table-wrap:not(.card-layout) th{top:0;z-index:2;background:#f1f5f9}
  [data-theme=dark][data-active-tab="conferences"] .table-wrap:not(.card-layout) th{background:#26364d}
 }
+
+/* One heading rhythm for archive, reagents and schedule sections. */
+.research-title,.group-schedule>.planner-heading,.game-night-editor>.planner-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;min-height:48px;margin:0 0 14px;padding:0 0 9px;border-bottom:2px solid #1769e8;box-sizing:border-box}
+.group-schedule>.planner-heading>div:first-child,.game-night-editor>.planner-heading>div:first-child{display:flex;align-items:baseline;flex-wrap:wrap;gap:12px;min-width:0}
+.group-schedule>.planner-heading h2,.game-night-editor>.planner-heading h2{font-size:23px;line-height:1.6;font-weight:700;margin:0;padding:0}
+.group-schedule>.planner-heading small,.game-night-editor>.planner-heading small{font-size:12px;color:var(--muted,#64748b)}
+.game-night-editor{display:block}
+.game-night-editor .game-season-toolbar{margin:0;padding:0}
+.game-night-editor .game-season-toolbar>div{display:flex;gap:6px;align-items:center}
+@media(min-width:761px){
+ .research-title-actions :is(button,.reagent-upload),.planner-heading :is(button,select){height:36px;min-height:36px;box-sizing:border-box;display:inline-flex;align-items:center;padding:6px 11px;font-size:14px;line-height:1.4}
+ .game-night-editor>.planner-heading{display:flex}
+}
+@media(max-width:760px){
+ .group-schedule>.planner-heading,.game-night-editor>.planner-heading{gap:8px;margin-bottom:12px;padding-bottom:10px}
+ .group-schedule>.planner-heading h2,.game-night-editor>.planner-heading h2{font-size:20px;line-height:1.4}
+ .game-night-editor .research-title-actions{flex-wrap:wrap}
+}
