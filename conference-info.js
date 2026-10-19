@@ -1,6 +1,6 @@
 // Public conference notices only. Update dates only from cited official announcements.
 const ConferenceInfo = {
-  "updated": "2026-10-05",
+  "updated": "2026-10-19",
   "events": [
     {
       "id": "kiche-2026-fall",
@@ -70,12 +70,12 @@ const ConferenceInfo = {
           "time": null
         }
       ],
-      "note": "9월 공식 뉴스레터 제326호는 발표자 사전등록 마감을 9월 2일로 안내합니다. 학술대회 상세 페이지의 기존 8월 26일 표기와 차이가 있어 최신 뉴스레터 기준으로 표시했습니다. 신규 초록 제출 마감(8월 26일)과 제출 초록 수정 마감(9월 2일), 일반 참가 사전등록(9월 28일)을 구분합니다.",
+      "note": "9월 공식 뉴스레터 제326호는 발표자 사전등록 마감을 9월 2일로 안내합니다. 학술대회 상세 페이지의 기존 8월 26일 표기와 차이가 있어 최신 뉴스레터 기준으로 표시했습니다. 신규 초록 제출 마감(8월 26일)과 제출 초록 수정 마감(9월 2일), 일반 참가 사전등록(9월 28일)을 구분합니다. 사전등록은 종료되었으며 공식 안내에 현장등록이 제공됩니다.",
       "sources": [
         "https://www.ksiec.or.kr/html/sub/competition/competition101",
-        "https://www.ksiec.or.kr/pkmailer/pkletterhistory.php?pg_letter=326"
+        "https://www.ksiec.or.kr/pkmailer/pkletterhistory.php?pg_letter=327"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "kiche-2027-spring",
@@ -92,14 +92,14 @@ const ConferenceInfo = {
       "sources": [
         "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2027-spring",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2027 춘계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2027-03-31",
       "end": "2027-04-02",
       "venue": "제주컨벤션센터(ICC JEJU)",
@@ -110,7 +110,7 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "ksiec-2027-spring",
@@ -127,7 +127,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc="
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "mrs-2026-fall",
@@ -137,7 +137,7 @@ const ConferenceInfo = {
       "url": "https://www.mrs.org/meetings-events/annual-meetings/2026-mrs-fall-meeting",
       "start": "2026-11-29",
       "end": "2026-12-04",
-      "venue": "미국 보스턴 · Hynes Convention Center",
+      "venue": "미국 보스턴 · Hynes Convention Center / Sheraton Boston Hotel",
       "abstracts": [
         {
           "label": "Breaking News 추가접수",
@@ -160,13 +160,14 @@ const ConferenceInfo = {
           "time": "23:59"
         }
       ],
-      "note": "추가 초록 접수 마감 기준. 공식 등록비 PDF의 연장된 조기등록 일자를 반영했습니다.",
+      "note": "사전등록은 10월 29일 23:59 미국 동부시간까지(한국시간 10월 30일 12:59). 10월 30일부터 일반 등록요금이 적용됩니다. 초록은 Breaking News 추가접수 마감 기준입니다.",
       "sources": [
         "https://www.mrs.org/meetings-events/annual-meetings/2026-mrs-fall-meeting/call-for-abstracts",
         "https://www.mrs.org/docs/default-source/meetings-events/fall-meetings/2026/f26-registration-rates.pdf?sfvrsn=20d1b0e6_1",
-        "https://x.com/Materials_MRS/status/2064739998939627818"
+        "https://x.com/Materials_MRS/status/2064739998939627818",
+        "https://www.mrs.org/meetings-events/annual-meetings/2026-mrs-fall-meeting/registration"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-19"
     },
     {
       "id": "mrs-2027-spring",
@@ -182,16 +183,16 @@ const ConferenceInfo = {
           "label": "초록",
           "date": "2026-10-14",
           "tz": "America/New_York",
-          "time": null
+          "time": "23:59"
         }
       ],
       "registration": [],
-      "note": "공식 검색 공지로 초록 마감 확인. 마감 시각 및 등록 마감은 추가 확인 예정.",
+      "note": "초록 접수 종료. 공식 세부 일정은 10월 14일 23:59 미국 동부시간(한국시간 10월 15일 12:59)으로 안내합니다. 같은 페이지의 종료 안내 문구는 10월 15일로 표기되어 있어 세부 일정 기준으로 표시했습니다. 결과 안내는 2026년 12월 중순 예정이며 등록 마감은 공지 대기입니다.",
       "sources": [
         "https://www.mrs.org/",
         "https://www.mrs.org/meetings-events/annual-meetings/2027-mrs-spring-meeting-exhibit/call-for-abstracts"
       ],
-      "checked": "2026-09-20"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2027-spring",
@@ -215,9 +216,10 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/spring.html",
         "https://callforabstracts.acs.org/acsspring2027",
-        "https://callforabstracts.acs.org/acsspring2027/COLL"
+        "https://callforabstracts.acs.org/acsspring2027/COLL",
+        "https://www.colloidssurfaces.org/conferences/"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2027-fall",
@@ -234,7 +236,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "colloids-2027",
@@ -247,12 +249,12 @@ const ConferenceInfo = {
       "venue": "미국 볼더 · University of Colorado Boulder",
       "abstracts": [],
       "registration": [],
-      "note": "초록 제출·참가등록은 2027년 초 공지 예정. 숙박 예약 마감과 구분합니다.",
+      "note": "ACS COLL 공식 일정에서 개최일·장소를 재확인했습니다. 대회 전용 홈페이지는 이번 점검에서 접속되지 않아 초록·등록의 신규 마감일은 확인하지 못했습니다. 마감일은 공지 대기로 유지합니다.",
       "sources": [
         "https://colloids2027.org/",
         "https://www.colloidssurfaces.org/conferences/"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "okinawa-2026",
@@ -291,12 +293,12 @@ const ConferenceInfo = {
           "time": null
         }
       ],
-      "note": "차기 개최 주기는 아직 미확인 · 매년 개최로 가정하지 않습니다.",
+      "note": "일반등록 마감은 10월 19일(마감 시각 미공개). 공식 등록 안내에 현장등록 요금이 별도로 안내되어 있습니다. 최종 프로그램이 공개되었습니다. 차기 개최 일정은 아직 미확인입니다.",
       "sources": [
         "https://okinawacolloids.jp/",
         "https://okinawacolloids.jp/submission-registration/registration/"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "kiche-2027-fall",
@@ -313,7 +315,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "kiche-2028-spring",
@@ -330,7 +332,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "kiche-2028-fall",
@@ -347,14 +349,14 @@ const ConferenceInfo = {
       "sources": [
         "https://www.kiche.or.kr/news/view_content/4fe18ff3-6b5f-44cb-be58-ef3feca6d860"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2027-fall",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2027 추계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2027-10-06",
       "end": "2027-10-08",
       "venue": "대전컨벤션센터(DCC)",
@@ -365,14 +367,14 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2028-spring",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2028 춘계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2028-04-05",
       "end": "2028-04-07",
       "venue": "부산 BEXCO",
@@ -383,14 +385,14 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2028-fall",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2028 추계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2028-10-11",
       "end": "2028-10-13",
       "venue": "대전컨벤션센터(DCC)",
@@ -401,14 +403,14 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2029-spring",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2029 춘계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2029-04-11",
       "end": "2029-04-13",
       "venue": "제주컨벤션센터(ICC JEJU)",
@@ -419,14 +421,14 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "polymer-2029-fall",
       "society": "polymer",
       "group": "domestic",
       "name": "한국고분자학회 · 2029 추계",
-      "url": "https://www.polymer.or.kr/function/function_0.php",
+      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
       "start": "2029-10-10",
       "end": "2029-10-12",
       "venue": "부산 BEXCO",
@@ -437,7 +439,7 @@ const ConferenceInfo = {
         "https://www.polymer.or.kr/function/function_0.php",
         "https://www.polymer.or.kr/eng/function/function_0.php"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "ksiec-2027-fall",
@@ -454,7 +456,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.ksiec.or.kr/new_site/board2/notice.html?act=read&aid=8404&keyword=&page=1&sc="
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2028-spring",
@@ -471,7 +473,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2028-fall",
@@ -488,7 +490,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2029-spring",
@@ -505,7 +507,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "acs-2029-fall",
@@ -522,7 +524,7 @@ const ConferenceInfo = {
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
     },
     {
       "id": "coins-next",
@@ -535,12 +537,80 @@ const ConferenceInfo = {
       "venue": "",
       "abstracts": [],
       "registration": [],
-      "note": "Colloid and Interface Symposium(COINS)을 추적하는 항목입니다. 공식 COINS2026 안내 및 IACIS에 실린 조직위원회 공지의 시드니 UNSW 행사(2026년 7월 19–23일)는 종료되었습니다. 차기 개최 연도·일정·장소·마감일은 아직 공식 공지를 확인하지 못했습니다. 링크는 최근 공식 개최 홈페이지이며 연례 개최로 가정하지 않습니다. 홈페이지 직접 접속 오류가 있어 IACIS 공식 뉴스레터의 조직위원회 안내로 학회명을 확인했습니다.",
+      "note": "COINS2026 공식 홈페이지에서 2026년 7월 19–23일 시드니 UNSW 행사를 재확인했습니다. 종료된 행사이며 차기 개최 연도·일정·장소·마감일은 이번 점검에서 공식 공지를 확인하지 못했습니다. 링크는 최근 개최 홈페이지입니다.",
       "sources": [
         "https://www.coins2026.org/",
         "https://www.utwente.nl/en/iacis/archives/newsletters/nl91.pdf"
       ],
-      "checked": "2026-10-05"
+      "checked": "2026-10-19"
+    },
+    {
+      "id": "mrs-2027-fall",
+      "society": "mrs",
+      "group": "international",
+      "name": "MRS · 2027 Fall Meeting",
+      "url": "https://www.mrs.org/meetings-events/annual-meetings",
+      "start": "2027-11-28",
+      "end": "2027-12-03",
+      "venue": "미국 보스턴",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
+      "sources": [
+        "https://www.mrs.org/meetings-events/annual-meetings"
+      ],
+      "checked": "2026-10-19"
+    },
+    {
+      "id": "mrs-2028-spring",
+      "society": "mrs",
+      "group": "international",
+      "name": "MRS · 2028 Spring Meeting",
+      "url": "https://www.mrs.org/meetings-events/annual-meetings",
+      "start": "2028-03-27",
+      "end": "2028-03-31",
+      "venue": "캐나다 밴쿠버",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
+      "sources": [
+        "https://www.mrs.org/meetings-events/annual-meetings"
+      ],
+      "checked": "2026-10-19"
+    },
+    {
+      "id": "mrs-2028-fall",
+      "society": "mrs",
+      "group": "international",
+      "name": "MRS · 2028 Fall Meeting",
+      "url": "https://www.mrs.org/meetings-events/annual-meetings",
+      "start": "2028-11-26",
+      "end": "2028-12-01",
+      "venue": "미국 보스턴",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
+      "sources": [
+        "https://www.mrs.org/meetings-events/annual-meetings"
+      ],
+      "checked": "2026-10-19"
+    },
+    {
+      "id": "mrs-2029-spring",
+      "society": "mrs",
+      "group": "international",
+      "name": "MRS · 2029 Spring Meeting",
+      "url": "https://www.mrs.org/meetings-events/annual-meetings",
+      "start": "2029-04-09",
+      "end": "2029-04-13",
+      "venue": "미국 시애틀",
+      "abstracts": [],
+      "registration": [],
+      "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
+      "sources": [
+        "https://www.mrs.org/meetings-events/annual-meetings"
+      ],
+      "checked": "2026-10-19"
     }
   ],
   "icons": {
