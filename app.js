@@ -8,7 +8,7 @@ let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['home','연구실 활동'],['groupMeetings','그룹미팅/게임나잇'],['papers','논문Archive'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
+const menu=[['home','연구실 활동'],['groupMeetings','그룹미팅/게임나잇'],['papers','논문아카이브'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -398,7 +398,7 @@ function enhanceView(){
   table.parentElement.replaceWith(list);bindCoauthorDisclosure(list);return;
  }
  table.classList.add('responsive-table');table.classList.toggle('paper-sheet',tab==='papers');
- if(tab==='papers'){const widths={'순번':3,'연도':4,'논문 제목':22,'학술지명':12,'제1저자':8,'교신저자':8,'공동저자':12,'권':3,'호':3,'페이지':5,'SCI 여부':4,'총저자수':4,'온라인공개일':7,'출판일':7,'DOI':10,'과제사사':12,'수정':5};const total=headers.reduce((n,h)=>n+(widths[h]||5),0),cols=document.createElement('colgroup');cols.innerHTML=headers.map(h=>`<col style="width:${(widths[h]||5)/total*100}%">`).join('');table.prepend(cols);}
+ if(tab==='papers'){const widths={'순번':3,'연도':4,'논문 제목':22,'학술지명':12,'제1저자':8,'교신저자':8,'공동저자':12,'권':3,'호':3,'페이지':5,'SCI 여부':5.5,'총저자수':5.5,'온라인공개일':8,'출판일':7,'DOI':10,'과제사사':12,'수정':5};const total=headers.reduce((n,h)=>n+(widths[h]||5),0),cols=document.createElement('colgroup');cols.innerHTML=headers.map(h=>`<col style="width:${(widths[h]||5)/total*100}%">`).join('');table.prepend(cols);}
 table.parentElement.classList.toggle('card-layout',hasLayouts&&viewLayout==='cards');
  const indices=(customizable&&!viewDetail?order:headers).map(h=>headers.indexOf(h));for(const row of table.rows){const cells=[...row.cells];for(const i of indices){const cell=cells[i];cell.classList.toggle('column-hidden',customizable&&!viewDetail&&!selected.includes(headers[i])&&!['관리','수정'].includes(headers[i])&&i!==titleIndex);cell.classList.toggle('record-title',i===titleIndex);cell.classList.toggle('wide-cell',/제목|저자|장소|비고|확인/.test(headers[i]));row.append(cell);}}
  if(tab==='papers')bindCoauthorDisclosure(table);

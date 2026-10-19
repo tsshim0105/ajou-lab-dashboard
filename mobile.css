@@ -540,3 +540,16 @@
 .paper-page-link:hover{background:#e7f1f8}.paper-page-link:focus-visible{outline:2px solid #346d9b;outline-offset:2px}
 .paper-page-link.unavailable{opacity:.5;cursor:default}
 [data-theme=dark] .paper-page-link{color:#b2d1e8;background:#22313e;border-color:#4b6579}
+
+/* Desktop workspace fills the window while only its content pane scrolls. */
+@media(min-width:761px){
+ html .app,html[data-active-tab="papers"] .app{width:100%;max-width:100%;height:100dvh;margin:0;border-radius:0;box-shadow:none;display:flex;flex-direction:column;overflow:hidden}
+ .app> :not(#panel){flex-shrink:0}
+ .app>#panel{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+ .app>.header-bar{position:relative;z-index:30;background:var(--surface,#fff)}
+ .table-wrap:not(.card-layout) .paper-sheet th{white-space:nowrap!important;overflow-wrap:normal;word-break:keep-all;padding-left:4px;padding-right:4px}
+}
+@media(min-width:900px){
+ html[data-layout=vertical] .app{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto}
+ [data-layout=vertical] .app>#tabs{min-height:0;overflow-y:auto}
+}
