@@ -384,3 +384,13 @@
  .meeting-agenda-kind>span{font-size:13px;padding:4px 8px}
  .meeting-agenda-kind>small{font-size:11px;margin-top:2px}
 }
+
+/* Desktop overview keeps presenters on the same row as date and logistics. */
+@media(min-width:761px){
+ .meeting-overview{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:9px 16px;align-items:center}
+ .meeting-overview-header{grid-column:1/-1}
+ .meeting-overview-main{display:contents}
+ .meeting-overview-date{grid-column:1;grid-row:2}
+ .meeting-overview-details{grid-column:2;grid-row:2}
+ .meeting-overview-presenters{grid-column:3;grid-row:2;border-top:0;padding-top:0;text-align:right;min-width:0}
+}
