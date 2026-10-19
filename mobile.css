@@ -448,3 +448,31 @@
 .header-bar .user-info .mobile-home-link::before{content:"";display:block;width:15px;height:15px;background:currentColor;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);-webkit-mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cellipse%20cx%3D%2212%22%20cy%3D%2212%22%20rx%3D%224%22%20ry%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%229%22%2F%3E%3Cellipse%20cx%3D%2212%22%20cy%3D%2212%22%20rx%3D%224%22%20ry%3D%229%22%2F%3E%3Cpath%20d%3D%22M3%2012h18%22%2F%3E%3C%2Fsvg%3E") center/contain no-repeat}
 [data-theme=dark] .header-bar .user-info :is(#notificationToggle,#theme,.mobile-home-link){color:#c0cfdf}
 }
+
+/* Aurora annual charts with compact rows and a restrained entrance. */
+.research-year-charts{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.research-year-charts>.section-card{background:linear-gradient(130deg,#eaf4f4,#f4f7ed);border:0;border-radius:14px;padding:18px 20px;box-shadow:none;color:#263747}
+.research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#f0edf8,#faf0ef)}
+.research-year-charts h2{font-size:16px;margin-bottom:14px}
+.research-year-charts .bar-row{grid-template-columns:54px minmax(0,1fr) 24px;gap:10px;margin:7px 0;font-size:13px;line-height:1.5;font-variant-numeric:tabular-nums}
+.research-year-charts .bar-row>span{color:#566b7d}
+.research-year-charts .bar-row>strong{text-align:right}
+.research-year-charts .track{height:9px;border-radius:8px;background:#dce6ea80}
+.research-year-charts .fill{background:#579f9e;border-radius:8px;transform-origin:left center}
+.research-year-charts .fill.light{background:#9589c4}
+[data-theme=dark] .research-year-charts>.section-card{background:linear-gradient(130deg,#203b3c,#26392e);color:#e4edf7}
+[data-theme=dark] .research-year-charts>.section-card:nth-child(2){background:linear-gradient(130deg,#342f48,#3c303a)}
+[data-theme=dark] .research-year-charts .bar-row>span{color:#bdcbd9}
+[data-theme=dark] .research-year-charts .track{background:#ffffff10}
+[data-theme=dark] .research-year-charts .fill{background:#79c5bd}
+[data-theme=dark] .research-year-charts .fill.light{background:#bbadeb}
+@media(prefers-reduced-motion:no-preference){
+ .research-year-charts .fill{animation:annual-bar-grow 850ms cubic-bezier(.22,.7,.25,1) both}
+ .research-year-charts .bar-row:nth-child(3) .fill{animation-delay:30ms}
+ .research-year-charts .bar-row:nth-child(4) .fill{animation-delay:60ms}
+ .research-year-charts .bar-row:nth-child(5) .fill{animation-delay:90ms}
+ .research-year-charts .bar-row:nth-child(n+6) .fill{animation-delay:120ms}
+}
+@keyframes annual-bar-grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media(max-width:760px){.research-year-charts{grid-template-columns:1fr;gap:10px}.research-year-charts>.section-card{padding:16px}.research-year-charts .bar-row{margin:6px 0}}
+@media(prefers-reduced-motion:no-preference){#startupSplash~main .research-year-charts .fill{animation-play-state:paused}}
