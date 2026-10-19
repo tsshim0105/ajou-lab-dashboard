@@ -553,3 +553,24 @@
  html[data-layout=vertical] .app{display:grid;grid-template-rows:auto auto minmax(0,1fr) auto}
  [data-layout=vertical] .app>#tabs{min-height:0;overflow-y:auto}
 }
+
+/* Keep the archive toolbar outside the sheet's own scroll area. */
+@media(min-width:761px){
+ html[data-active-tab="papers"] .app>#panel:has(.paper-sheet):not(:has(.card-layout)){display:flex;flex-direction:column;overflow:hidden}
+ html[data-active-tab="papers"] #panel>.research-title{flex-shrink:0}
+ html[data-active-tab="papers"] #panel>.table-wrap:has(.paper-sheet):not(.card-layout){flex:1;min-height:0;max-height:none;overflow:auto;isolation:isolate}
+ .table-wrap:not(.card-layout) .paper-sheet{border-collapse:separate;border-spacing:0}
+ .table-wrap:not(.card-layout) .paper-sheet thead th{position:sticky;top:0;z-index:2;background:#f1f5f9;box-shadow:0 1px 0 #dce4ee}
+ [data-theme=dark] .table-wrap:not(.card-layout) .paper-sheet thead th{background:#26364d;box-shadow:0 1px 0 #475569}
+}
+
+/* Research title precedes the shared year/search controls in both layouts. */
+html:is([data-active-tab="papers"],[data-active-tab="conferences"]) #panel>#filters{padding:0 0 12px;margin-bottom:12px;flex-shrink:0}
+@media(min-width:761px){
+ html:is([data-active-tab="papers"],[data-active-tab="conferences"]) .app>#panel{display:flex;flex-direction:column;overflow:hidden}
+ html:is([data-active-tab="papers"],[data-active-tab="conferences"]) #panel>:is(.research-title,.toolbar,.note){flex-shrink:0}
+ html:is([data-active-tab="papers"],[data-active-tab="conferences"]) #panel>:is(.table-wrap,.paper-archive-list){flex:1;min-height:0;max-height:none;overflow:auto;isolation:isolate}
+ html[data-active-tab="conferences"] .table-wrap:not(.card-layout) .data-table{border-collapse:separate;border-spacing:0}
+ html[data-active-tab="conferences"] .table-wrap:not(.card-layout) th{top:0;z-index:2;background:#f1f5f9}
+ [data-theme=dark][data-active-tab="conferences"] .table-wrap:not(.card-layout) th{background:#26364d}
+}
