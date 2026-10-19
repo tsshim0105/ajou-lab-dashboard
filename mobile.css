@@ -607,3 +607,8 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
  .app>#panel{flex:1;min-height:0;overflow:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
  .app>.header-bar{position:relative;z-index:30;background:var(--surface,#fff)}
 }
+
+/* Footer follows the last record inside the active content scroller. */
+#panel .foot{position:static;flex:none;grid-column:1/-1;margin-top:16px;padding:8px 0 0;min-width:0;white-space:normal}
+#panel .table-wrap>.foot{padding:8px 10px;margin-top:0;background:var(--surface,#fff)}
+#panel .paper-archive-list>.foot{grid-column:1/-1;align-self:end}
