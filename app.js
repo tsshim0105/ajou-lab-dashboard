@@ -47,9 +47,9 @@ function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homep
   html+=`<div class="grid research-year-charts"><section class="section-card" aria-label="연도별 논문 그래프"><h2>연도별 논문</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.p,max)).join(''):'<p class="muted">등록된 논문이 없습니다.</p>'}</section><section class="section-card" aria-label="연도별 학회 발표 그래프"><h2>연도별 학회 발표</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.c,max,true)).join(''):'<p class="muted">등록된 학회 발표가 없습니다.</p>'}</section></div>`;
  }else if(tab==='papers'){
 
-  const headers=['순번','연도','논문 제목','학술지명','제1저자','교신저자','공동저자','권','호','페이지','SCI 여부','총저자수','온라인공개일','출판일'];
+  const headers=['순번','연도','논문 제목','학술지명','제1저자','교신저자','공동저자','권','호','페이지','SCI 여부','총저자수','온라인공개일','출판일','DOI','과제사사'];
   const records=p.slice().sort((a,b)=>b.year-a.year||(b.websiteNumber||0)-(a.websiteNumber||0));
-  const rows=records.map((r,i)=>[i+1,r.year,r.title,r.journal||'미기재',paperFirst(r)||'미입력',paperCorresponding(r)||'미입력',paperCoauthors(r)||((r.coauthors!==undefined||r.authorList?.length)?'없음':'미확인'),r.volume||'—',r.issue||'—',[r.pages,r.articleNumber].filter(Boolean).join(' / ')||'—',paperSci(r)||'미확인',paperAuthorCount(r)??'미확인',r.onlineDate||'미확인',r.issueDate||'미확인']);exportRows=[headers,...rows];
+  const rows=records.map((r,i)=>[i+1,r.year,r.title,r.journal||'미기재',paperFirst(r)||'미입력',paperCorresponding(r)||'미입력',paperCoauthors(r)||((r.coauthors!==undefined||r.authorList?.length)?'없음':'미확인'),r.volume||'—',r.issue||'—',[r.pages,r.articleNumber].filter(Boolean).join(' / ')||'—',paperSci(r)||'미확인',paperAuthorCount(r)??'미확인',r.onlineDate||'미확인',r.issueDate||'미확인',r.doi||'미등록',r.fund||'미등록']);exportRows=[headers,...rows];
   html+=toolbar(rows.length)+table([...headers,...(canEditResearch()?['수정']:[])],rows.map((row,i)=>{const cells=row.map(esc),r=records[i];
    cells[6]=coauthorMarkup(esc(row[6]),'sheet-coauthors-'+i);
    cells[13]=`<span title="${esc(r.bibliographyDateBasis||'')}">${esc(row[13])}</span>`;
@@ -389,7 +389,7 @@ function enhanceView(){
   table.parentElement.replaceWith(list);bindCoauthorDisclosure(list);return;
  }
  table.classList.add('responsive-table');table.classList.toggle('paper-sheet',tab==='papers');
- if(tab==='papers'){const widths={'순번':3,'연도':4,'논문 제목':22,'학술지명':12,'제1저자':8,'교신저자':8,'공동저자':12,'권':3,'호':3,'페이지':5,'SCI 여부':4,'총저자수':4,'온라인공개일':7,'출판일':7,'수정':5};const total=headers.reduce((n,h)=>n+(widths[h]||5),0),cols=document.createElement('colgroup');cols.innerHTML=headers.map(h=>`<col style="width:${(widths[h]||5)/total*100}%">`).join('');table.prepend(cols);}
+ if(tab==='papers'){const widths={'순번':3,'연도':4,'논문 제목':22,'학술지명':12,'제1저자':8,'교신저자':8,'공동저자':12,'권':3,'호':3,'페이지':5,'SCI 여부':4,'총저자수':4,'온라인공개일':7,'출판일':7,'DOI':10,'과제사사':12,'수정':5};const total=headers.reduce((n,h)=>n+(widths[h]||5),0),cols=document.createElement('colgroup');cols.innerHTML=headers.map(h=>`<col style="width:${(widths[h]||5)/total*100}%">`).join('');table.prepend(cols);}
 table.parentElement.classList.toggle('card-layout',hasLayouts&&viewLayout==='cards');
  const indices=(customizable&&!viewDetail?order:headers).map(h=>headers.indexOf(h));for(const row of table.rows){const cells=[...row.cells];for(const i of indices){const cell=cells[i];cell.classList.toggle('column-hidden',customizable&&!viewDetail&&!selected.includes(headers[i])&&!['관리','수정'].includes(headers[i])&&i!==titleIndex);cell.classList.toggle('record-title',i===titleIndex);cell.classList.toggle('wide-cell',/제목|저자|장소|비고|확인/.test(headers[i]));row.append(cell);}}
  if(tab==='papers')bindCoauthorDisclosure(table);
