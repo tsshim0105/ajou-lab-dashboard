@@ -535,3 +535,8 @@
 .archive-authors>div{align-items:first baseline}
 .paper-archive .archive-authors dt{padding-top:0;line-height:1.5}
 .paper-archive .archive-authors dd{line-height:1.5;min-width:0}
+
+.paper-page-link{display:inline-block;vertical-align:baseline;margin-left:5px;padding:2px 6px;border:1px solid #c9d9e6;border-radius:5px;background:#f4f8fb;color:#346d9b;font-size:11px;font-weight:600;line-height:1.5;white-space:nowrap;text-decoration:none}
+.paper-page-link:hover{background:#e7f1f8}.paper-page-link:focus-visible{outline:2px solid #346d9b;outline-offset:2px}
+.paper-page-link.unavailable{opacity:.5;cursor:default}
+[data-theme=dark] .paper-page-link{color:#b2d1e8;background:#22313e;border-color:#4b6579}
