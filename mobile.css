@@ -290,3 +290,18 @@
  .section-swipe-copy{pointer-events:none!important;z-index:5;overflow:hidden;background:var(--surface,#fff)}
  [data-theme=dark] .section-swipe-copy{background:#1e293b}
 }
+
+/* Overview: large date, stacked logistics, and prominent presenters. */
+.meeting-overview{container-type:inline-size;padding:16px 18px 15px}
+.meeting-overview-header{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.meeting-overview-header h2{font-size:16px;line-height:1.4;margin:0;white-space:nowrap}
+.meeting-overview-kind{font-size:13px;font-weight:650;white-space:nowrap;background:#ffffff80;border-radius:6px;padding:3px 8px}
+.meeting-overview-main{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:12px;margin:14px 0 12px;min-width:0}
+.meeting-overview-date{font-size:64px;font-size:clamp(26px,20cqw,72px);font-weight:750;line-height:1.05;letter-spacing:-.055em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.meeting-overview-details{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0;border-left:1px solid #ffffffa8;padding-left:14px}
+.meeting-overview-time{font-size:24px;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.meeting-overview-place{font-size:14px;font-weight:550;line-height:1.4;overflow-wrap:anywhere}
+.meeting-overview-presenters{border-top:1px solid #ffffff90;padding-top:10px;font-size:21px;font-weight:650;line-height:1.4;overflow-wrap:anywhere}
+[data-theme=dark] .meeting-overview-kind{background:#14233055}[data-theme=dark] .meeting-overview-details{border-color:#ffffff25}[data-theme=dark] .meeting-overview-presenters{border-color:#ffffff25}
+@media(max-width:760px){.meeting-overview{padding:10px 9px}.meeting-overview-header{gap:3px}.meeting-overview-header h2{font-size:11px}.meeting-overview-kind{font-size:10px;padding:2px 4px}.meeting-overview-main{gap:5px;margin:12px 0 10px}.meeting-overview-details{padding-left:6px;gap:3px}.meeting-overview-time{font-size:15px}.meeting-overview-place{font-size:10px}.meeting-overview-presenters{font-size:14px;padding-top:8px}}
+@media(max-width:360px){.meeting-overview-header h2{font-size:10px}.meeting-overview-kind{font-size:9px;padding:2px 3px}.meeting-overview-time{font-size:13px}.meeting-overview-presenters{font-size:13px}}
