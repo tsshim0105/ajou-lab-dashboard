@@ -93,7 +93,51 @@ function render(){document.documentElement.dataset.activeTab=tab;if(tab==='homep
 }
 function toolbar(n){if(tab==='papers')return '';return `<div class="toolbar"><span class="muted">${count(n)}개 기록</span>${['papers','conferences'].includes(tab)?'':'<button class="secondary" id="csv">현재 표 CSV 저장</button>'}</div>`;}
 function download(){const cell=v=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};const b=new Blob(['\ufeff'+exportRows.map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='연구실_'+tab+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-async function performPut(path,input){if(studentPreview)throw Error('학생 화면 미리보기에서는 자료를 변경할 수 없습니다.');if(user.role==='student'&&path==='/api/data'){path='/api/shared';}const res=await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json','X-Lab-Request':'1'},body:JSON.stringify({version,...input})});const result=await res.json();if(!res.ok)throw Error(result.error);version=result.version;if(result.notifications){notifications=result.notifications;renderNotifications();}}
+// Rebase only the user's changes onto a fresh snapshot; never resend a stale full copy.
+function mergeSavedData(base,local,remote,key=''){
+ const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b),copy=v=>v===undefined?undefined:structuredClone(v);
+ if(equal(local,base))return copy(remote);
+ if(equal(remote,base)||equal(local,remote))return copy(local);
+ if(key==='paperEditedAt')return [local,remote].sort().at(-1);
+ if(key==='paperEditedFields'&&Array.isArray(local)&&Array.isArray(remote))return [...new Set([...remote,...local])];
+ if(Array.isArray(base)&&Array.isArray(local)&&Array.isArray(remote)){
+  const keyed=rows=>rows.every(r=>r&&typeof r==='object'&&typeof r.id==='string')&&new Set(rows.map(r=>r.id)).size===rows.length;
+  if([base,local,remote].every(keyed)){
+   const b=new Map(base.map(r=>[r.id,r])),l=new Map(local.map(r=>[r.id,r])),r=new Map(remote.map(r=>[r.id,r]));
+   return [...new Set([...remote.map(r=>r.id),...local.map(r=>r.id)])].map(id=>mergeSavedData(b.get(id),l.get(id),r.get(id),id)).filter(v=>v!==undefined);
+  }
+ }
+ const object=v=>v&&typeof v==='object'&&!Array.isArray(v);
+ if(object(base)&&object(local)&&object(remote)){
+  const result={};for(const field of new Set([...Object.keys(base),...Object.keys(local),...Object.keys(remote)])){
+   const value=mergeSavedData(base[field],local[field],remote[field],field);if(value!==undefined)result[field]=value;
+  }return result;
+ }
+ throw Error('같은 항목을 다른 사람이 수정했습니다. 입력 내용은 유지되어 있습니다. 최신 내용을 확인한 뒤 저장해주세요.');
+}
+async function performPut(path,input){
+ if(studentPreview)throw Error('학생 화면 미리보기에서는 자료를 변경할 수 없습니다.');
+ if(user.role==='student'&&path==='/api/data')path='/api/shared';
+ const canMerge=['/api/data','/api/shared'].includes(path)&&input.data;
+ const baseline=canMerge?structuredClone(data):null,desired=canMerge?structuredClone(input.data):null;
+ let payload=input,saveVersion=version;
+ for(let attempt=0;attempt<4;attempt++){
+  const res=await fetch(path,{method:'PUT',headers:{'Content-Type':'application/json','X-Lab-Request':'1'},body:JSON.stringify({...payload,version:saveVersion})});
+  const result=await res.json();
+  if(res.ok){
+   version=result.version;
+   // Callers retain their next-data reference; update it only after successful persistence.
+   if(canMerge&&payload!==input){for(const key of Object.keys(input.data))delete input.data[key];Object.assign(input.data,payload.data);}
+   if(result.notifications){notifications=result.notifications;renderNotifications();}return;
+  }
+  if(res.status!==409||!canMerge)throw Error(result.error||'저장하지 못했습니다. 입력 내용을 유지한 채 다시 시도해주세요.');
+  if(attempt===3)throw Error('자료 저장이 잠시 밀리고 있습니다. 입력 내용은 유지되어 있으니 저장을 다시 눌러주세요.');
+  const fresh=await fetch('/api/data',{cache:'no-store'}),snapshot=await fresh.json();
+  if(!fresh.ok)throw Error(snapshot.error||'최신 자료를 확인하지 못했습니다. 입력 내용은 유지되어 있습니다.');
+  payload={...input,data:mergeSavedData(baseline,desired,snapshot.data)};saveVersion=snapshot.version;
+ }
+}
+
 
 async function saveStudents(){const b=$('saveStudents');b.disabled=true;try{const next=$('students').value.split(/\s+/).filter(Boolean);await put('/api/students',{students:next});students=next;render();$('accountStatus').textContent='접근 목록을 저장했습니다.';}catch(e){$('accountStatus').textContent=e.message;}finally{b.disabled=false;}}
 $('year').onchange=render;$('query').oninput=render;$('reset').onclick=()=>{$('year').value='all';$('query').value='';render();};
