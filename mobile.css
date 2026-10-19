@@ -359,3 +359,28 @@
  .meeting-agenda-kind{max-width:68px}.meeting-agenda-kind>span{font-size:12px;padding:6px}.meeting-agenda-kind>small{font-size:11px}
 }
 @media(max-width:360px){.meeting-memo.meeting-agenda-card{grid-template-columns:70px minmax(0,1fr) auto;gap:7px;padding-right:7px}.meeting-agenda-date strong{font-size:16px}.meeting-agenda-person{font-size:16px}.meeting-agenda-kind>span{font-size:11px;padding:5px}}
+
+/* Compact desktop overview and agenda; retain mobile sizing separately. */
+@media(min-width:761px){
+ .meeting-overview{padding:11px 16px 10px}
+ .meeting-overview-date{font-size:24px;letter-spacing:-.5px;line-height:1.2}
+ .meeting-overview-main{grid-template-columns:auto minmax(0,1fr);gap:18px;margin:8px 0}
+ .meeting-overview-details{gap:2px;padding-left:14px}
+ .meeting-overview-time{font-size:20px}
+ .meeting-overview-place{font-size:13px}
+ .meeting-overview-presenters{font-size:17px;padding-top:6px;line-height:1.35}
+ .group-schedule .meeting-month-board{gap:8px;margin-top:14px}
+ .group-schedule .meeting-month h3{font-size:13px;padding-top:12px}
+ .group-schedule .meeting-month-events{gap:6px}
+ .meeting-memo.meeting-agenda-card{grid-template-columns:88px minmax(0,1fr) auto;gap:16px;min-height:64px;padding-right:14px;border-radius:10px}
+ .meeting-agenda-date{padding:6px 13px}
+ .meeting-agenda-date strong{font-size:18px;letter-spacing:0}
+ .meeting-agenda-date span{font-size:12px;margin-top:3px}
+ .meeting-agenda-info{padding:6px 0}
+ .meeting-agenda-person{font-size:18px;line-height:1.3}
+ .meeting-agenda-facts{gap:3px 13px;margin-top:3px;line-height:1.25}
+ .meeting-agenda-time{font-size:17px}
+ .meeting-agenda-place{font-size:14px}
+ .meeting-agenda-kind>span{font-size:13px;padding:4px 8px}
+ .meeting-agenda-kind>small{font-size:11px;margin-top:2px}
+}
