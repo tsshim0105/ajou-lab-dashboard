@@ -288,3 +288,12 @@ test('annual plan saves atomically, shares one notice and preserves other data',
  assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',body),env)).status,409);
  assert.equal((await worker.fetch(req(OWNER,'/api/group-meetings','PUT',{...body,version:owner.version,plan:{...plan,names:['A','A']}}),env)).status,400);
 });
+
+test('verified paper grants persist once on authenticated reads without exposing financial data',async()=>{
+ const {paperGrantCatalog}=await import('../server/paper-grants.mjs');const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();
+ original.data.papers[0].doi=paperGrantCatalog[1].doi;
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:original.version,data:original.data}),env)).status,200);
+ assert.equal((await worker.fetch(req('unapproved@example.test'),env)).status,403);
+ const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.version,2);assert.deepEqual(student.data.funds,[]);assert.deepEqual(student.data.payroll,[]);
+ const owner=await (await worker.fetch(req(OWNER),env)).json();assert.equal(owner.version,2);assert.equal(owner.data.papers[0].fund,'RS-2024-00397807');assert.equal(owner.data.papers[0].fundSource,paperGrantCatalog[1].source);assert.deepEqual(owner.data.funds,original.data.funds);
+});

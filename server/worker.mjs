@@ -1,3 +1,4 @@
+import {applyPaperGrants} from './paper-grants.mjs';
 import {recordScheduleAdditions,recordScheduleDay} from './schedule-notifications.mjs';
 import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
 import {migrationRequest} from './migration.mjs';
@@ -124,7 +125,7 @@ export function applySharedData(current,input){
  return validateData(next);
 }
 
-export function createWorker(html,meetingEvents=null,serviceWorkerSource='',notificationIcon=''){return {async fetch(req,env,ctx){const migration=await migrationRequest(req,env);if(migration)return migration;const gateway=await gatewayRequest(req,env);if(gateway instanceof Response)return gateway;if(gateway){const response=await createWorker(html,meetingEvents,serviceWorkerSource,notificationIcon).fetch(gateway,env,ctx);const type=response.headers.get('Content-Type')||'';if(type.includes('text/html')||type.includes('javascript')){const h=new Headers(response.headers);if(type.includes('javascript'))h.set('Service-Worker-Allowed','/dashboard/');return new Response(req.method==='HEAD'?null:mountDashboardText(await response.text()),{status:response.status,headers:h});}return response;}const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
+export function createWorker(html,meetingEvents=null,serviceWorkerSource='',notificationIcon=''){return {async fetch(req,env,ctx){const migration=await migrationRequest(req,env);if(migration)return migration;const gateway=await gatewayRequest(req,env);if(gateway instanceof Response)return gateway;if(gateway){const response=await createWorker(html,meetingEvents,serviceWorkerSource,notificationIcon).fetch(gateway,env,ctx);const type=response.headers.get('Content-Type')||'';if(type.includes('text/html')||type.includes('javascript')){const h=new Headers(response.headers);if(type.includes('javascript'))h.set('Service-Worker-Allowed','/dashboard/');return new Response(req.method==='HEAD'?null:mountDashboardText(await response.text()),{status:response.status,headers:h});}return response;}const url=new URL(req.url),headers={'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','Vary':'Cookie, oai-authenticated-user-id, oai-authenticated-user-email','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'"};
  const reply=(body,status=200,type)=>new Response(req.method==='HEAD'?null:typeof body==='string'?body:JSON.stringify(body),{status,headers:{...headers,...(type?{'Content-Type':type}:{})}});
  try{
   if(url.pathname==='/notification-icon.png'&&['GET','HEAD'].includes(req.method))return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(notificationIcon),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600'}});
@@ -216,6 +217,16 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    return reply(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모바일 화면 검증</title><style>body{margin:0;background:#edf1f5;display:grid;place-items:start center;padding:20px}iframe{border:0;border-radius:16px;background:white;box-shadow:0 4px 30px #0002}</style></head><body><iframe title="모바일 대시보드" src="/" width="${width}" height="${height}"></iframe></body></html>`,200,'text/html; charset=utf-8');
   }
   if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
+  if(read&&url.pathname==='/api/data'){
+   // Each merge starts from the latest snapshot; never overwrite a concurrent save.
+   for(let attempt=0;attempt<3;attempt++){
+    const merged=applyPaperGrants(state.data);if(!merged.count)break;
+    const next={...state,data:merged.data};
+    const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();
+    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+    if(saved.meta?.changes)break;
+   }
+  }
   if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
