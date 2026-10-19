@@ -315,11 +315,12 @@ export function grantDoi(value){const v=String(value||'').trim().replace(/^https
 export function applyPaperGrants(data,catalog=paperGrantCatalog){
  let count=0;const key=v=>String(v||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
  const papers=data.papers.map(p=>{
-  if(String(p.fund||'').trim()||p.paperEditedFields?.includes('fund'))return p;
+  // One-time replacement requested by the owner; later manual edits remain intact.
+  if(p.fundNumberRevision==='2026-10-19-replace')return p;
   const doi=grantDoi(p.doi||p.publicationUrl),byDoi=doi?catalog.filter(c=>grantDoi(c.doi)===doi):[];
   const candidates=doi?byDoi:catalog.filter(c=>[p.title,...(p.titleAliases||[])].some(t=>key(t)&&key(t)===key(c.title)));
   if(candidates.length!==1)return p;
   const found=candidates[0],numbers=cleanGrantNumbers(found.awards);if(!numbers.length)return p;
-  count++;return {...p,fund:numbers.join(', '),fundSource:found.source,fundChecked:'2026-10-19'};
+  count++;return {...p,fund:numbers.join(', '),fundSource:found.source,fundChecked:'2026-10-19',fundNumberRevision:'2026-10-19-replace'};
  });return {data:{...data,papers},count};
 }
