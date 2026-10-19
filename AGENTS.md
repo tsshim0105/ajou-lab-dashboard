@@ -21,3 +21,7 @@
 - Shared research and reagent content supports add/edit/delete/import/export and shared name mappings for students. Keep financial records and hidden paper metadata intact during student saves.
 - Account access grants/revocations and private device subscription administration remain security administration; never silently expose them as content management.
 - Verify both student UI and server permissions for each applicable change.
+
+## Footer release tracking
+- The build automatically updates release.json when dashboard source changes. Commit release.json with every code change and deploy that exact build.
+- Never hardcode the footer version/date. Keep DASHBOARD_RELEASE metadata in the bundled HTML.
