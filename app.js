@@ -532,3 +532,22 @@ document.addEventListener('click',e=>{
 });
 
 matchMedia('(max-width:760px)').addEventListener('change',()=>{if(tab==='papers'&&!busy)render();});
+
+// Refresh shared data without reloading the WebView or replaying the startup screen.
+async function refreshDashboardFromPull(){
+ if(offline)throw Error('오프라인에서는 새로고침할 수 없습니다.');
+ await prefQueue;
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{
+  const response=await fetch('/api/data',{cache:'no-store',signal:controller.signal});
+  if(!response.ok)throw Error(response.status===401?'다시 로그인해 주세요.':'연결을 확인하고 다시 당겨 주세요.');
+  const result=await response.json();
+  if(!result.data||!result.user)throw Error('데이터를 불러오지 못했습니다.');
+  const selectedYear=$('year').value;
+  ({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];
+  notifications=result.notifications||[];labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];
+  years();if([...$('year').options].some(o=>o.value===selectedYear))$('year').value=selectedYear;
+  renderNotifications();render();$('panel').scrollTop=0;
+ }catch(error){if(error.name==='AbortError')throw Error('연결이 지연됩니다. 다시 당겨 주세요.');throw error;}
+ finally{clearTimeout(timer);}
+}

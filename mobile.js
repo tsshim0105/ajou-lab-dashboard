@@ -17,15 +17,49 @@ function openMobileMore(){
  const mobile=()=>matchMedia('(max-width:760px)').matches;
  const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
  const reset=()=>{panel.style.transform='';panel.style.willChange='';};
+ let pullIndicator=null;
+ const pullBlocked=()=>busy||document.querySelector('dialog[open],[data-inline-editor],#startupSplash')||!['home','groupMeetings','papers','conferences','reagents','meetingInfo'].includes(tab);
+ const atTop=target=>{
+  if(!panel.contains(target)||panel.scrollTop>1)return false;
+  for(let n=target;n&&n!==panel;n=n.parentElement)if(n.scrollTop>1)return false;
+  return true;
+ };
+ const showPull=(distance,label,loading=false)=>{
+  if(!pullIndicator){pullIndicator=document.createElement('div');pullIndicator.className='pull-refresh';pullIndicator.setAttribute('role','status');pullIndicator.setAttribute('aria-live','polite');panel.parentElement.append(pullIndicator);}
+  pullIndicator.style.top=(panel.offsetTop+8)+'px';pullIndicator.hidden=false;
+  pullIndicator.classList.toggle('is-loading',loading);
+  pullIndicator.innerHTML='<span aria-hidden="true">↻</span><small>'+label+'</small>';
+  pullIndicator.style.opacity=String(Math.min(1,distance/40));
+  panel.style.willChange='transform';panel.style.transform=`translateY(${distance}px)`;
+ };
+ const finishPull=async(g,cancel)=>{
+  animating=true;
+  const commit=!cancel&&g.pull>=64&&!pullBlocked()&&g.tab===tab;
+  if(commit){
+   busy=true;showPull(52,'새로고침 중',true);
+   try{await refreshDashboardFromPull();showPull(52,'업데이트 완료');}
+   catch(error){showPull(52,error.message||'연결을 확인해 주세요');await new Promise(resolve=>setTimeout(resolve,1300));}
+   finally{busy=false;}
+  }
+  const from=commit?52:g.pull;
+  const a=panel.animate([{transform:`translateY(${from}px)`},{transform:'translateY(-3px)',offset:.72},{transform:'translateY(0)'}],{duration:reduced()?0:460,easing:'cubic-bezier(.22,.8,.25,1)',fill:'both'});
+  try{await a.finished;}finally{a.cancel();reset();if(pullIndicator)pullIndicator.hidden=true;animating=false;}
+ };
  document.addEventListener('touchstart',e=>{
   if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
   const t=e.touches[0];
-  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
+  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,pull:0,canPull:!pullBlocked()&&atTop(e.target),scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
  },{passive:true,capture:true});
  document.addEventListener('touchmove',e=>{
-  if(!gesture)return;if(e.touches.length!==1){gesture=null;reset();return;}
+  if(!gesture)return;if(e.touches.length!==1){finish(true);return;}
   const t=e.touches[0],dx=t.clientX-gesture.x,dy=t.clientY-gesture.y;
   if(!gesture.axis&&Math.max(Math.abs(dx),Math.abs(dy))>10)gesture.axis=Math.abs(dx)>Math.abs(dy)*1.3?'x':'y';
+  if(gesture.axis==='y'&&gesture.canPull){
+   if(dy<=0&&!gesture.pull){gesture.canPull=false;return;}
+   if(e.cancelable)e.preventDefault();
+   gesture.pull=Math.max(0,Math.min(100,dy*.42));suppressClickUntil=performance.now()+500;
+   showPull(gesture.pull,gesture.pull>=64?'놓으면 새로고침':'당겨서 새로고침');return;
+  }
   if(gesture.axis!=='x')return;
   const scroller=gesture.scroller;
   if(scroller&&scroller.scrollWidth>scroller.clientWidth+2&&((dx>0&&scroller.scrollLeft>1)||(dx<0&&scroller.scrollLeft+scroller.clientWidth<scroller.scrollWidth-1))){gesture=null;reset();return;}
@@ -35,7 +69,7 @@ function openMobileMore(){
   gesture.dx=next?dx:dx*.2;panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
  },{passive:false,capture:true});
  const finish=cancel=>{
-  const g=gesture;gesture=null;if(!g)return;if(g.axis!=='x'){reset();return;}
+  const g=gesture;gesture=null;if(!g)return;if(g.pull>0){finishPull(g,cancel);return;}if(g.axis!=='x'){reset();return;}
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),next=keys[keys.indexOf(tab)+(g.dx<0?1:-1)];
   const commit=!cancel&&g.axis==='x'&&g.tab===tab&&next&&(Math.abs(g.dx)>Math.min(80,innerWidth*.22)||(!g.wheel&&Math.abs(g.dx)>30&&Math.abs(g.dx)/(performance.now()-g.time)>.45));
   const duration=reduced()?0:300,opts={duration,easing:'cubic-bezier(.22,.8,.25,1)',fill:'both'};

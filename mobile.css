@@ -612,3 +612,12 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 #panel .foot{position:static;flex:none;grid-column:1/-1;margin-top:16px;padding:8px 0 0;min-width:0;white-space:normal}
 #panel .table-wrap>.foot{padding:8px 10px;margin-top:0;background:var(--surface,#fff)}
 #panel .paper-archive-list>.foot{grid-column:1/-1;align-self:end}
+
+/* The header stays anchored while content follows the pull gesture. */
+.pull-refresh{position:absolute;left:50%;transform:translateX(-50%);z-index:25;display:flex;align-items:center;gap:7px;pointer-events:none;color:var(--muted,#64748b);font-size:22px;white-space:nowrap}
+.pull-refresh[hidden]{display:none}
+.pull-refresh small{font-size:11px;font-weight:500}
+.pull-refresh.is-loading>span{animation:pull-refresh-spin .8s linear infinite}
+@keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.pull-refresh.is-loading>span{animation:none}}
+@media(max-width:760px){.app>#panel{overscroll-behavior-y:none}}
