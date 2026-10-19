@@ -592,3 +592,8 @@ html:is([data-active-tab="papers"],[data-active-tab="conferences"]) #panel>#filt
  .group-schedule>.planner-heading h2,.game-night-editor>.planner-heading h2{font-size:20px;line-height:1.4}
  .game-night-editor .research-title-actions{flex-wrap:wrap}
 }
+
+.year-game-row{margin-bottom:12px}
+@media(max-width:760px){.year-game-row{margin-bottom:8px}}
+.foot{padding-top:6px;padding-bottom:6px}
+#desktopConnectionStatus{font-size:inherit;color:inherit}
