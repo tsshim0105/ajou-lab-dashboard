@@ -732,3 +732,15 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
  .conference-pass-deadlines{padding-left:8px;padding-right:8px;column-gap:6px}
  .conference-pass .meeting-deadline strong{font-size:15px}
 }
+
+/* Shared title-side filters for conferences and research funds. */
+.section-filter-title{justify-content:flex-start;align-items:center;gap:14px}
+.section-filter-title h1{flex:0 1 auto;min-width:0}
+.section-filter-buttons{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.section-filter-buttons button{border-radius:8px;padding:6px 11px;min-height:32px;font-size:13px;line-height:1.3;white-space:nowrap}
+@media(max-width:760px){
+ .section-filter-title{gap:8px;flex-wrap:wrap}
+ .section-filter-title h1{font-size:18px}
+ .section-filter-buttons{gap:4px}
+ .section-filter-buttons button{padding:7px 8px;min-height:36px;font-size:12px}
+}
