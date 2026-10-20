@@ -406,42 +406,6 @@ const ConferenceInfo = {
       "checked": "2026-10-19"
     },
     {
-      "id": "polymer-2029-spring",
-      "society": "polymer",
-      "group": "domestic",
-      "name": "한국고분자학회 · 2029 춘계",
-      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
-      "start": "2029-04-11",
-      "end": "2029-04-13",
-      "venue": "제주컨벤션센터(ICC JEJU)",
-      "abstracts": [],
-      "registration": [],
-      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
-      "sources": [
-        "https://www.polymer.or.kr/function/function_0.php",
-        "https://www.polymer.or.kr/eng/function/function_0.php"
-      ],
-      "checked": "2026-10-19"
-    },
-    {
-      "id": "polymer-2029-fall",
-      "society": "polymer",
-      "group": "domestic",
-      "name": "한국고분자학회 · 2029 추계",
-      "url": "https://www.polymer.or.kr/eng/function/function_0.php",
-      "start": "2029-10-10",
-      "end": "2029-10-12",
-      "venue": "부산 BEXCO",
-      "abstracts": [],
-      "registration": [],
-      "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
-      "sources": [
-        "https://www.polymer.or.kr/function/function_0.php",
-        "https://www.polymer.or.kr/eng/function/function_0.php"
-      ],
-      "checked": "2026-10-19"
-    },
-    {
       "id": "ksiec-2027-fall",
       "society": "ksiec",
       "group": "domestic",
@@ -487,40 +451,6 @@ const ConferenceInfo = {
       "abstracts": [],
       "registration": [],
       "note": "개최 일정·장소 공개. 초록·등록 마감 및 전용 대회 홈페이지는 공지 대기.",
-      "sources": [
-        "https://www.acs.org/events/acs-meetings/future-meetings.html"
-      ],
-      "checked": "2026-10-19"
-    },
-    {
-      "id": "acs-2029-spring",
-      "society": "acs",
-      "group": "international",
-      "name": "ACS · 2029 Spring Meeting",
-      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
-      "start": "2029-03-25",
-      "end": "2029-03-29",
-      "venue": "미국 시카고 · 미확정(Pending)",
-      "abstracts": [],
-      "registration": [],
-      "note": "공식 미래 일정에 게시됨. 개최지는 Pending(미확정)으로 표시되어 있습니다. 초록·등록 마감 및 전용 페이지는 공지 대기.",
-      "sources": [
-        "https://www.acs.org/events/acs-meetings/future-meetings.html"
-      ],
-      "checked": "2026-10-19"
-    },
-    {
-      "id": "acs-2029-fall",
-      "society": "acs",
-      "group": "international",
-      "name": "ACS · 2029 Fall Meeting",
-      "url": "https://www.acs.org/events/acs-meetings/future-meetings.html",
-      "start": "2029-08-19",
-      "end": "2029-08-23",
-      "venue": "미국 로스앤젤레스 · 미확정(Pending)",
-      "abstracts": [],
-      "registration": [],
-      "note": "공식 미래 일정에 게시됨. 개최지는 Pending(미확정)으로 표시되어 있습니다. 초록·등록 마감 및 전용 페이지는 공지 대기.",
       "sources": [
         "https://www.acs.org/events/acs-meetings/future-meetings.html"
       ],
@@ -587,23 +517,6 @@ const ConferenceInfo = {
       "start": "2028-11-26",
       "end": "2028-12-01",
       "venue": "미국 보스턴",
-      "abstracts": [],
-      "registration": [],
-      "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
-      "sources": [
-        "https://www.mrs.org/meetings-events/annual-meetings"
-      ],
-      "checked": "2026-10-19"
-    },
-    {
-      "id": "mrs-2029-spring",
-      "society": "mrs",
-      "group": "international",
-      "name": "MRS · 2029 Spring Meeting",
-      "url": "https://www.mrs.org/meetings-events/annual-meetings",
-      "start": "2029-04-09",
-      "end": "2029-04-13",
-      "venue": "미국 시애틀",
       "abstracts": [],
       "registration": [],
       "note": "공식 연간 일정에 공개된 개최일·도시입니다. 초록·참가등록 마감은 공지 대기입니다.",
