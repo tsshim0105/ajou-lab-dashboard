@@ -1,0 +1,11 @@
+# Weekly conference updates
+
+The live dashboard is hosted at https://nisml.ajou.ac.kr/dashboard/ in the NISML Sites project `appgprj_6acdc83a9b088191a8a13f8d73fc6624`. The former separate dashboard redirects there. Keep the integrated runtime in sync with dashboard UI and server changes without replacing concurrent work.
+
+A linked cloud schedule starts each Monday at 06:00 Asia/Seoul. Read the current catalog using the Site's owner-only `read_conference_catalog` MCP tool. Check official sites for the registered societies and editions, including new editions announced for this year through the end of the year two years ahead. Do not invent dates, deadlines, venues, or annual recurrence. Preserve previously verified values when sources fail. Skip later years. Fetch fresh source announcements, not only search snippets.
+
+Use `update_conference_catalog` with the returned version, full public records only for changed/new events, and IDs of successfully checked events. Never send dashboard research, student, or finance data. On conflict re-read and reapply the same verified changes. The writer changes the catalog, shared notification feed and notification snapshot atomically; repeated writes do not duplicate alerts. Read back to verify. Do not republish code for routine data updates. Report failures without claiming a successful refresh. If tools are unavailable, connect the Site-created plugin before enabling unattended updates.
+
+The page displays last actual content update, last successful check and the weekly cadence. Actual additions/changes persist `updatedAt`; their card shows an “업데이트됨” badge beside the event title with its change timestamp. Check-only passes do not create badges or notifications. Display is limited to upcoming events through current year + 2. Earlier saved future records are retained but hidden until in range.
+
+`server/conference-updates.mjs` contains the shared merge/write implementation, using the integrated `dashboard_state` table. `integrations/conference-mcp-route.ts` is the integrated Sites route, mounted at `/mcp` with the `mcp` hosting capability and owner identity checks. Production also keeps `app/dashboard/conference-seed.json` as its initial public catalog. No credentials belong in this repository.
