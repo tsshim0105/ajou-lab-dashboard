@@ -621,3 +621,47 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 @keyframes pull-refresh-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.pull-refresh.is-loading>span{animation:none}}
 @media(max-width:760px){.app>#panel{overscroll-behavior-y:none}}
+
+/* Aurora boarding pass: official logos and complete deadline metadata. */
+.conference-pass{--pass-paper:#fff;--pass-ink:#22394e;--pass-sub:#61768a;--pass-line:#c5d6de;--pass-a:#dfefeb;--pass-b:#eeebf7;--pass-soft:#eff4f7;display:grid;grid-template-columns:minmax(0,1fr) 150px;border-radius:15px;overflow:hidden;background:var(--pass-paper);color:var(--pass-ink);box-shadow:0 3px 16px #102a4210;min-width:0}
+.conference-pass-main{padding:14px 16px;background:linear-gradient(130deg,var(--pass-a),var(--pass-paper) 80%);min-width:0}
+.conference-pass.is-domestic .conference-pass-main{background:linear-gradient(130deg,var(--pass-b),var(--pass-paper) 80%)}
+.conference-pass-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.conference-pass-logo{display:flex;align-items:center;justify-content:center;flex:0 0 64px;align-self:stretch;border-right:1px dashed var(--pass-line);padding-right:12px;box-sizing:border-box}
+.conference-pass-logo img{width:50px;height:50px;object-fit:contain;padding:3px;background:#fff;border-radius:8px;box-sizing:border-box}
+.conference-pass-heading{flex:1;min-width:0}
+.conference-pass-heading h2{font-size:21px;line-height:1.3;margin:0;padding:0;border:0;overflow-wrap:anywhere;color:var(--pass-ink)}
+.conference-pass-heading h2 a{color:inherit;text-decoration:none}.conference-pass-heading h2 a:hover{text-decoration:underline}
+.conference-pass-heading p{font-size:14px;color:var(--pass-sub);margin:4px 0 0;overflow-wrap:anywhere}
+.conference-pass-transport{display:flex;flex:0 0 40px;color:var(--pass-sub)}.conference-pass-transport svg{width:40px;height:40px}
+.conference-pass-deadlines{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.conference-pass-deadlines section{min-width:0}.conference-pass-deadlines h3{font-size:13px;line-height:1.4;color:var(--pass-sub);margin:0 0 5px}
+.conference-pass .meeting-deadline{background:var(--pass-paper);padding:7px 10px;border-radius:8px;margin:0;border:0}
+.conference-pass .meeting-deadline+.meeting-deadline{margin-top:7px}
+.conference-pass .meeting-deadline-label{font-size:13px;color:var(--pass-sub);margin:0}
+.conference-pass .meeting-deadline strong{font-size:25px;line-height:1.25;color:var(--pass-ink);letter-spacing:-.5px}
+.conference-pass .meeting-deadline small{font-size:12px;margin-top:3px;color:var(--pass-sub)}
+.conference-pass .meeting-deadline-line{justify-content:space-between;gap:4px}
+.conference-pass .meeting-deadline .badge{font-size:11px;padding:2px 5px}
+.conference-pass .meeting-unknown{font-size:15px;color:var(--pass-sub);padding:10px;background:var(--pass-paper);border-radius:8px}
+.conference-pass-stub{position:relative;padding:14px 12px;background:var(--pass-soft);border-left:1px dashed var(--pass-line);display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0}
+.conference-pass-stub:before,.conference-pass-stub:after{content:'';width:14px;height:14px;border-radius:50%;background:var(--surface,#fff);position:absolute;left:-7px}.conference-pass-stub:before{top:-7px}.conference-pass-stub:after{bottom:-7px}
+.conference-pass-stub small,.conference-pass-dash{font-size:12px;color:var(--pass-sub)}
+.conference-pass-stub time{font-size:34px;font-weight:750;line-height:1.15;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.conference-pass-region{font-size:12px;font-weight:600;margin-top:6px}.conference-pass-pending{font-size:20px}
+.conference-pass-barcode{height:17px;margin-top:9px;opacity:.25;background:repeating-linear-gradient(90deg,var(--pass-ink) 0 2px,transparent 2px 4px,var(--pass-ink) 4px 5px,transparent 5px 8px)}
+.conference-pass .meeting-footer{margin-top:10px;padding:0;font-size:12px;gap:8px;align-items:flex-start;flex-wrap:wrap}.conference-pass .meeting-footer details{min-width:0;flex:1}.conference-pass .meeting-footer p,.conference-pass .meeting-sources{overflow-wrap:anywhere}
+[data-theme=dark] .conference-pass{--pass-paper:#223044;--pass-ink:#e8eff7;--pass-sub:#b4c3d3;--pass-line:#526378;--pass-a:#29434b;--pass-b:#3c374f;--pass-soft:#2d3d50}
+@media(max-width:760px){
+ .conference-pass{grid-template-columns:minmax(0,1fr) 94px;border-radius:13px}
+ .conference-pass-main{padding:10px}.conference-pass-header{display:grid;grid-template-columns:44px minmax(0,1fr) 32px;gap:7px;margin-bottom:10px}
+ .conference-pass-logo{width:44px;padding-right:4px}.conference-pass-logo img{width:40px;height:40px;padding:2px}
+ .conference-pass-transport,.conference-pass-transport svg{width:32px;height:32px}
+ .conference-pass-heading h2{font-size:17px}.conference-pass-heading p{font-size:12px}
+ .conference-pass-deadlines{gap:7px}.conference-pass .meeting-deadline{padding:7px}
+ .conference-pass .meeting-deadline strong{font-size:21px;white-space:normal;overflow-wrap:normal}
+ .conference-pass .meeting-deadline-label{font-size:12px}.conference-pass .meeting-deadline small{font-size:11px}
+ .conference-pass-stub{padding:10px 8px}.conference-pass-stub time{font-size:27px}.conference-pass-stub small,.conference-pass-region{font-size:11px}
+ .conference-pass .meeting-footer{font-size:11px}.conference-pass .meeting-footer summary{padding:5px 0}
+}
+@media(max-width:380px){.conference-pass{grid-template-columns:minmax(0,1fr) 80px}.conference-pass-stub{padding:10px 6px}.conference-pass-stub time{font-size:24px}.conference-pass-deadlines{grid-template-columns:1fr}.conference-pass-heading h2{font-size:16px}}
