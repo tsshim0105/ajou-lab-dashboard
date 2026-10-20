@@ -692,3 +692,43 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
  .conference-pass-barcode{height:10px;margin-top:5px}
  .conference-pass-region{margin-top:3px}
 }
+
+/* Mobile film-rail ticket: independent layout, shared conference content. */
+.conference-pass-spine,.conference-pass-mobile-region{display:none}
+@media(max-width:760px){
+ .conference-pass{grid-template-columns:32px minmax(0,1fr);grid-template-areas:'spine header' 'spine event' 'spine deadlines' 'spine footer';border-radius:0;-webkit-mask:radial-gradient(circle at 8px 0,transparent 4px,#000 4.5px) top/16px 51% repeat-x,radial-gradient(circle at 8px 100%,transparent 4px,#000 4.5px) bottom/16px 51% repeat-x;mask:radial-gradient(circle at 8px 0,transparent 4px,#000 4.5px) top/16px 51% repeat-x,radial-gradient(circle at 8px 100%,transparent 4px,#000 4.5px) bottom/16px 51% repeat-x;background:var(--pass-paper)}
+ .conference-pass-main{display:contents}
+ .conference-pass-spine{grid-area:spine;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:14px 6px;font-size:11px;letter-spacing:2px;background:var(--pass-soft);border-left:1px dashed var(--pass-line)}
+ .conference-pass-header{grid-area:header;display:grid;grid-template-columns:36px minmax(0,1fr) 29px;gap:7px 8px;margin:0;padding:14px 12px 9px;background:linear-gradient(125deg,var(--pass-a),var(--pass-b))}
+ .conference-pass-logo{grid-column:1;grid-row:1;width:36px;padding:0;border:0;align-self:center}
+ .conference-pass-logo img{width:36px;height:36px}
+ .conference-pass-mobile-region{display:block;grid-column:2;grid-row:1;font-size:12px;color:var(--pass-sub)}
+ .conference-pass-transport{grid-column:3;grid-row:1;width:29px;flex-basis:29px}
+ .conference-pass-transport svg{width:29px;height:29px}
+ .conference-pass-heading{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(66px,30%);align-items:center;gap:8px}
+ .conference-pass-heading h2{font-size:17px;line-height:1.3;margin:0}
+ .conference-pass-heading p{font-size:12px;line-height:1.4;margin:0;padding-left:8px;border-left:1px solid var(--pass-line);text-align:right;overflow-wrap:anywhere}
+ .conference-pass-stub{grid-area:event;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px 8px;padding:8px 12px;border-left:0;border-top:1px dashed var(--pass-line);border-bottom:1px dashed var(--pass-line)}
+ .conference-pass-stub:before,.conference-pass-stub:after{display:none}
+ .conference-pass-stub>small:first-child{flex-basis:100%;font-size:12px}
+ .conference-pass-stub time{font-size:21px;line-height:1.2;letter-spacing:-.5px}
+ .conference-pass-stub .conference-pass-region,.conference-pass-stub .conference-pass-barcode{display:none}
+ .conference-pass-deadlines{grid-area:deadlines;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:9px 8px;padding:9px 12px;background:var(--pass-paper)}
+ .conference-pass-deadlines section{display:contents}
+ .conference-pass .meeting-deadline{padding:0;margin:0;min-width:0;background:transparent}
+ .conference-pass .meeting-deadline+.meeting-deadline{margin:0}
+ .conference-pass .meeting-deadline-label{display:block;min-height:0;font-size:11px;line-height:1.25;margin:0 0 2px;overflow-wrap:anywhere}
+ .conference-pass .meeting-deadline-line{display:flex;flex-direction:row;justify-content:flex-start;align-items:center;gap:3px;flex-wrap:wrap}
+ .conference-pass .meeting-deadline strong{font-size:16px;line-height:1.25;letter-spacing:-.5px;white-space:nowrap}
+ .conference-pass .meeting-deadline .badge{font-size:11px;line-height:1.25;padding:2px 5px;border-radius:999px;white-space:normal;max-width:100%;overflow-wrap:anywhere}
+ .conference-pass .meeting-unknown{font-size:12px;padding:0;margin:0;overflow-wrap:anywhere}
+ .conference-pass .meeting-footer{grid-area:footer;display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:8px 12px 12px;background:var(--pass-soft);border-top:1px dashed var(--pass-line);font-size:11px}
+ .conference-pass .meeting-footer:before{content:'';display:block;flex-basis:100%;height:11px;opacity:.3;background:repeating-linear-gradient(90deg,var(--pass-ink) 0 1px,transparent 1px 3px,var(--pass-ink) 3px 5px,transparent 5px 8px)}
+ .conference-pass .meeting-footer summary{padding:4px 0}
+}
+@media(max-width:380px){
+ .conference-pass{grid-template-columns:28px minmax(0,1fr)}
+ .conference-pass-header,.conference-pass-stub,.conference-pass .meeting-footer{padding-left:8px;padding-right:8px}
+ .conference-pass-deadlines{padding-left:8px;padding-right:8px;column-gap:6px}
+ .conference-pass .meeting-deadline strong{font-size:15px}
+}
