@@ -665,3 +665,16 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
  .conference-pass .meeting-footer{font-size:11px}.conference-pass .meeting-footer summary{padding:5px 0}
 }
 @media(max-width:380px){.conference-pass{grid-template-columns:minmax(0,1fr) 80px}.conference-pass-stub{padding:10px 6px}.conference-pass-stub time{font-size:24px}.conference-pass-deadlines{grid-template-columns:1fr}.conference-pass-heading h2{font-size:16px}}
+
+/* Compact ticket deadlines: full dates and equally legible statuses. */
+.conference-pass .meeting-deadline{padding:5px 10px}
+.conference-pass .meeting-deadline+.meeting-deadline{margin-top:5px}
+.conference-pass .meeting-deadline-line{flex-wrap:wrap;align-items:center}
+.conference-pass .meeting-deadline strong,.conference-pass .meeting-deadline .badge{font-size:23px;line-height:1.2;white-space:nowrap}
+.conference-pass .meeting-deadline .badge{padding:2px 6px}
+.conference-pass-header{margin-bottom:8px}
+@media(max-width:760px){
+ .conference-pass-deadlines{grid-template-columns:1fr;gap:5px}
+ .conference-pass .meeting-deadline strong,.conference-pass .meeting-deadline .badge{font-size:18px}
+ .conference-pass .meeting-deadline{padding:5px 7px}
+}
