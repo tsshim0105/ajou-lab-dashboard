@@ -16,8 +16,11 @@ export async function saveResearchImport(env,b){
  const papers=(b.papers||[]).map(p=>({title:text(p.title,500,true),url:url(p.url),authors:text(p.authors||'',1000),journal:text(p.journal||'',200),year:text(p.year||'',20),doi:text(p.doi||'',160)}));
  const images=[],warnings=[];
  for(const [i,x] of (b.images||[]).entries()){
-  const caption=text(x.caption||'ChatGPT에서 저장한 그림',500),origin=x.url?url(x.url):'',sourceUrl=x.source?url(x.source):origin;let bytes;
+  const caption=text(x.caption||'ChatGPT에서 저장한 그림',500);let bytes,origin='',sourceUrl='';
+  // A placeholder reserves the original position without pretending a file exists.
+  if(x.placeholder===true||(!x.url&&!x.base64&&!x.svg)){warnings.push('그림 '+(i+1)+': 원본 파일 연결 대기 중입니다. attach_research_image로 연결해주세요.');images.push({caption,missing:true,pending:true});continue;}
   try{
+   origin=x.url?url(x.url):'';sourceUrl=x.source?url(x.source):origin;
    if(x.svg){bytes=new TextEncoder().encode(safeResearchSvg(x.svg));}
    else if(x.base64){if(x.base64.length>5600000)throw Error();bytes=Uint8Array.from(atob(x.base64),c=>c.charCodeAt(0));}
    else if(origin){const host=new URL(origin).hostname;const allowed=['oaiusercontent.com','oaistatic.com','blob.core.windows.net','acs.org','wiley.com','springernature.com'];if(!allowed.some(d=>host===d||host.endsWith('.'+d)))throw Error();const r=await fetch(origin,{redirect:'error',signal:AbortSignal.timeout(12000)});if(!r.ok||Number(r.headers.get('content-length'))>4194304)throw Error();const reader=r.body.getReader(),parts=[];let n=0;while(true){const v=await reader.read();if(v.done)break;n+=v.value.length;if(n>4194304){await reader.cancel();throw Error();}parts.push(v.value);}bytes=new Uint8Array(n);let off=0;for(const p of parts){bytes.set(p,off);off+=p.length;}}
