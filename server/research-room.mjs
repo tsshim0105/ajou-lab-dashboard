@@ -1,3 +1,4 @@
+import {meetingRecordingRequest} from './meeting-recording.mjs';
 import {prepareResearchImageUpload} from './research-upload.mjs';
 // Topic viewers have read-only access; all mutations remain professor-only.
 export const RESEARCH_MODEL='gpt-6.1-sol';
@@ -12,6 +13,7 @@ async function rrConfig(db){const row=await db.prepare("SELECT payload FROM rese
 async function rrTopic(db,id){const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('topic:'+rrId(id)).first();if(!row)throw rrError('주제를 찾을 수 없습니다.',404);return {...JSON.parse(row.payload),version:row.version};}
 async function rrUpdate(db,id,version,payload){const result=await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(payload),id,version).run();if(!result.meta?.changes)throw rrError('다른 화면에서 수정되었습니다. 최신 내용을 확인한 뒤 저장해주세요. 입력은 유지됩니다.',409);}
 export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new URL(req.url),action=url.pathname.split('/').at(-1),reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});if(!actor.admin&&req.method!=='GET')return reply({error:'교수님만 수정할 수 있습니다.'},403);
+ if(action.startsWith('recording-'))return meetingRecordingRequest(req,env,actor,{reserveResearchJob,settleResearchJob,RESEARCH_MODEL});
  const viewerNames=t=>(t.viewers||[]).map(email=>(actor.members||[]).find(m=>m.email===email)).filter(Boolean).map(m=>m.name===m.email?'연구실 구성원':m.name);
  const canRead=t=>actor.admin||(!t.deleted&&Array.isArray(t.viewers)&&t.viewers.includes(actor.email));
  const readTopic=async id=>{const t=await rrTopic(db,id);if(!canRead(t))throw rrError('이 채팅의 열람 권한이 없습니다.',403);return t;};
