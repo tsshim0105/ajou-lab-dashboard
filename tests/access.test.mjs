@@ -313,3 +313,23 @@ test('verified paper grants persist once on authenticated reads without exposing
  assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:owner.version,changes:[{id:'links-r',values:{links:['https://example.com/a','https://example.com/b']}}]}),env)).status,200);
  assert.deepEqual((await (await worker.fetch(req(OWNER),env)).json()).data.reagents[0].links,['https://example.com/a','https://example.com/b']);
  });
+
+test('product links replace generated searches and preserve student deletions and custom URLs',async()=>{
+ const {suggestReagentLinks,upgradedReagentLinks}=await import('../server/worker.mjs');
+ const name='1-Decanol',note='DAEJUNG',search='https://www.google.com/search?q='+encodeURIComponent('site:daejungchem.co.kr '+name);
+ const base={id:'product-r',name,note,unit:'mL',capacity:'500',quantity:'1',location:'Shelf'};
+ assert.deepEqual(suggestReagentLinks(base),['https://4science.net/shop/goods/798624']);
+ assert.deepEqual(upgradedReagentLinks({...base,links:[]}),[]);
+ assert.deepEqual(upgradedReagentLinks({...base,links:['https://example.com/custom']}),['https://example.com/custom']);
+ assert.deepEqual(upgradedReagentLinks({...base,links:[search,'https://example.com/custom']}),['https://example.com/custom','https://4science.net/shop/goods/798624']);
+ const sigma=suggestReagentLinks({name:'(3-Aminopropyl)triethoxysilane',note:'SIGMA-ALDRICH'});assert.ok(sigma.length);assert.ok(sigma.every(u=>new URL(u).hostname==='www.sigmaaldrich.com'));
+ assert.deepEqual(suggestReagentLinks({name:'Calcium chloride dry, 74.0%',note:'SAMCHUN'}),[]);
+ assert.deepEqual(suggestReagentLinks({name:'Unknown reagent',note:'DAEJUNG'}),[]);
+ const {worker,env}=fixture();let owner=await (await worker.fetch(req(OWNER),env)).json();owner.data.papers[0].id='product-paper';owner.data.reagents=[{...base,links:[search]}];
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:owner.version,data:owner.data}),env)).status,200);
+ owner=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(owner.data.reagents[0].links,['https://4science.net/shop/goods/798624']);
+ assert.equal((await (await worker.fetch(req(OWNER),env)).json()).version,owner.version);
+ const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.data.reagents[0].links,owner.data.reagents[0].links);assert.deepEqual(student.data.funds,[]);
+ assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:student.version,changes:[{id:base.id,values:{links:[]}}]}),env)).status,200);
+ owner=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(owner.data.reagents[0].links,[]);
+});

@@ -1,3 +1,4 @@
+import {reagentProducts} from './reagent-products.mjs';
 import {receiveResearchImageUpload} from './research-upload.mjs';
 import {researchRoomRequest} from './research-room.mjs';
 import {applyPaperGrants} from './paper-grants.mjs';
@@ -7,7 +8,7 @@ import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
 // Candidate purchase links: verified product pages or explicitly labelled searches.
-export function suggestReagentLinks(r){
+function legacyReagentLinks(r){
  const name=String(r.name||'').trim(),note=String(r.note||'').trim(),brand=note.toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
  if(!name)return [];
  const domains={sigmaaldrich:'sigmaaldrich.com',aldrich:'sigmaaldrich.com',merck:'sigmaaldrich.com',tci:'tcichemicals.com',samchun:'samchun.com',daejung:'daejungchem.co.kr',junsei:'junsei.co.jp',kayaku:'kayakuam.com',microchem:'kayakuam.com',smoothon:'smooth-on.com',evonik:'evonik.com',byk:'byk.com'};
@@ -23,6 +24,20 @@ export function suggestReagentLinks(r){
  if(domain)result.push('https://www.google.com/search?q='+encodeURIComponent('site:'+domain+' '+name));
  result.push('https://www.google.com/search?q='+encodeURIComponent([brandText,name,'구매'].filter(Boolean).join(' ')));
  return [...new Set(result)];
+}
+function reagentProductKey(r){let brand=String(r.note||'').toLowerCase().replace(/[^a-z0-9가-힣]/g,'');if(brand==='aldrich')brand='sigmaaldrich';return brand+'|'+String(r.name||'').trim().toLowerCase();}
+export function suggestReagentLinks(r){
+ const key=reagentProductKey(r);if(Object.hasOwn(reagentProducts,key))return [...reagentProducts[key]];
+ if(/^(sigmaaldrich|samchun|daejung)\|/.test(key))return [];
+ return legacyReagentLinks(r);
+}
+export function upgradedReagentLinks(r){
+ if(r.links===undefined)return suggestReagentLinks(r);
+ const key=reagentProductKey(r);if(!Object.hasOwn(reagentProducts,key)||!r.links.length)return r.links;
+ // Replace only the exact search URLs supplied by v181. Keep custom links and explicit deletions.
+ const searches=legacyReagentLinks(r).filter(url=>url.startsWith('https://www.google.com/search?'));
+ if(!r.links.some(url=>searches.includes(url)))return r.links;
+ return [...new Set([...r.links.filter(url=>!searches.includes(url)),...reagentProducts[key]])].slice(0,12);
 }
 export function validateReagentLinks(links){
  if(!Array.isArray(links)||links.length>12)throw Error('구매 링크는 최대 12개까지 입력해주세요.');
@@ -186,8 +201,8 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email,members:state.students.map(email=>({email,name:state.studentNames?.[email]||email}))});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
-  if(admin&&read&&url.pathname==='/api/data'&&(state.data.reagents||[]).some(r=>r.links===undefined)){
-   const next=structuredClone(state);for(const r of next.data.reagents)if(r.links===undefined)r.links=suggestReagentLinks(r);
+  if(admin&&read&&url.pathname==='/api/data'&&(state.data.reagents||[]).some(r=>JSON.stringify(r.links)!==JSON.stringify(upgradedReagentLinks(r)))){
+   const next=structuredClone(state);for(const r of next.data.reagents)r.links=upgradedReagentLinks(r);
    const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();
    if(!saved.meta?.changes)return reply({error:'시약 링크를 갱신 중입니다. 다시 시도해주세요.'},409);
    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
