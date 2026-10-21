@@ -162,7 +162,7 @@ async function saveStudents(){const b=$('saveStudents');b.disabled=true;try{cons
 $('year').onchange=render;$('query').oninput=render;$('reset').onclick=()=>{$('year').value='all';$('query').value='';render();};
 function theme(mode){document.documentElement.dataset.theme=mode;const label=mode==='dark'?'라이트모드로 전환':'다크모드로 전환';$('theme').innerHTML='<span aria-hidden="true">'+(mode==='dark'?'☀':'☾')+'</span>';$('theme').setAttribute('aria-label',label);$('theme').title=label;try{localStorage.setItem('ajou-lab-theme',mode);}catch{}}
 try{theme(localStorage.getItem('ajou-lab-theme')||'light');}catch{theme('light');}$('theme').onclick=()=>{theme(document.documentElement.dataset.theme==='dark'?'light':'dark');preferences.theme=document.documentElement.dataset.theme;savePreferences();};
-(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch('/api/data',{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();openPushTarget(location.href);}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
+(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch('/api/data',{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();closeNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();openPushTarget(location.href,{initial:true});}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
 
 function field(name,label,value='',type='text',extra=''){return `<label style="display:grid;gap:6px">${esc(label)}<input name="${name}" type="${type}" value="${esc(value)}" ${extra} style="width:100%;box-sizing:border-box;padding:10px"></label>`;}
 function editor(title,fields,save,research=false,remove=null,options={}){
@@ -436,9 +436,12 @@ function openViewSettings(headers,selected,order){
 
 for(const [id,layout] of [['menuHorizontal','horizontal'],['menuVertical','vertical']])$(id).onclick=()=>{preferences.layout=layout;applyAppearance();savePreferences();};
 
-function openPushTarget(value){
+function openPushTarget(value,{initial=false}={}){
  let url;try{url=new URL(value,location.origin);}catch{return;}if(url.origin!==location.origin)return;
- if(url.searchParams.get('inbox')==='1'){openResearchNotification(null);return;}
+ if(url.searchParams.get('inbox')==='1'){
+  if(initial){const clean=new URL(location.href);clean.searchParams.delete('inbox');history.replaceState(history.state,'',clean.href);if(performance.getEntriesByType('navigation')[0]?.type==='reload')return;}
+  openResearchNotification(null);return;
+ }
  const view=url.searchParams.get('view');if(['papers','conferences','meetingInfo','groupMeetings'].includes(view))openResearchNotification({id:'push-link',type:view,action:'수정',title:(url.searchParams.get('q')||'').slice(0,500)});
 }
 
