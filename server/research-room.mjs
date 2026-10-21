@@ -1,6 +1,6 @@
 // Research rooms are intentionally owner-only until a separate rollout is approved.
 export const RESEARCH_MODEL='gpt-6.1-sol';
-export const researchDefaults=()=>({budget:50,inputLimit:12000,outputLimit:2000,reasoning:'low'});
+export const researchDefaults=()=>({budget:50,inputLimit:24000,outputLimit:6000,reasoning:'medium'});
 const rrError=(message,status=400)=>Object.assign(new Error(message),{status});
 const rrText=(v,max=12000)=>{if(typeof v!=='string'||!v.trim()||v.length>max)throw rrError('입력 내용과 길이를 확인해주세요.');return v.trim();};
 const rrId=v=>{if(typeof v!=='string'||!/^[\w-]{8,100}$/.test(v))throw rrError('요청 ID를 확인해주세요.');return v;};
@@ -15,7 +15,8 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  const config=await rrConfig(db),month=new Date().toISOString().slice(0,7);
  if(req.method==='GET'){
   if(action==='rooms'){const rows=await db.prepare("SELECT payload,version FROM research_records WHERE id LIKE 'topic:%' ORDER BY id").all();const jobs=await db.prepare("SELECT * FROM research_jobs WHERE month=? OR status IN ('pending','uncertain')").bind(month).all();return reply({topics:rows.results.map(r=>({...JSON.parse(r.payload),version:r.version})),config,month,usage:researchUsage(jobs.results),connection:{state:env.OPENAI_API_KEY?'configured':'missing_key',model:RESEARCH_MODEL,ready:!!env.OPENAI_API_KEY,message:env.OPENAI_API_KEY?'AI 질문 · 미팅 요약 사용 가능':'서버 API 키 등록 후 사용할 수 있습니다.'},members:[{name:actor.name,email:actor.email,role:'교수'}],visibility:'owner-only'});}
-  if(action==='thread'){const topic=await rrTopic(db,url.searchParams.get('topic'));const rows=await db.prepare('SELECT * FROM research_messages WHERE topic=? ORDER BY created,id').bind(topic.id).all();const notes=await db.prepare('SELECT payload,version FROM research_records WHERE id LIKE ?').bind('note:'+topic.id+':%').all();const materials=await db.prepare('SELECT payload,version FROM research_records WHERE id LIKE ?').bind('material:'+topic.id+':%').all();const jobs=await db.prepare('SELECT id,status,created FROM research_jobs WHERE topic=? ORDER BY created DESC LIMIT 10').bind(topic.id).all();return reply({topic,messages:rows.results,notes:notes.results.map(r=>({...JSON.parse(r.payload),version:r.version})),materials:materials.results.map(r=>({...JSON.parse(r.payload),version:r.version})),jobs:jobs.results});}
+  if(action==='asset'){const topic=await rrTopic(db,url.searchParams.get('topic'));const id=rrId(url.searchParams.get('id'));const row=await db.prepare('SELECT payload FROM research_records WHERE id=?').bind('answer:'+topic.id+':ai-'+id).first();const rich=row?JSON.parse(row.payload):{};if(!rich.asset||!env.BUCKET)throw rrError('이미지를 찾을 수 없습니다.',404);const file=await env.BUCKET.get(rich.asset);if(!file)throw rrError('이미지를 찾을 수 없습니다.',404);return new Response(file.body,{headers:{'Content-Type':'image/png','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});}
+  if(action==='thread'){const topic=await rrTopic(db,url.searchParams.get('topic'));await rrReconcile(env,topic.id);const rows=await db.prepare('SELECT * FROM research_messages WHERE topic=? ORDER BY created,id').bind(topic.id).all();const notes=await db.prepare('SELECT payload,version FROM research_records WHERE id LIKE ?').bind('note:'+topic.id+':%').all();const materials=await db.prepare('SELECT payload,version FROM research_records WHERE id LIKE ?').bind('material:'+topic.id+':%').all();const jobs=await db.prepare('SELECT id,status,created FROM research_jobs WHERE topic=? ORDER BY created DESC LIMIT 10').bind(topic.id).all();const extra=(await db.prepare('SELECT id,payload FROM research_records WHERE id LIKE ? OR id LIKE ?').bind('answer:'+topic.id+':%','paper:'+topic.id+':%').all()).results;return reply({topic,messages:rows.results.map(m=>({...m,rich:JSON.parse(extra.find(x=>x.id==='answer:'+topic.id+':'+m.id)?.payload||'{}')})),papers:extra.filter(x=>x.id.startsWith('paper:')).map(x=>JSON.parse(x.payload)),notes:notes.results.map(r=>({...JSON.parse(r.payload),version:r.version})),materials:materials.results.map(r=>({...JSON.parse(r.payload),version:r.version})),jobs:jobs.results});}
   throw rrError('찾을 수 없습니다.',404);
  }
  if(req.method!=='POST')throw rrError('허용하지 않는 요청입니다.',405);
@@ -23,6 +24,7 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  if(action==='config'){const next={budget:Number(b.budget),inputLimit:Number(b.inputLimit),outputLimit:Number(b.outputLimit),reasoning:b.reasoning};if(!Number.isFinite(next.budget)||next.budget<1||next.budget>10000||!Number.isInteger(next.inputLimit)||next.inputLimit<2000||next.inputLimit>100000||!Number.isInteger(next.outputLimit)||next.outputLimit<256||next.outputLimit>16000||!['low','medium','high'].includes(next.reasoning))throw rrError('예산·입력·출력 한도를 확인해주세요.');await db.prepare("INSERT INTO research_records(id,version,payload) VALUES('config',0,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=version+1").bind(JSON.stringify(next)).run();return reply({ok:true});}
  if(action==='topic'){const id=rrId(b.id),title=rrText(b.title,120),description=String(b.description||'').slice(0,2000);if(b.create){await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind('topic:'+id,JSON.stringify({id,title,description,archived:false,created:new Date().toISOString(),summary:''})).run();}else{const t=await rrTopic(db,id);await rrUpdate(db,'topic:'+id,b.version,{...t,title,description,archived:!!b.archived});}return reply({ok:true,id});}
  const topic=await rrTopic(db,b.topic);if(topic.archived)throw rrError('보관된 주제는 복원한 뒤 수정할 수 있습니다.',409);
+ if(action==='paper'){const message=rrId(b.message),index=Number(b.index);const row=await db.prepare('SELECT payload FROM research_records WHERE id=?').bind('answer:'+topic.id+':'+message).first();const paper=row&&JSON.parse(row.payload).papers?.[index];if(!paper)throw rrError('답변의 논문 출처를 찾을 수 없습니다.');const id=message+'-'+index,key='paper:'+topic.id+':'+id;if(b.selected===false)await db.prepare('DELETE FROM research_records WHERE id=?').bind(key).run();else await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind(key,JSON.stringify({...paper,id,message,index,saved:new Date().toISOString()})).run();return reply({ok:true});}
  if(action==='message'){const id=rrId(b.id),content=rrText(b.content);if(b.replyTo){const parent=await db.prepare('SELECT id FROM research_messages WHERE id=? AND topic=?').bind(rrId(b.replyTo),topic.id).first();if(!parent)throw rrError('이 주제의 메시지에만 답글을 달 수 있습니다.');}await db.prepare('INSERT OR IGNORE INTO research_messages(id,topic,author,kind,content,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind(id,topic.id,actor.name||actor.email,'human',content,b.replyTo||null,new Date().toISOString()).run();return reply({ok:true,id});}
  if(action==='material'){const id=rrId(b.id),record={id,title:rrText(b.title,160),content:rrText(b.content,24000),selected:!!b.selected,created:new Date().toISOString()};const key='material:'+topic.id+':'+id;if(b.create)await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind(key,JSON.stringify(record)).run();else if(b.remove)await db.prepare('DELETE FROM research_records WHERE id=? AND version=?').bind(key,b.version).run();else await rrUpdate(db,key,b.version,record);return reply({ok:true});}
  if(action==='note'){const id=rrId(b.id);const from=rrId(b.from),to=rrId(b.to);const range=await db.prepare('SELECT id FROM research_messages WHERE topic=? ORDER BY created,id').bind(topic.id).all();const ids=range.results.map(x=>x.id);if(ids.indexOf(from)<0||ids.indexOf(to)<ids.indexOf(from))throw rrError('요약할 대화 범위를 선택해주세요.');const record={id,title:rrText(b.title,120),from,to,content:rrText(b.content,24000),status:b.confirm?'confirmed':'draft',author:actor.name||actor.email,updated:new Date().toISOString()};const key='note:'+topic.id+':'+id;if(b.create)await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind(key,JSON.stringify(record)).run();else await rrUpdate(db,key,b.version,record);return reply({ok:true});}
@@ -55,7 +57,7 @@ const rrRates={input:2.5,output:10,date:'2026-10-21'};
 async function rrGenerate(env,actor,topic,config,month,b,action){
  const db=env.DB;
  if(!env.OPENAI_API_KEY)throw rrError('AI 연결 전입니다. Sites 서버에 OPENAI_API_KEY 비밀 설정을 등록한 뒤 배포해주세요.',503);
- if(!['generate','summarize'].includes(action))throw rrError('웹 검색과 이미지 생성은 아직 활성화되지 않았습니다.',503);
+ if(!['generate','summarize','search','image'].includes(action))throw rrError('지원하지 않는 AI 작업입니다.');if(action==='image'&&!env.BUCKET)throw rrError('이미지 저장소 연결이 필요합니다.',503);
  const id=rrId(b.id),existing=await db.prepare('SELECT * FROM research_jobs WHERE id=?').bind(id).first();
  if(existing){if(existing.topic!==topic.id||existing.author!==actor.email)throw rrError('다른 요청에 사용된 ID입니다.',409);if(existing.status==='failed')throw rrError('이 요청은 거절되었습니다. 설정을 확인한 뒤 새 질문으로 다시 시도해주세요.',409);return {ok:true,id,status:existing.status};}
  const rows=await db.prepare('SELECT * FROM research_messages WHERE topic=? ORDER BY created,id').bind(topic.id).all();let messages=rows.results;
@@ -66,30 +68,62 @@ async function rrGenerate(env,actor,topic,config,month,b,action){
   const m=messages.find(m=>m.id===b.message&&m.kind==='human');if(!m)throw rrError('먼저 질문을 저장해주세요.');messages=messages.slice(0,messages.indexOf(m)+1);
  }
  const materials=(await db.prepare('SELECT payload FROM research_records WHERE id LIKE ?').bind('material:'+topic.id+':%').all()).results.map(r=>JSON.parse(r.payload)).filter(m=>m.selected);
- const context=researchContext(topic,messages,materials,config.inputLimit-400);
+ const notes=(await db.prepare('SELECT payload FROM research_records WHERE id LIKE ?').bind('note:'+topic.id+':%').all()).results.map(r=>JSON.parse(r.payload)).filter(n=>n.status==='confirmed').sort((a,b)=>b.updated.localeCompare(a.updated));const context=researchContext({...topic,summary:notes[0]?.content.slice(0,4000)||topic.summary},messages,materials,config.inputLimit-2000);const mode=action==='image'?'image':action==='summarize'?'summary':b.mode==='chat'?'chat':'search';
+ if(action!=='summarize'&&!context.input.some(x=>x.role==='user'&&x.content.endsWith(messages.at(-1)?.content||'')))throw rrError('질문과 선택 자료가 입력 한도를 넘습니다. AI 설정에서 입력 한도를 높여주세요.');
  if(action==='summarize'&&context.truncated)throw rrError('선택 범위가 입력 한도보다 큽니다. 범위를 줄이거나 입력 한도를 높여주세요.');
- context.input.push({role:'developer',content:action==='summarize'?'선택한 대화를 연구 질문, 확인한 근거, 잠정 결론, 미해결 질문, 다음 할 일·담당자·기한으로 정리하세요. 정해지지 않은 담당자와 기한은 미정으로 표시하세요. 사람이 검토할 초안입니다.':'마지막 사용자 질문에 답하세요. 실시간 웹 검색은 제공되지 않습니다. 최신 자료를 확인했다고 주장하지 마세요.'});
- const reserve=Math.ceil(config.inputLimit*rrRates.input+config.outputLimit*rrRates.output);
+ context.input.push({role:'developer',content:action==='summarize'?'선택한 대화를 연구 질문, 확인한 근거, 잠정 결론, 미해결 질문, 다음 할 일·담당자·기한으로 정리하세요. 정해지지 않은 담당자와 기한은 미정으로 표시하세요. 사람이 검토할 초안입니다.':'한국어로 명확하고 충분하게 답하고 Markdown 제목, 목록, 표를 활용하세요. 논문 찾기 요청이면 웹 검색으로 논문 제목과 DOI/출판사 페이지를 검증하고 직접 관련된 논문과 유사한 방법론을 구분하세요. 각 논문 설명에 URL 인용을 붙이고 존재하지 않는 서지정보를 만들지 마세요. 논문 검색에는 가능한 경우 해당 논문의 그림을 이미지 검색으로 함께 찾아 보여주세요. 이미지 검색 결과가 없으면 없는 그대로 답하고 논문 그림을 생성해서 대체하지 마세요. 논문이 있을 때 답변 끝에 ```papers 코드블록으로 [{"title":"제목","url":"검색에서 확인한 원문 URL","authors":"저자","journal":"학술지","year":"연도","doi":"확인된 DOI"}]를 출력하세요. 논문이 없으면 블록은 생략하세요.'});
+ const reserve=Math.ceil((config.inputLimit+(mode==='search'?128000:0))*rrRates.input+config.outputLimit*rrRates.output+(mode==='search'?40000:0)+(mode==='image'?1000000:0));
  const admission=await reserveResearchJob(db,{id,topic:topic.id,author:actor.email,month,reserve,budget:Math.floor(config.budget*1000000)});
  if(!admission.admitted){if(admission.job)return {ok:true,id,status:admission.job.status};throw rrError('예산 잔액이 부족하거나 이 주제의 AI 요청이 진행 중입니다. 사용량 설정을 확인해주세요.',409);}
+ const metadata={action,mode,from:b.from,to:b.to,message:b.message,truncated:context.truncated,rates:rrRates};
+ await db.prepare('UPDATE research_jobs SET usage=? WHERE id=?').bind(JSON.stringify(metadata),id).run();
  try{
-  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:RESEARCH_MODEL,input:context.input,max_output_tokens:config.outputLimit,reasoning:{effort:config.reasoning},service_tier:'default',store:false}),signal:AbortSignal.timeout(90000)});
+  const tools=mode==='search'?[{type:'web_search',search_context_size:'low',search_content_types:['text','image'],image_settings:{max_results:3,caption:true}}]:mode==='image'?[{type:'image_generation',model:'gpt-image-2.5-flare',quality:'low',size:'1024x1024',output_format:'png'}]:[];
+  const payload={model:RESEARCH_MODEL,input:context.input,max_output_tokens:config.outputLimit,reasoning:{effort:config.reasoning},service_tier:'default',store:true,background:true,tools,max_tool_calls:mode==='image'?1:4,...(mode==='search'?{include:['web_search_call.action.sources','web_search_call.results'],tool_choice:action==='search'?'required':'auto'}:{}),...(mode==='image'?{tool_choice:{type:'image_generation'}}:{})};
+  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
   if(!response.ok){
-   // Explicit rejection before generation is safe to release. Ambiguous server errors are not.
    if([400,401,403,404,422,429].includes(response.status))await db.prepare("UPDATE research_jobs SET status='failed',reserve=0 WHERE id=? AND status='pending'").bind(id).run();
-   const errors={401:'서버 API 키 인증에 실패했습니다.',403:'지정 모델의 접근 권한을 확인해주세요.',404:'gpt-6.1-sol 모델을 사용할 수 없습니다. 다른 모델로 변경하지 않았습니다.',429:'OpenAI 잔액 또는 요청 한도를 확인해주세요.',400:'AI 요청 설정을 확인해주세요.'};
-   throw rrError(errors[response.status]||'AI 서버 응답을 확인하지 못했습니다. 중복 과금을 막기 위해 비용 예약을 유지합니다.',503);
+   const errors={401:'서버 API 키 인증에 실패했습니다.',403:'모델 또는 도구 접근 권한이 없습니다.',404:'지정 모델을 사용할 수 없습니다. 다른 모델로 변경하지 않았습니다.',429:'OpenAI 잔액 또는 요청 한도를 확인해주세요.',400:'AI 요청 설정 또는 도구 지원 여부를 확인해주세요.'};
+   throw rrError(errors[response.status]||'AI 서버 응답이 불확실해 비용 예약을 유지합니다.',503);
   }
-  const data=await response.json(),u=data.usage;
-  if(!u||!Number.isSafeInteger(u.input_tokens)||u.input_tokens<0||!Number.isSafeInteger(u.output_tokens)||u.output_tokens<0)throw rrError('AI 사용량을 확인하지 못해 비용 예약을 유지합니다.',503);
-  const content=(data.output||[]).filter(x=>x.type==='message').flatMap(x=>x.content||[]).filter(x=>x.type==='output_text'||x.type==='refusal').map(x=>x.text||x.refusal||'').join('\n');
-  const usage={input:Math.ceil(u.input_tokens*rrRates.input),output:u.output_tokens*rrRates.output,search:0,image:0,inputTokens:u.input_tokens,outputTokens:u.output_tokens,providerResponse:data.id,rates:rrRates,truncated:context.truncated,status:data.status};
-  if(content){
-   const text=content+(data.status==='incomplete'?'\n\n[출력 한도에 도달한 부분 답변입니다.]':'');
-   if(action==='summarize')await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind('note:'+topic.id+':'+id,JSON.stringify({id,title:'AI 미팅 요약 · 초안',from:b.from,to:b.to,content:text,status:'draft',author:'AI',updated:new Date().toISOString()})).run();
-   else await db.prepare('INSERT OR IGNORE INTO research_messages(id,topic,author,kind,content,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind('ai-'+id,topic.id,'AI · '+RESEARCH_MODEL,'assistant',text,b.message,new Date().toISOString()).run();
-  }
-  await settleResearchJob(db,id,usage.input+usage.output,usage);
-  return {ok:true,id,status:'completed',truncated:context.truncated,notice:content?'':'출력 토큰이 추론에 소진되어 표시할 답변이 없습니다. 출력 한도를 늘려 다시 질문해주세요.'};
- }catch(error){await db.prepare("UPDATE research_jobs SET status='uncertain' WHERE id=? AND status='pending'").bind(id).run();throw error.status?error:rrError('AI 응답 여부가 불확실합니다. 중복 요청 방지를 위해 비용 예약을 유지합니다.',503);}
+  const data=await response.json();if(!/^resp_[\w-]+$/.test(data.id||''))throw rrError('AI 요청 ID를 확인하지 못했습니다.',503);
+  await db.prepare('UPDATE research_jobs SET usage=? WHERE id=?').bind(JSON.stringify({...metadata,providerResponse:data.id}),id).run();
+  await rrFinish(env,{id,topic:topic.id,usage:JSON.stringify(metadata)},data);
+  return {ok:true,id,status:['queued','in_progress'].includes(data.status)?'pending':'completed',truncated:context.truncated};
+ }catch(error){await db.prepare("UPDATE research_jobs SET status='uncertain' WHERE id=? AND status='pending'").bind(id).run();throw error.status?error:rrError('AI 응답 여부가 불확실합니다. 요청 기록을 유지하고 다시 확인합니다.',503);}
+}
+
+function rrSafeURL(value){try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:null;}catch{return null;}}
+function rrCanonical(value){const safe=rrSafeURL(value);if(!safe)return null;const u=new URL(safe);for(const k of [...u.searchParams.keys()])if(k.startsWith('utm_'))u.searchParams.delete(k);u.hash='';return u.href.replace(/\/$/,'');}
+export function researchRich(data){
+ const segments=(data.output||[]).filter(x=>x.type==='message').flatMap(x=>x.content||[]),sources=[];
+ for(const segment of segments)for(const a of segment.annotations||[])if(a.type==='url_citation'&&rrSafeURL(a.url)&&!sources.some(s=>s.url===a.url))sources.push({title:String(a.title||a.url).slice(0,500),url:a.url});
+ for(const call of (data.output||[]).filter(x=>x.type==='web_search_call'))for(const a of call.action?.sources||[])if(rrSafeURL(a.url)&&!sources.some(s=>s.url===a.url))sources.push({title:String(a.title||a.url).slice(0,500),url:a.url});
+ let text=segments.filter(x=>x.type==='output_text'||x.type==='refusal').map(x=>{let value=x.text||x.refusal||'';for(const a of [...(x.annotations||[])].filter(a=>a.type==='url_citation'&&rrSafeURL(a.url)&&Number.isInteger(a.end_index)).sort((a,b)=>b.end_index-a.end_index)){const n=sources.findIndex(s=>s.url===a.url)+1;if(a.end_index>=0&&a.end_index<=value.length)value=value.slice(0,a.end_index)+' ['+n+']('+a.url+')'+value.slice(a.end_index);}return value.replace(/cite[^]*/g,'');}).join('\n');let papers=[];
+ text=text.replace(/```papers\s*([\s\S]*?)```/g,(_,json)=>{try{const a=JSON.parse(json);if(Array.isArray(a))papers=a.slice(0,20).filter(p=>p&&typeof p.title==='string'&&sources.some(s=>rrCanonical(s.url)===rrCanonical(p.url))&&rrSafeURL(p.url)).map(p=>({title:p.title.slice(0,500),url:rrSafeURL(p.url),authors:String(p.authors||'').slice(0,600),journal:String(p.journal||'').slice(0,200),year:String(p.year||'').slice(0,20),doi:String(p.doi||'').slice(0,160)}));}catch{}return '';});
+ const images=(data.output||[]).filter(x=>x.type==='web_search_call').flatMap(x=>x.results||[]).filter(x=>x.type==='image_result'&&rrSafeURL(x.thumbnail_url||x.image_url)&&rrSafeURL(x.source_website_url)).slice(0,6).map(x=>({url:rrSafeURL(x.thumbnail_url||x.image_url),source:rrSafeURL(x.source_website_url),caption:String(x.caption||'검색 이미지').slice(0,500)}));
+ return {text,sources:sources.slice(0,30),papers,images};
+}
+async function rrFinish(env,job,data){
+ if(['queued','in_progress'].includes(data.status))return;
+ const db=env.DB,meta=JSON.parse(job.usage||'{}'),u=data.usage;
+ const valid=u&&Number.isSafeInteger(u.input_tokens)&&u.input_tokens>=0&&Number.isSafeInteger(u.output_tokens)&&u.output_tokens>=0;
+ const rich=researchRich(data);const image=(data.output||[]).find(x=>x.type==='image_generation_call'&&x.result);
+ if(image&&env.BUCKET){const bytes=Uint8Array.from(atob(image.result),c=>c.charCodeAt(0));if(bytes.length>15000000)throw rrError('생성 이미지 크기 한도를 초과했습니다.',503);rich.asset='research/'+job.topic+'/'+job.id+'.png';await env.BUCKET.put(rich.asset,bytes,{httpMetadata:{contentType:'image/png'}});}
+ const content=rich.text+(data.status==='incomplete'?'\n\n> 출력 한도에 도달한 부분 답변입니다.':'')|| (image?'요청하신 이미지입니다. AI 생성 이미지이며 논문 원본 그림이 아닙니다.':'표시할 답변이 없습니다. 출력 한도 또는 모델 상태를 확인해주세요.');
+ if(meta.action==='summarize')await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind('note:'+job.topic+':'+job.id,JSON.stringify({id:job.id,title:'AI 미팅 요약 · 초안',from:meta.from,to:meta.to,content,status:'draft',author:'AI',updated:new Date().toISOString()})).run();
+ else{
+ await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind('answer:'+job.topic+':ai-'+job.id,JSON.stringify({...rich,text:undefined,generatedImage:!!image})).run();
+ await db.prepare('INSERT OR IGNORE INTO research_messages(id,topic,author,kind,content,reply_to,created) VALUES(?,?,?,?,?,?,?)').bind('ai-'+job.id,job.topic,'AI · '+RESEARCH_MODEL,'assistant',content,meta.message||null,new Date().toISOString()).run();
+ }
+ if(!valid){await db.prepare("UPDATE research_jobs SET status='uncertain' WHERE id=? AND status='pending'").bind(job.id).run();return;}
+ const calls=(data.output||[]).filter(x=>x.type==='web_search_call').length;
+ const usage={...meta,providerResponse:data.id,input:Math.ceil(u.input_tokens*rrRates.input),output:u.output_tokens*rrRates.output,search:calls*10000,image:image?1000000:0,inputTokens:u.input_tokens,outputTokens:u.output_tokens,searchCalls:calls,imageEstimate:!!image,rates:rrRates,status:data.status};
+ await settleResearchJob(db,job.id,usage.input+usage.output+usage.search+usage.image,usage);
+}
+async function rrReconcile(env,topic){
+ if(!env.OPENAI_API_KEY)return;
+ const jobs=(await env.DB.prepare("SELECT * FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain')").bind(topic).all()).results;
+ for(const job of jobs){const meta=JSON.parse(job.usage||'{}');if(!/^resp_[\w-]+$/.test(meta.providerResponse||''))continue;
+ try{const r=await fetch('https://api.openai.com/v1/responses/'+encodeURIComponent(meta.providerResponse),{headers:{Authorization:'Bearer '+env.OPENAI_API_KEY},signal:AbortSignal.timeout(15000)});if(r.ok)await rrFinish(env,job,await r.json());}catch{/* Keep reservation on unknown outcomes, retry retrieval only. */}}
 }
