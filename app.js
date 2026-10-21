@@ -359,6 +359,11 @@ function renderNotifications(){
 async function openResearchNotification(n){
  if(busy)return;
  if(!n){$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');renderNotifications();return;}
+ if(n.type==='researchRooms'){
+  const p=notificationPrefs();saveNotificationPrefs({hidden:p.hidden||[],read:[...new Set([...(p.read||[]),n.id])].slice(-400)});
+  researchRoomState.selected=n.topic;researchRoomState.archived=!!n.archived;researchRoomState.mobileChatOpen=true;researchRoomState.view='chat';
+  tab='researchRooms';closeNotifications();render();renderNotifications();return;
+ }
  if(!['papers','conferences','meetingInfo','groupMeetings'].includes(n.type))return;
  if(!offline&&n.type!=='meetingInfo'){
   try{const res=await fetch('/api/data',{cache:'no-store'});if(!res.ok)throw Error();const result=await res.json();data=result.data;version=result.version;years();}

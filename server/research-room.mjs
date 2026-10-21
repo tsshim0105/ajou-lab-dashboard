@@ -137,3 +137,25 @@ async function rrReconcile(env,topic){
  for(const job of jobs){const meta=JSON.parse(job.usage||'{}');if(!/^resp_[\w-]+$/.test(meta.providerResponse||''))continue;
  try{const r=await fetch('https://api.openai.com/v1/responses/'+encodeURIComponent(meta.providerResponse),{headers:{Authorization:'Bearer '+env.OPENAI_API_KEY},signal:AbortSignal.timeout(15000)});if(r.ok)await rrFinish(env,job,await r.json());}catch{/* Keep reservation on unknown outcomes, retry retrieval only. */}}
 }
+
+// Durable research messages are the notification ledger; retries retain their IDs.
+// Enable only new activity, avoiding a flood of historical import notifications.
+export const RESEARCH_NOTIFICATION_START='2026-10-21T22:37:01.000Z';
+export async function researchNotifications(db,actor,existing=[]){
+ const statement=db.prepare("SELECT payload FROM research_records WHERE id LIKE 'topic:%'");
+ const rows=await statement.all?.();
+ const events=[];
+ for(const row of rows?.results||[]){
+  const topic=JSON.parse(row.payload);
+  if(topic.deleted||(!actor.admin&&!(topic.viewers||[]).includes(actor.email)))continue;
+  const make=(id,at,action)=>({id,at,actor:'연구미팅',type:'researchRooms',topic:topic.id,archived:!!topic.archived,action,label:'연구미팅 · '+action,title:topic.title,detail:action==='새 채팅'?'새 채팅창이 등록되었습니다.':'새 질문과 답변이 추가되었습니다.'});
+  if(topic.created>=RESEARCH_NOTIFICATION_START)events.push(make('rr-topic:'+topic.id,topic.created,'새 채팅'));
+  const messages=await db.prepare("SELECT id,created,reply_to FROM research_messages WHERE topic=? AND kind='assistant' AND created>=? ORDER BY created DESC LIMIT 200").bind(topic.id,RESEARCH_NOTIFICATION_START).all();
+  for(const m of messages.results||[]){
+   // The first imported answer is part of the new-chat notification.
+   if(topic.created>=RESEARCH_NOTIFICATION_START&&Math.abs(Date.parse(m.created)-Date.parse(topic.created))<=1)continue;
+   events.push(make('rr-message:'+m.id,m.created,'새 내용'));
+  }
+ }
+ return [...existing,...events].sort((a,b)=>b.at.localeCompare(a.at)).slice(0,200);
+}

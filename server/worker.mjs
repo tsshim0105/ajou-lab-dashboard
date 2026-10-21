@@ -1,6 +1,6 @@
 import {reagentProducts} from './reagent-products.mjs';
 import {receiveResearchImageUpload} from './research-upload.mjs';
-import {researchRoomRequest} from './research-room.mjs';
+import {researchRoomRequest,researchNotifications} from './research-room.mjs';
 import {applyPaperGrants} from './paper-grants.mjs';
 import {recordScheduleAdditions,recordScheduleDay} from './schedule-notifications.mjs';
 import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
@@ -257,7 +257,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
+   if(url.pathname==='/api/notifications')return reply({notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
   }
   if(read&&url.pathname==='/_mobile-preview'){
    if(!admin)return reply({error:'교수님만 확인할 수 있습니다.'},403);
@@ -275,7 +275,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(saved.meta?.changes)break;
    }
   }
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[]),data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
@@ -312,7 +312,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    recordScheduleDay(state);
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
-   return reply({version:row.version+1,notifications:state.notifications||[]});
+   return reply({version:row.version+1,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
   }
   return reply({error:'페이지를 찾을 수 없습니다.'},404);
  }catch(e){return reply({error:e instanceof SyntaxError?'자료 형식을 확인해주세요.':e.message||'처리 중 오류가 발생했습니다.'},400);}

@@ -61,3 +61,21 @@ test('unchanged polling preserves image DOM and new attachments still render',as
  thread.selectedImages.push({message:'image-one',index:0});vm.runInContext('rrDrawContent()',ctx);assert.equal(renders,2);
  thread.topic.id='topic-two';vm.runInContext('rrDrawContent()',ctx);assert.equal(renders,3);
 });
+
+test('meeting notifications persist, deduplicate imports and respect current topic access',async()=>{
+ const {researchNotifications,RESEARCH_NOTIFICATION_START}=await import('../server/research-room.mjs');
+ const f=fixture(),at=new Date(Date.parse(RESEARCH_NOTIFICATION_START)+1000).toISOString();
+ const add=(id,viewers,created=at)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('topic:'+id,JSON.stringify({id,title:id,viewers,created}));
+ add('shared',['student@example.test']);add('private',[]);add('old',['student@example.test'],'2020-01-01T00:00:00.000Z');
+ const msg=(id,topic,created)=>f.sql.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').run(id,topic,'ChatGPT','assistant','answer','question',created);
+ msg('first','shared',new Date(Date.parse(at)+1).toISOString());
+ msg('next','shared',new Date(Date.parse(at)+2000).toISOString());msg('next','shared',at);
+ msg('old-new','old',new Date(Date.parse(at)+3000).toISOString());msg('secret','private',new Date(Date.parse(at)+4000).toISOString());
+ const student={admin:false,email:'student@example.test'},owner={admin:true,email:'owner@example.test'};
+ const a=await researchNotifications(f.DB,student);assert.equal(a.length,3);assert.equal(a.filter(n=>n.topic==='shared').length,2);assert.ok(a.every(n=>n.topic!=='private'));assert.equal(a[0].id,'rr-message:old-new');
+ assert.deepEqual(await researchNotifications(f.DB,student),a);assert.equal((await researchNotifications(f.DB,owner)).length,5);
+ f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify({id:'shared',title:'shared',created:at,viewers:[]}), 'topic:shared');
+ assert.equal((await researchNotifications(f.DB,student)).length,1);
+ f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify({id:'private',title:'private',created:at,deleted:true}),'topic:private');
+ assert.ok((await researchNotifications(f.DB,owner)).every(n=>n.topic!=='private'));
+});
