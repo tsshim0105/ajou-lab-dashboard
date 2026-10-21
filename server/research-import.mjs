@@ -29,7 +29,9 @@ export async function saveResearchImport(env,b){
    const asset='research-import/'+topic+'/'+id+'/'+i;await env.BUCKET.put(asset,bytes,{httpMetadata:{contentType:mime}});images.push({caption,source:sourceUrl,asset,mime});
   }catch{warnings.push('그림 '+(i+1)+': 파일을 가져오지 못했습니다. PNG/JPEG/WebP 또는 외부 참조 없는 SVG를 첨부해 다시 저장해주세요.');images.push({caption,source:sourceUrl,missing:true});}
  }
- const now=new Date().toISOString(),rich={origin:'chatgpt',project:'연구미팅',chatUrl:source,papers,sources:papers.map(p=>({title:p.title,url:p.url})),importImages:images,importWarnings:warnings,blocks,questionBlocks};
+ const fileNames=[...new Set([...blocks,...questionBlocks].filter(x=>x.type==='file').map(x=>x.name))];
+ const files=old?(JSON.parse(old.payload).files||[]):[];for(const name of fileNames)if(!files.some(f=>f.name===name))files.push({name,kind:/\.(png|jpe?g|webp)$/i.test(name)?'image':'document',missing:true});
+ const now=new Date().toISOString(),rich={files,origin:'chatgpt',project:'연구미팅',chatUrl:source,papers,sources:papers.map(p=>({title:p.title,url:p.url})),importImages:images,importWarnings:warnings,blocks,questionBlocks};
  const statements=[env.DB.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind('topic:'+topic,JSON.stringify({id:topic,title,description:'ChatGPT 연구미팅 프로젝트에서 저장한 결과',archived:false,created:now,summary:''})),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(id,topic,'교수님','human',question,null,now),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(message,topic,'ChatGPT · 저장한 답변','assistant',answer,id,new Date(Date.now()+1).toISOString()),env.DB.prepare('INSERT INTO research_records VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=version+1').bind('answer:'+topic+':'+message,JSON.stringify(rich))];
  await env.DB.batch(statements);return {ok:true,topic,id,papers:papers.length,imagesSaved:images.filter(x=>x.asset).length,blocksSaved:blocks.length+questionBlocks.length,warnings};
 }

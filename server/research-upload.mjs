@@ -16,7 +16,7 @@ export async function prepareResearchImageUpload(env,b,origin){
  await ruTarget(env,b.topicId,b.messageId);
  if(b.imageIndex!==undefined&&(!Number.isInteger(b.imageIndex)||b.imageIndex<0||b.imageIndex>39))throw ruFail('그림 위치를 확인해주세요.');
  const token=crypto.randomUUID()+crypto.randomUUID(),id=await ruHash(token),expires=Date.now()+15*60*1000;
- const grant={topic:b.topicId,message:b.messageId,caption:String(b.caption||b.filename||'첨부한 그림').slice(0,500),imageIndex:b.imageIndex,expires};
+ const grant={topic:b.topicId,message:b.messageId,caption:String(b.caption||b.filename||'첨부한 그림').slice(0,500),imageIndex:b.imageIndex,fileMode:b.fileMode===true,filename:String(b.filename||'').normalize('NFC').slice(0,200),expires};
  await env.DB.prepare('INSERT INTO research_records(id,version,payload) VALUES(?,0,?)').bind('upload:'+id,JSON.stringify(grant)).run();
  return {uploadUrl:new URL('/api/research-image-upload',origin).href,uploadToken:token,expiresAt:new Date(expires).toISOString(),maxBytes:ruMax,method:'POST',contentType:'application/octet-stream',instructions:'Read the actual local PNG/JPEG/WebP file as binary and POST it to uploadUrl with Authorization: Bearer <uploadToken>. Do not send a sandbox path or print base64. This token only attaches one image to the selected answer, expires in 15 minutes, and must not be shown in chat. Check ok and imagesSaved in the JSON response before claiming success. If outbound file upload is unavailable, the user can use 그림 첨부 on this answer in the dashboard.'};
 }
@@ -35,7 +35,7 @@ export async function receiveResearchImageUpload(req,env){
  const reader=req.body?.getReader();if(!reader)throw ruFail('그림 파일이 없습니다.');const chunks=[];let size=0;
  while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>ruMax){await reader.cancel();throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);}chunks.push(value);}
  const bytes=new Uint8Array(size);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.length;}
- return reply(await ruStoreImage(env,grant,id,bytes));
+ return reply(await (grant.fileMode?ruStoreFile(env,grant,bytes):ruStoreImage(env,grant,id,bytes)));
  }catch(e){return reply({error:e.message||'그림을 저장하지 못했습니다.'},e.status||500);}
 }
 export async function listResearchImageTargets(env,topicId){
@@ -122,4 +122,43 @@ async function ruDownloadNative(file,fetchFile){
 export async function diagnoseResearchFile(b,fetchFile=fetch){
  const {bytes,redirects,host}=await ruDownloadNative(b.file,fetchFile);
  return {ok:true,downloaded:true,bytes:bytes.length,sha256:await ruHash(bytes),redirects,host,saved:false};
+}
+
+function ruFileType(name,bytes){
+ const ext=name.split('.').pop().toLowerCase();
+ const png=bytes.length>24&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255,webp=String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
+ if(ext==='png'&&png)return ['image','image/png'];
+ if(['jpg','jpeg'].includes(ext)&&jpg)return ['image','image/jpeg'];
+ if(ext==='webp'&&webp)return ['image','image/webp'];
+ if(ext==='pdf'&&String.fromCharCode(...bytes.slice(0,5))==='%PDF-')return ['document','application/pdf'];
+ const office={docx:'wordprocessingml.document',xlsx:'spreadsheetml.sheet',pptx:'presentationml.presentation'};
+ if(office[ext]&&bytes[0]===80&&bytes[1]===75&&bytes[2]===3&&bytes[3]===4)return ['document','application/vnd.openxmlformats-officedocument.'+office[ext]];
+ if(['txt','md','csv'].includes(ext)){try{new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{throw ruFail('UTF-8 텍스트 파일을 선택해주세요.');}return ['document','text/plain; charset=utf-8'];}
+ throw ruFail('PNG/JPG/WebP, PDF, DOCX, PPTX, XLSX, TXT/MD/CSV 파일만 지원합니다.');
+}
+async function ruStoreFile(env,grant,bytes){
+ const key=await ruTarget(env,grant.topic,grant.message),name=String(grant.filename||'').normalize('NFC');
+ if(!name||name.length>200||/[\\/\x00-\x1f]/.test(name))throw ruFail('파일명을 확인해주세요.');
+ if(!bytes.length||bytes.length>ruMax)throw ruFail('파일은 20MB 이내로 선택해주세요.');
+ const [kind,mime]=ruFileType(name,bytes),digest=await ruHash(bytes),asset='research-files/'+grant.topic+'/'+digest;
+ await env.BUCKET.put(asset,bytes,{httpMetadata:{contentType:mime}});
+ await env.DB.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind(key,'{}').run();
+ for(let attempt=0;attempt<5;attempt++){
+ await ruTarget(env,grant.topic,grant.message);
+ const current=await env.DB.prepare('SELECT payload,version FROM research_records WHERE id=?').bind(key).first(),rich=JSON.parse(current.payload);rich.files||=[];
+ let index=rich.files.findIndex(f=>f.name===name);
+ if(index>=0&&rich.files[index].asset){if(rich.files[index].sha256===digest)return {ok:true,duplicate:true,filesSaved:1,name,kind,index};throw ruFail('같은 이름의 다른 파일이 있습니다. 파일명을 바꿔주세요.',409);}
+ if(index<0){index=rich.files.length;if(index>=40)throw ruFail('답변당 파일은 40개까지 보관할 수 있습니다.');}
+ rich.files[index]={name,kind,mime,size:bytes.length,sha256:digest,asset};
+ const result=await env.DB.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(rich),key,current.version).run();
+ if(result.meta?.changes||result.changes)return {ok:true,filesSaved:1,name,kind,index};
+ }
+ throw ruFail('다른 저장이 진행 중입니다. 다시 시도해주세요.',409);
+}
+export async function attachResearchFiles(env,b,fetchFile=fetch){
+ await ruTarget(env,b.topicId,b.messageId);
+ if(!Array.isArray(b.files)||!b.files.length||b.files.length>20)throw ruFail('한 번에 파일 1–20개를 선택해주세요.');
+ const results=[];
+ for(const file of b.files){try{const {bytes}=await ruDownloadNative(file,fetchFile);results.push(await ruStoreFile(env,{topic:b.topicId,message:b.messageId,filename:file.file_name},bytes));}catch(e){results.push({ok:false,name:file.file_name||'',error:e.message});}}
+ return {ok:results.every(r=>r.ok),filesSaved:results.filter(r=>r.ok).length,results};
 }

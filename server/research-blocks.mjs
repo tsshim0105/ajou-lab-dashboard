@@ -5,6 +5,7 @@ export function validateResearchBlocks(blocks,images,papers){
  const str=(v,max=12000)=>{if(typeof v!=='string'||v.length>max)throw Error('콘텐츠 텍스트를 확인해주세요.');return v;};
  return blocks.map(b=>{if(!b||typeof b!=='object')throw Error('콘텐츠 형식을 확인해주세요.');
  const title=b.title===undefined?'':str(b.title,300);
+ if(b.type==='file'){const name=str(b.name,200).normalize('NFC');if(!name.trim()||/[\\/\x00-\x1f]/.test(name))throw Error('파일명을 확인해주세요.');return {type:'file',name};}
  if(b.type==='markdown')return {type:b.type,text:str(b.text,80000)};
  if(b.type==='image'||b.type==='paper'){if(!Number.isInteger(b.index)||b.index<0||b.index>=(b.type==='image'?images:papers))throw Error('그림·논문 참조 번호를 확인해주세요.');return {type:b.type,index:b.index};}
  if(b.type==='table'){if(!Array.isArray(b.headers)||!b.headers.length||b.headers.length>20||!Array.isArray(b.rows)||b.rows.length>200)throw Error('표 크기를 확인해주세요.');const headers=b.headers.map(v=>str(v,500));return {type:b.type,title,headers,rows:b.rows.map(r=>{if(!Array.isArray(r)||r.length!==headers.length)throw Error('표의 열 수를 확인해주세요.');return r.map(v=>str(v,3000));})};}
