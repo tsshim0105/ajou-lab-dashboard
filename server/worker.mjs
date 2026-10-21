@@ -158,7 +158,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(!admin&&!state.students.includes(email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
   const read=['GET','HEAD'].includes(req.method),origin=req.headers.get('Origin');
   if((origin&&origin!==url.origin)||(!read&&(origin!==url.origin||req.headers.get('X-Lab-Request')!=='1'||req.headers.get('Content-Type')!=='application/json')))return reply({error:'허용되지 않는 요청입니다.'},403);
-  if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email});
+  if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email,members:admin?state.students.map(email=>({email,name:state.studentNames?.[email]||email})):[]});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
   if(admin&&read&&url.pathname==='/api/data'&&env.PAPER_CATALOG_REVISION&&state.paperCatalogRevision!==env.PAPER_CATALOG_REVISION){
