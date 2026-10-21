@@ -790,3 +790,56 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 .rr-student-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.rr-student-chips>span{display:inline-block;padding:3px 8px;border-radius:6px;background:#fff;color:#426076;font-size:12px;line-height:1.5;overflow-wrap:anywhere;border:1px solid #dce6ec}[data-theme=dark] .rr-student-chips>span{background:#283c49;color:#d8e7ef;border-color:#405564}
 .rr-publication{padding:14px 18px}.rr-publication h3{margin:7px 0 0}.rr-publication .rr-pub-journal,.rr-publication .rr-pub-authors{margin:5px 0 0}.rr-answer .rr-publication{padding:13px 16px}.rr-answer .rr-publication h3{margin:7px 0 0}.rr-rich-blocks{display:grid;gap:14px;margin:12px 0}.rr-rich-blocks>section>h3{font-size:16px;margin:4px 0 10px}.rr-inline-image figure{margin:0}.rr-inline-image img{max-width:100%;max-height:640px;object-fit:contain;height:auto;border-radius:10px;background:#fff}.rr-inline-image figcaption{font-size:12px;color:#60758a;margin:6px 0}.rr-inline-image label{font-size:12px}.rr-original{margin:12px 0;font-size:12px;color:#60758a}.rr-original .rr-prose{color:var(--ink,#243544)}.rr-block-table table,.rr-chart-block table{border-collapse:collapse;width:100%;font-size:13px}.rr-block-table th,.rr-block-table td,.rr-chart-block th,.rr-chart-block td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--edge);white-space:pre-wrap;overflow-wrap:anywhere}.rr-metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.rr-metric{background:var(--tint,#f0f5f7);border-radius:12px;padding:14px}.rr-metric>span{display:block;font-size:12px;color:#5e778b}.rr-metric strong{display:block;font-size:24px;margin-top:5px;overflow-wrap:anywhere}.rr-metric small{font-size:13px;font-weight:400}.rr-chart-block{border:1px solid var(--edge);border-radius:12px;padding:14px}.rr-chart-canvas{overflow:auto}.rr-chart-canvas svg{width:100%;min-width:400px;display:block}.rr-chart-canvas text{fill:currentColor;font-size:12px}.rr-chart-grid{stroke:var(--edge);stroke-width:1}.rr-chart-unit,.rr-chart-legend,.rr-chart-block details{font-size:12px}.rr-chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}.rr-chart-legend span{display:flex;align-items:center;gap:5px}.rr-chart-legend i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--series)}.rr-series-0{--series:#397fb8;fill:var(--series);stroke:var(--series)}.rr-series-1{--series:#8c69bd;fill:var(--series);stroke:var(--series)}.rr-series-2{--series:#3c9b8a;fill:var(--series);stroke:var(--series)}.rr-series-3{--series:#bf8049;fill:var(--series);stroke:var(--series)}.rr-series-4{--series:#b86388;fill:var(--series);stroke:var(--series)}.rr-series-5{--series:#7d8954;fill:var(--series);stroke:var(--series)}.rr-chart-canvas polyline{fill:none}[data-theme=dark] .rr-metric>span,[data-theme=dark] .rr-original{color:#afc3d4}
 @media(max-width:760px){.rr-publication{padding:12px 14px}.rr-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rr-metric{padding:11px}.rr-metric strong{font-size:21px}.rr-block-table .rr-table-scroll{max-width:100%}}
+
+/* Compact research conversation: mobile chooser and desktop inline tools. */
+#researchRoomRoot .rr-workspace{gap:14px;min-height:0}
+#researchRoomRoot .rr-topic-heading{align-items:center;padding:10px 14px;gap:14px;border-bottom:1px solid var(--edge);position:relative}
+#researchRoomRoot .rr-topic-heading h2{flex:1;min-width:0;font-size:17px;line-height:1.4;margin:0}
+#researchRoomRoot .rr-views{flex-shrink:0;border:0;padding:0;gap:2px}
+#researchRoomRoot .rr-views button{padding:8px 10px}
+.rr-mobile-section-name,.rr-back{display:none}
+.rr-overflow{position:relative;flex-shrink:0}
+.rr-overflow summary{list-style:none;font-size:24px;font-weight:700;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:8px}
+.rr-overflow summary::-webkit-details-marker{display:none}
+.rr-overflow[open] summary{background:var(--tint,#f3f6fa)}
+.rr-overflow>div{position:absolute;right:0;top:40px;z-index:30;min-width:180px;background:var(--panel,#fff);color:inherit;border:1px solid var(--edge);border-radius:10px;box-shadow:0 8px 24px #13263b18;padding:5px}
+.rr-overflow button{display:block;width:100%;padding:11px 12px;text-align:left;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;border-radius:6px;white-space:nowrap;cursor:pointer}
+.rr-overflow button:hover{background:var(--tint,#f3f6fa)}
+#researchRoomRoot .rr-main{overflow:visible}
+#researchRoomRoot #rrContent{min-width:0;overflow:hidden;border-radius:0 0 14px 14px}
+#researchRoomRoot .rr-messages{min-height:280px}
+[data-theme=dark] .rr-overflow>div{background:#172333}
+@media(min-width:761px) and (max-width:1050px){#researchRoomRoot .rr-workspace{grid-template-columns:180px minmax(0,1fr)}#researchRoomRoot .rr-topic-heading{gap:6px}#researchRoomRoot .rr-topic-heading h2{font-size:15px}#researchRoomRoot .rr-views button{padding:8px 6px}}
+@media(max-width:760px){
+ #researchRoomRoot .rr-workspace{display:flex;flex-direction:column;gap:0}
+ #researchRoomRoot .rr-sidebar{border:0;border-radius:0;padding:0 0 8px;gap:8px;order:0}
+ #researchRoomRoot .rr-topic-list{gap:6px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:none;padding:2px 0 4px;flex:none}
+ #researchRoomRoot .rr-topic{min-width:0;max-width:240px;width:auto;flex:0 0 auto;padding:8px 11px;border:1px solid var(--edge);border-radius:9px}
+ #researchRoomRoot .rr-topic strong{font-size:12px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+ #researchRoomRoot .rr-student-chips{margin-top:4px}
+ #researchRoomRoot .rr-main{display:none;border:0;border-radius:0}
+ #researchRoomRoot.rr-chat-open>.research-title{display:none}
+ #researchRoomRoot.rr-chat-open .rr-main{display:contents}
+ #researchRoomRoot.rr-chat-open .rr-topic-heading{order:-1;display:grid;grid-template-columns:auto minmax(0,1fr) 36px 36px;padding:4px 0 7px;gap:6px;border-bottom:2px solid var(--blue,#1766df);margin-bottom:8px}
+ #researchRoomRoot .rr-mobile-section-name{display:block;font-size:18px;font-weight:700;white-space:nowrap}
+ #researchRoomRoot .rr-topic-heading h2{font-size:13px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;padding-left:7px;border-left:1px solid var(--edge)}
+ #researchRoomRoot .rr-back{display:grid;place-items:center;font-size:25px;border:0;background:transparent;color:inherit;padding:0;width:36px;height:44px;cursor:pointer}
+ #researchRoomRoot .rr-overflow summary{height:44px}
+ #researchRoomRoot .rr-overflow{grid-column:4;grid-row:1}
+ #researchRoomRoot .rr-views{grid-column:1/-1;grid-row:2;gap:3px}
+ #researchRoomRoot .rr-views button{font-size:13px;padding:7px 12px}
+ #researchRoomRoot.rr-chat-open .rr-list-filter{display:none}
+ #researchRoomRoot.rr-chat-open .rr-student-chips{display:none}
+ #researchRoomRoot #rrContent{order:1;border-radius:0}
+ #researchRoomRoot .rr-messages{padding:8px 2px 14px;scroll-padding:8px;min-height:280px}
+ #researchRoomRoot .rr-answer{display:block}
+ #researchRoomRoot .rr-answer>.rr-avatar{display:none}
+ #researchRoomRoot .rr-question{width:94%}
+ #researchRoomRoot .rr-paper-library{padding:0;margin:8px 0}
+ #researchRoomRoot .rr-message-meta .rr-saved-time{font-size:11px}
+ #researchRoomRoot .rr-message-body{width:100%}
+ #researchRoomRoot .rr-section-toolbar{padding:0 2px}
+ #researchRoomRoot .rr-topic-heading>.section-clock{display:none}
+}
+#researchRoomRoot .rr-topic{color:var(--text)}
+@media(min-width:761px){#researchRoomRoot .rr-topic-heading h2{flex:0 1 auto}#researchRoomRoot .rr-views{margin-right:auto}}

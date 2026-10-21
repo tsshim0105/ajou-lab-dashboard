@@ -46,7 +46,7 @@ function openMobileMore(){
   try{await a.finished;}finally{a.cancel();reset();if(pullIndicator)pullIndicator.hidden=true;animating=false;}
  };
  document.addEventListener('touchstart',e=>{
-  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
+  if(!mobile()||animating||busy||e.target.closest('.rr-topic-list')||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
   const t=e.touches[0];
   gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,pull:0,canPull:!pullBlocked()&&atTop(e.target),scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
  },{passive:true,capture:true});
