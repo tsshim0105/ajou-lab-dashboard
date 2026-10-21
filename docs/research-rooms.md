@@ -41,3 +41,19 @@ Run node --test tests/access.test.mjs tests/mobile.test.mjs tests/research-room.
 and node scripts/build.mjs. The unified Site mounts the runtime below /dashboard,
 passes the server secret and private R2 binding, and owns schema migrations. Never log API errors
 verbatim, store credentials in source, or pass keys to the browser.
+
+## ChatGPT project publishing
+The Site MCP plugin exposes list_research_topics and save_research_result.
+The /mcp route verifies the existing owner identity before every tool call.
+The user selects an answer in their ChatGPT 연구미팅 project and asks to save it.
+The caller passes the original question/answer, papers, and transferable images;
+this is explicit publishing, not automatic ChatGPT conversation synchronization.
+No model request is made and no API charge is incurred by importing.
+Images are stored privately in R2 (PNG/JPEG/WebP <=4MB each, max8). Base64 is
+supported. HTTPS downloads use a small trusted-host allowlist, reject redirects,
+and enforce response limits; unsupported/internal sandbox images yield visible
+warnings. Same content retries deduplicate and may repair missing image files.
+Saved papers are automatically added to the topic library. Original formatting
+is safely rendered Markdown, not an exact clone of ChatGPT interactive UI.
+Project name is workflow context, not an authenticated project-level boundary:
+only the owner can invoke this tool, from any chat where the plugin is enabled.
