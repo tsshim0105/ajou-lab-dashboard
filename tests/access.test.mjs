@@ -175,7 +175,7 @@ test('paper deletion records title aliases and preserves unrelated records; only
 
 test('reagent CRUD persists across reload, preserves finance and enforces administrator writes',async()=>{
  const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();const next=structuredClone(original.data);
- const reagent={id:'reagent-1',name:'Example reagent',unit:'mL',capacity:'100',quantity:'2',location:'냉장고 1층',note:'Manufacturer'};next.reagents=[reagent];
+ const reagent={id:'reagent-1',name:'Example reagent',unit:'mL',capacity:'100',quantity:'2',location:'냉장고 1층',note:'Manufacturer',links:[]};next.reagents=[reagent];
  assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env)).status,200);
  const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.data.reagents,[reagent]);assert.deepEqual(student.data.funds,[]);
  next.reagents[0].quantity='1';assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:1,data:next}),env)).status,403);
@@ -205,9 +205,9 @@ test('SCI initialization is once only and future KCI or non-indexed selections p
 
 test('students edit existing reagents only, preserving records and rejecting unauthorized or stale changes',async()=>{
  const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();const next=structuredClone(original.data);
- next.reagents=[{id:'r1',name:'Example',unit:'mL',capacity:'100',quantity:'2',location:'냉장고',note:'old'}];
+ next.reagents=[{id:'r1',name:'Example',unit:'mL',capacity:'100',quantity:'2',location:'냉장고',note:'old',links:[]}];
  await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:next}),env);
- const changes=[{id:'r1',values:{quantity:'1',location:'시약장',note:'updated'}}];
+ const changes=[{id:'r1',values:{quantity:'1',location:'시약장',note:'updated',links:[]}}];
  assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:1,changes}),env)).status,200);
  let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].quantity,'1');assert.equal(saved.data.reagents[0].location,'시약장');assert.equal(saved.data.reagents[0].note,'updated');
  for(const k of ['papers','conferences','funds','payroll','sources'])assert.deepEqual(saved.data[k],next[k]);
@@ -220,7 +220,7 @@ test('students edit existing reagents only, preserving records and rejecting una
 
 test('shared content parity lets students add/delete/import reagents and manage papers and aliases without financial access',async()=>{
  const {worker,env}=fixture();const original=await (await worker.fetch(req(OWNER),env)).json();original.data.papers[0].id='existing-paper';await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:original.data}),env);let student=await (await worker.fetch(req('student@example.test'),env)).json();
- student.data.reagents=[{id:'new-r',name:'Student reagent',unit:'g',capacity:'10',quantity:'1',location:'새 장소',note:'added'}];
+ student.data.reagents=[{id:'new-r',name:'Student reagent',unit:'g',capacity:'10',quantity:'1',location:'새 장소',note:'added',links:[]}];
  student.data.authorAliases=[{korean:'홍길동',english:'Gil Dong Hong'}];
  assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:1,data:student.data}),env)).status,200);
  let saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].name,'Student reagent');assert.equal(saved.data.authorAliases[0].english,'Gil Dong Hong');
@@ -231,7 +231,7 @@ test('shared content parity lets students add/delete/import reagents and manage 
  for(const k of ['funds','payroll','standards']){const bad=structuredClone(student.data);bad[k]=[{title:'blocked'}];assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:3,data:bad}),env)).status,400);}
  assert.equal((await worker.fetch(req('unapproved@example.test','/api/shared','PUT',{version:3,data:student.data}),env)).status,403);
  assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:2,data:student.data}),env)).status,409);
- student=await (await worker.fetch(req('student@example.test'),env)).json();student.data.reagents=[{id:'import-r',name:'Imported reagent',unit:'mL',capacity:'50',quantity:'3',location:'냉장고',note:''}];
+ student=await (await worker.fetch(req('student@example.test'),env)).json();student.data.reagents=[{id:'import-r',name:'Imported reagent',unit:'mL',capacity:'50',quantity:'3',location:'냉장고',note:'',links:[]}];
  assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:3,data:student.data}),env)).status,200);
  saved=await (await worker.fetch(req(OWNER),env)).json();assert.equal(saved.data.reagents[0].id,'import-r');assert.deepEqual(saved.data.funds,original.data.funds);assert.deepEqual(saved.data.payroll,original.data.payroll);
 });
@@ -298,3 +298,18 @@ test('verified paper grants persist once on authenticated reads without exposing
  const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.version,2);assert.deepEqual(student.data.funds,[]);assert.deepEqual(student.data.payroll,[]);
  const owner=await (await worker.fetch(req(OWNER),env)).json();assert.equal(owner.version,2);assert.equal(owner.data.papers[0].fund,'RS-2024-00397807');assert.equal(owner.data.papers[0].fundSource,paperGrantCatalog[1].source);assert.deepEqual(owner.data.funds,original.data.funds);
 });
+
+ test('purchase links seed once and students can remove all without regeneration',async()=>{
+ const {worker,env}=fixture();let owner=await (await worker.fetch(req(OWNER),env)).json();
+ owner.data.papers[0].id='links-paper';owner.data.reagents=[{id:'links-r',name:'Ecoflex 00-30 part A',unit:'g',capacity:'450',quantity:'1',location:'Shelf',note:'SMOOTH-ON'}];
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:owner.version,data:owner.data}),env)).status,200);
+ owner=await (await worker.fetch(req(OWNER),env)).json();assert.equal(owner.data.reagents[0].links.length,3);assert.match(owner.data.reagents[0].links[0],/smooth-on.com/);
+ const version=owner.version;assert.equal((await (await worker.fetch(req(OWNER),env)).json()).version,version);
+ let student=await (await worker.fetch(req('student@example.test'),env)).json();student.data.reagents[0].links=[];
+ assert.equal((await worker.fetch(req('student@example.test','/api/shared','PUT',{version:student.version,data:student.data}),env)).status,200);
+ owner=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(owner.data.reagents[0].links,[]);
+ assert.equal((await (await worker.fetch(req(OWNER),env)).json()).version,owner.version);
+ for(const links of [['javascript:alert(1)'],['https://user:pass@example.com'],['http://example.com'],Array(13).fill('https://example.com')])assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:owner.version,changes:[{id:'links-r',values:{links}}]}),env)).status,400);
+ assert.equal((await worker.fetch(req('student@example.test','/api/reagents','PUT',{version:owner.version,changes:[{id:'links-r',values:{links:['https://example.com/a','https://example.com/b']}}]}),env)).status,200);
+ assert.deepEqual((await (await worker.fetch(req(OWNER),env)).json()).data.reagents[0].links,['https://example.com/a','https://example.com/b']);
+ });

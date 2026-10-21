@@ -31,9 +31,9 @@ function renderReagents(){
 }
 function drawReagents(){
  const all=data.reagents||[],rows=ReagentData.filter(all,reagentQuery,reagentLocation);
- exportRows=[ReagentData.headers,...rows.map(r=>ReagentData.fields.map(k=>r[k]))];
+ exportRows=[[...ReagentData.headers,'구매 링크'],...rows.map(r=>[...ReagentData.fields.map(k=>r[k]),(r.links||[]).join('\n')])];
  $('reagentCount').textContent=`${rows.length}개 항목 / 전체 ${all.length}개`;
- $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
+ $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>k==='name'?reagentNameLinks(r):esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
  $('reagentList').querySelectorAll('[data-reagent-edit]').forEach(b=>b.onclick=()=>editReagent(b.dataset.reagentEdit));
 }
 function bindReagents(){
@@ -48,13 +48,14 @@ function reagentLocationField(record){
 }
 function editReagent(id=null){
  if(!canEditResearch())return;const record=(data.reagents||[]).find(r=>r.id===id);if(id&&!record)return;
- editor(id?'시약 정보 수정':'시약 추가',ReagentData.fields.map((k,i)=>k==='location'?reagentLocationField(record):field(k,ReagentData.headers[i]+(k==='name'?' *':''),record?.[k]||'','text',`${k==='name'?'required':''} maxlength="2000"`)).join(''),(values,next)=>{
+ editor(id?'시약 정보 수정':'시약 추가',ReagentData.fields.map((k,i)=>k==='location'?reagentLocationField(record):field(k,ReagentData.headers[i]+(k==='name'?' *':''),record?.[k]||'','text',`${k==='name'?'required':''} maxlength="2000"`)).join('')+reagentLinksEditor(record?.links||[]),(values,next)=>{
   const location=values.location==='__custom__'?String(values.newLocation||'').trim():String(values.location||'').trim();if(values.location==='__custom__'&&!location)throw Error('새 보관위치를 입력해주세요.');
   const reagent={id:id||crypto.randomUUID(),...Object.fromEntries(ReagentData.fields.map(k=>[k,String(values[k]||'').trim()])),location};if(!reagent.name)throw Error('화학물질명을 입력해주세요.');
+  reagent.links=[...document.querySelectorAll('dialog[open] [data-reagent-link-url]')].map(i=>i.value.trim()).filter(Boolean);if(reagent.links.length>12)throw Error('구매 링크는 최대 12개까지 입력해주세요.');for(const value of reagent.links){let u;try{u=new URL(value);}catch{throw Error('구매 링크는 https:// 주소로 입력해주세요.');}if(u.protocol!=='https:'||u.username||u.password)throw Error('구매 링크는 인증정보 없는 HTTPS 주소만 사용할 수 있습니다.');}reagent.links=[...new Set(reagent.links)];
   next.reagents=next.reagents||[];if(id){const index=next.reagents.findIndex(r=>r.id===id);if(index<0)throw Error('시약이 삭제되었습니다. 새로고침해주세요.');next.reagents[index]=reagent;}else next.reagents.push(reagent);
  },true,id?next=>{next.reagents=(next.reagents||[]).filter(r=>r.id!==id);}:null,{
   removeLabel:'시약 삭제',removeConfirm:`「${record?.name||''}」 시약 항목을 삭제할까요?`,
-  onMount:form=>{const select=form.elements.location,input=form.elements.newLocation,wrapper=form.querySelector('[data-custom-location]');select.onchange=()=>{const custom=select.value==='__custom__';wrapper.hidden=!custom;wrapper.style.display=custom?'grid':'';input.disabled=!custom;input.required=custom;if(custom)input.focus();};}
+  onMount:form=>{bindReagentLinksEditor(form);const select=form.elements.location,input=form.elements.newLocation,wrapper=form.querySelector('[data-custom-location]');select.onchange=()=>{const custom=select.value==='__custom__';wrapper.hidden=!custom;wrapper.style.display=custom?'grid':'';input.disabled=!custom;input.required=custom;if(custom)input.focus();};}
  });
 }
 async function uploadReagents(e){
@@ -63,3 +64,9 @@ async function uploadReagents(e){
   const next=structuredClone(data);next.reagents=rows;next.sources=next.sources.filter(s=>s.type!=='reagents');next.sources.push({type:'reagents',name:'시약 목록',importedAt:new Date().toISOString()});if(!offline)await put('/api/data',{data:next});data=next;render();$('reagentStatus').textContent=`시약 ${rows.length}개 항목을 저장했습니다.`;
  }catch(e){$('reagentStatus').textContent=e.message;}finally{busy=false;input.disabled=false;input.value='';}
 }
+
+function reagentLinkLabel(url,index){try{const u=new URL(url);return u.hostname==='www.google.com'&&u.pathname==='/search'?(u.searchParams.get('q')?.startsWith('site:')?'공식몰 검색':'구매 검색'):'구매처 '+(index+1);}catch{return '링크';}}
+function reagentNameLinks(r){return `<span>${esc(r.name||'—')}</span> <span class="reagent-purchase-links">${(r.links||[]).map((url,i)=>{try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return '';return `<a class="reagent-purchase-link" href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" title="${esc(r.name+' · '+(r.note||'')+' · '+url)}">${esc(reagentLinkLabel(url,i))} ↗</a>`;}catch{return '';}}).join('')}</span>`;}
+function reagentLinkRow(url=''){return `<div class="reagent-link-row"><input data-reagent-link-url type="url" aria-label="구매 링크 주소" placeholder="https://…" maxlength="2000" value="${esc(url)}"><button type="button" class="secondary" data-remove-reagent-link aria-label="이 구매 링크 삭제">삭제</button></div>`;}
+function reagentLinksEditor(links){return `<section class="reagent-links-editor"><strong>구매 링크</strong><p class="muted">여러 주소를 추가하고, 확인 후 맞는 링크만 남겨주세요. 삭제 후 저장하면 다시 추가되지 않습니다.</p><div data-reagent-link-rows>${links.map(reagentLinkRow).join('')}</div><button type="button" class="secondary" data-add-reagent-link>＋ 링크 추가</button></section>`;}
+function bindReagentLinksEditor(form){const rows=form.querySelector('[data-reagent-link-rows]');rows.onclick=e=>{const button=e.target.closest('[data-remove-reagent-link]');if(button)button.closest('.reagent-link-row').remove();};form.querySelector('[data-add-reagent-link]').onclick=()=>{if(rows.children.length>=12)return;rows.insertAdjacentHTML('beforeend',reagentLinkRow());rows.lastElementChild.querySelector('input').focus();};}

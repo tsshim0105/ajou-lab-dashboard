@@ -894,3 +894,11 @@ html[data-theme="dark"][data-active-tab="papers"] .paper-archive.lab-paper .arch
 html[data-theme="dark"][data-active-tab="papers"] .paper-archive.lab-paper .archive-mobile-actions{background:#253b3d}
 html[data-theme="dark"][data-active-tab="papers"] .paper-archive :is(dt,.archive-meta,.archive-journal),
 html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{color:#aabed1}
+
+/* Compact purchase links shared by professor and students. */
+.reagent-purchase-links{display:inline-flex;flex-wrap:wrap;gap:5px;vertical-align:middle;margin-left:6px}
+.reagent-purchase-link{display:inline-block;padding:3px 7px;border:1px solid #c9d9ec;border-radius:6px;background:#f1f6fc;color:#32628b;font-size:11px;font-weight:600;text-decoration:none;white-space:nowrap}
+.reagent-purchase-link:hover{background:#e4eefb}.reagent-purchase-link:focus-visible{outline:2px solid #2469ef;outline-offset:2px}
+.reagent-links-editor{grid-column:1/-1;min-width:0;padding-top:10px}.reagent-links-editor p{margin:7px 0;font-size:12px}.reagent-link-row{display:flex;gap:8px;margin:7px 0}.reagent-link-row input{flex:1;min-width:0;padding:10px}.reagent-link-row button{flex:none}
+[data-theme="dark"] .reagent-purchase-link{background:#243449;border-color:#425c77;color:#b6d7f6}
+@media(max-width:760px){.reagent-purchase-link{padding:6px 8px}.reagent-purchase-links{margin-left:0;margin-top:5px}}

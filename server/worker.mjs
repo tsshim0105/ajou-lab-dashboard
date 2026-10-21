@@ -6,6 +6,30 @@ import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
 import {migrationRequest} from './migration.mjs';
 import {gatewayRequest,mountDashboardText} from './gateway.mjs';
 // Only run behind the Sites trusted authentication dispatcher, never on a public Worker origin.
+// Candidate purchase links: verified product pages or explicitly labelled searches.
+export function suggestReagentLinks(r){
+ const name=String(r.name||'').trim(),note=String(r.note||'').trim(),brand=note.toLowerCase().replace(/[^a-z0-9가-힣]/g,'');
+ if(!name)return [];
+ const domains={sigmaaldrich:'sigmaaldrich.com',aldrich:'sigmaaldrich.com',merck:'sigmaaldrich.com',tci:'tcichemicals.com',samchun:'samchun.com',daejung:'daejungchem.co.kr',junsei:'junsei.co.jp',kayaku:'kayakuam.com',microchem:'kayakuam.com',smoothon:'smooth-on.com',evonik:'evonik.com',byk:'byk.com'};
+ const direct={
+  'smoothon|ecoflex 00-30 part a':'https://www.smooth-on.com/products/ecoflex-00-30/',
+  'smoothon|ecoflex 00-30 part b':'https://www.smooth-on.com/products/ecoflex-00-30/',
+  'evonik|abil em 90':'https://www.evonik.com/en/products/cs/pr_52003302.html',
+  'tci|imidazole-2-carboxaldehyde':'https://www.tcichemicals.com/KR/ko/p/I0809',
+  'tci|4-benzoylphenyl methacrylate':'https://www.tcichemicals.com/KR/ko/p/B6151'
+ };
+ const result=[],product=direct[brand+'|'+name.toLowerCase()];if(product)result.push(product);
+ const domain=domains[brand],brandText=/^[—-]?$/.test(note)?'':note;
+ if(domain)result.push('https://www.google.com/search?q='+encodeURIComponent('site:'+domain+' '+name));
+ result.push('https://www.google.com/search?q='+encodeURIComponent([brandText,name,'구매'].filter(Boolean).join(' ')));
+ return [...new Set(result)];
+}
+export function validateReagentLinks(links){
+ if(!Array.isArray(links)||links.length>12)throw Error('구매 링크는 최대 12개까지 입력해주세요.');
+ for(const value of links){if(typeof value!=='string'||value.length>2000)throw Error('구매 링크 주소를 확인해주세요.');let u;try{u=new URL(value);}catch{throw Error('구매 링크는 https:// 주소로 입력해주세요.');}if(u.protocol!=='https:'||u.username||u.password)throw Error('구매 링크는 인증정보 없는 HTTPS 주소만 사용할 수 있습니다.');}
+ return [...new Set(links)];
+}
+
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
 export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
 export function validateGroupMeetings(rows){
@@ -37,7 +61,7 @@ export function validateData(d){
  if(!d||typeof d!=='object')throw Error('자료 형식이 올바르지 않습니다.');
  if(d.reagents!==undefined){
   if(!Array.isArray(d.reagents)||d.reagents.length>20000)throw Error('시약 목록을 확인해주세요.');
-  const ids=new Set();for(const r of d.reagents){if(!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||r.id.length>200||ids.has(r.id)||typeof r.name!=='string'||!r.name.trim())throw Error('시약 이름과 식별자를 확인해주세요.');ids.add(r.id);for(const k of ['name','unit','capacity','quantity','location','note'])if(typeof r[k]!=='string'||r[k].length>2000)throw Error('시약 항목은 2000자 이하의 텍스트로 입력해주세요.');}
+  const ids=new Set();for(const r of d.reagents){if(!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||r.id.length>200||ids.has(r.id)||typeof r.name!=='string'||!r.name.trim())throw Error('시약 이름과 식별자를 확인해주세요.');ids.add(r.id);if(r.links!==undefined)r.links=validateReagentLinks(r.links);for(const k of ['name','unit','capacity','quantity','location','note'])if(typeof r[k]!=='string'||r[k].length>2000)throw Error('시약 항목은 2000자 이하의 텍스트로 입력해주세요.');}
  }
  for(const key of ['papers','conferences','funds','payroll','standards','sources','issues'])if(!Array.isArray(d[key])||d[key].length>20000)throw Error('필수 자료 목록이 없거나 너무 큽니다.');
  for(const row of [...d.papers,...d.conferences,...d.funds,...d.payroll,...d.standards,...d.sources,...d.issues])if(!row||typeof row!=='object'||Array.isArray(row))throw Error('자료 행 형식이 올바르지 않습니다.');
@@ -120,7 +144,7 @@ export function applySharedData(current,input){
   next[type]=input[type].map(r=>next[type].find(saved=>saved.id===r.id));
  }
  if(!Array.isArray(input.reagents))throw Error('시약 목록을 확인해주세요.');
- next.reagents=input.reagents.map(r=>({id:r.id,...Object.fromEntries(['name','unit','capacity','quantity','location','note'].map(k=>[k,r[k]]))}));
+ next.reagents=input.reagents.map(r=>({id:r.id,...Object.fromEntries(['name','unit','capacity','quantity','location','note'].map(k=>[k,r[k]])),...((r.links??current.reagents?.find(x=>x.id===r.id)?.links)!==undefined?{links:r.links??current.reagents.find(x=>x.id===r.id).links}:{})}));
  next.authorAliases=input.authorAliases||[];
  if(!Array.isArray(input.sources)||input.sources.some(r=>!r||!['papers','conferences','reagents'].includes(r.type)))throw Error('공용 자료의 출처를 확인해주세요.');
  next.sources=[...current.sources.filter(r=>!['papers','conferences','reagents'].includes(r.type)),...input.sources];
@@ -162,6 +186,12 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email,members:state.students.map(email=>({email,name:state.studentNames?.[email]||email}))});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
+  if(admin&&read&&url.pathname==='/api/data'&&(state.data.reagents||[]).some(r=>r.links===undefined)){
+   const next=structuredClone(state);for(const r of next.data.reagents)if(r.links===undefined)r.links=suggestReagentLinks(r);
+   const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();
+   if(!saved.meta?.changes)return reply({error:'시약 링크를 갱신 중입니다. 다시 시도해주세요.'},409);
+   row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
+  }
   if(admin&&read&&url.pathname==='/api/data'&&env.PAPER_CATALOG_REVISION&&state.paperCatalogRevision!==env.PAPER_CATALOG_REVISION){
    const count=Number(env.PAPER_CATALOG_CHUNKS);if(!Number.isInteger(count)||count<1||count>16)throw Error('논문 갱신 자료 설정을 확인해주세요.');
    const compressed=Array.from({length:count},(_,i)=>env['PAPER_CATALOG_GZIP_'+(i+1)]||'').join('');
@@ -248,7 +278,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    }
    else if(url.pathname==='/api/shared'){const next=applySharedData(state.data,input.data);for(const type of ['papers','conferences'])recordNotifications(state,state.data[type],next[type],type,state.studentNames?.[email]||'연구실 구성원');state.data=next;}
    else if(url.pathname==='/api/reagents'){
-    const fields=['name','unit','capacity','quantity','location','note'];
+    const fields=['name','unit','capacity','quantity','location','note','links'];
     if(!Array.isArray(input.changes)||!input.changes.length||input.changes.length>50||Object.keys(input).some(k=>!['version','changes'].includes(k)))throw Error('시약 수정 항목을 확인해주세요.');
     const next=structuredClone(state.data),seen=new Set();
     for(const change of input.changes){
