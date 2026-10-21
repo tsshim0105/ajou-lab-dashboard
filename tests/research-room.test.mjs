@@ -52,3 +52,12 @@ test('legacy image placeholders resolve once without duplicating file links or g
  ctx.m.rich.files.push({name:'other.png',kind:'image',asset:'other'});assert.equal(vm.runInContext('rrLinkedImageFile(m,0)',ctx),null);
  ctx.m.rich.importImages[0].fileName='original.png';assert.equal(vm.runInContext('rrLinkedImageFile(m,0).name',ctx),'original.png');
 });
+
+test('unchanged polling preserves image DOM and new attachments still render',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const code=await readFile(new URL('../research-room.js',import.meta.url),'utf8');let renders=0;const root={dataset:{},textContent:'image',set innerHTML(v){renders++;},querySelectorAll(){return []}};
+ const thread={topic:{id:'topic-one'},messages:[],selectedImages:[]};const ctx=vm.createContext({document:{getElementById:()=>root},researchRoomState:{view:'images',thread},admin:()=>false,rrBindImages(){},rrBindImagePreview(){}});
+ vm.runInContext(code.slice(code.indexOf('function rrDrawContent()'),code.indexOf('function rrDrawMessages()')),ctx);
+ vm.runInContext('rrDrawContent();rrDrawContent();rrDrawContent()',ctx);assert.equal(renders,1);
+ thread.selectedImages.push({message:'image-one',index:0});vm.runInContext('rrDrawContent()',ctx);assert.equal(renders,2);
+ thread.topic.id='topic-two';vm.runInContext('rrDrawContent()',ctx);assert.equal(renders,3);
+});
