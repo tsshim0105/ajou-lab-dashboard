@@ -787,3 +787,4 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 [data-theme=dark] .rr-publication{background:#22313d;border-color:#405261;color:#e2eaf0}
 [data-theme=dark] .rr-publication h3 a{color:#d0e4ff}
 @media(max-width:760px){.rr-messages{padding:16px 12px}.rr-message{gap:8px;margin-bottom:22px}.rr-question{width:94%}.rr-answer>.rr-avatar{width:25px;height:25px;font-size:10px}.rr-question .rr-prose{padding:10px 13px}.rr-answer .rr-publication{padding:13px}.rr-answer .rr-publication h3{font-size:16px}.rr-pub-meta{flex-wrap:wrap;gap:6px}.rr-answer .rr-image-results{grid-template-columns:1fr}}
+.rr-student-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.rr-student-chips>span{display:inline-block;padding:3px 8px;border-radius:6px;background:#fff;color:#426076;font-size:12px;line-height:1.5;overflow-wrap:anywhere;border:1px solid #dce6ec}[data-theme=dark] .rr-student-chips>span{background:#283c49;color:#d8e7ef;border-color:#405564}
