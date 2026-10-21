@@ -902,3 +902,17 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 .reagent-links-editor{grid-column:1/-1;min-width:0;padding-top:10px}.reagent-links-editor p{margin:7px 0;font-size:12px}.reagent-link-row{display:flex;gap:8px;margin:7px 0}.reagent-link-row input{flex:1;min-width:0;padding:10px}.reagent-link-row button{flex:none}
 [data-theme="dark"] .reagent-purchase-link{background:#243449;border-color:#425c77;color:#b6d7f6}
 @media(max-width:760px){.reagent-purchase-link{padding:6px 8px}.reagent-purchase-links{margin-left:0;margin-top:5px}}
+
+/* Mobile cards use the archive palette even when the desktop layout is a sheet. */
+@media(max-width:760px){
+ html[data-active-tab="conferences"] .responsive-table tbody tr{background:linear-gradient(115deg,#eef7f5,#f0f3fb);border-color:#cedcec;color:#20394d}
+ html[data-active-tab="conferences"] .responsive-table :is(td,.record-title){background:transparent;border-color:#cedcec!important}
+ html[data-active-tab="conferences"] .responsive-table td::before{color:#627b94}
+ html[data-theme="dark"][data-active-tab="conferences"] .responsive-table tbody tr{background:linear-gradient(115deg,#203937,#292e44);border-color:#40556b;color:#e4edf7}
+ html[data-theme="dark"][data-active-tab="conferences"] .responsive-table :is(td,.record-title){border-color:#40556b!important}
+ html[data-theme="dark"][data-active-tab="conferences"] .responsive-table td::before{color:#aabed1}
+ #researchRoomRoot .rr-topic-list{display:flex;flex-direction:column;gap:8px;overflow:visible;overscroll-behavior:auto;padding:2px 0 4px;width:100%;min-width:0}
+ #researchRoomRoot .rr-topic{width:100%;max-width:none;min-width:0;flex:none;margin:0;padding:11px 12px}
+ #researchRoomRoot .rr-topic>div{flex:1;min-width:0}
+ #researchRoomRoot .rr-topic strong{white-space:normal;overflow-wrap:anywhere;font-size:14px}
+}
