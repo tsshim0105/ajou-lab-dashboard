@@ -1,41 +1,37 @@
-# Research rooms: initial owner-only, disconnected release
+# Research rooms: professor-only Responses integration
 
-This release intentionally blocks every AI generation route, even if a key exists.
-No mock AI answers, external API calls, or charges occur. Students cannot see the
-menu or access any research-room endpoint. Existing Sites identity and dashboard
-administrator authorization are reused. Site-wide public visibility is unchanged.
+The existing dashboard administrator boundary protects all room reads and writes.
+The public Site audience and other dashboard permissions are unchanged.
 
-Implemented: topic create/edit/archive/restore, durable topic-isolated messages
-and replies, five-second polling while visible, idempotent message creation,
-reference-text selection, human-authored meeting drafts and confirmation with
-validated conversation range, administrator budget/token/reasoning configuration,
-and usage categories. Schema lives in the unified Site's Drizzle migrations.
+Configure OPENAI_API_KEY as a Sites server secret and deploy. Local .env.local
+is not uploaded or embedded. With no runtime secret, AI actions remain disabled.
+The exact model is gpt-6.1-sol, standard service tier and low reasoning by default;
+there is no fallback model. Local model-access verification succeeded 2026-10-21.
 
-The budget ledger stores integer micro-USD. Reservation admission is one SQL
-statement across the whole lab, includes pending and uncertain requests, and
-serializes active generations per topic. Settlement is idempotent. These helpers
-are tested but not connected to paid execution in this release. No request is
-allowed merely because the browser displays a remaining budget.
+Implemented: topic CRUD/archive, persistent messages/replies, selected reference
+text, AI answers, range-selected AI meeting-summary drafts, human edits and
+confirmation, polling, monthly budget configuration and usage attribution.
+Only the current topic's recent messages and selected materials are sent.
+Input is conservatively bounded by UTF-8 bytes plus overhead. Truncated chat
+context is disclosed; summary ranges must fit in full. Long-history automatic
+compaction, live web search, image generation and student rollout are not enabled.
 
-## Activation gate (separate, deliberate next step)
+Before every paid request an atomic SQL statement reserves integer micro-USD
+against the lab's monthly budget (default USD 50). It includes unresolved requests
+from previous months and allows only one active request per topic. IDs deduplicate
+retries. Responses are persisted before settlement; ambiguous timeout, missing
+usage, or persistence failure retains the reservation and blocks repeat generation.
+Explicit pre-generation 400/401/403/404/422/429 rejection releases it. Uncertain
+jobs require administrator investigation; do not delete them to force a retry.
 
-1. Use the OpenAI Developers plugin's secure API-key setup workflow. Configure
-   OPENAI_API_KEY only as a Sites server secret; never paste it into a room,
-   source, browser storage, or log. Do not put it in the hosting manifest.
-2. Verify account access to the exact gpt-6.1-sol model using the server key.
-   A documented model is not proof of account access. No automatic fallback.
-3. Implement/validate Responses execution, pricing snapshots, actual token/tool
-   usage settlement, uncertain-job reconciliation, citations and R2 image output.
-   Until this step passes, generation/search/images/AI summaries remain disabled.
-4. Wire reservations before every request and retain reservations on ambiguous
-   timeouts. Verify duplicates, simultaneous topics, monthly rollover and usage
-   errors with the actual provider contract. Default ordinary tier, low reasoning.
-5. Enable student collaboration only after an explicit rollout request. Enforce
-   the existing approved roster plus topic membership on every read/write. Keep
-   membership, cross-topic administration and expensive settings professor-only.
-
-Official model information checked 2026-10-21:
+Pricing snapshot 2026-10-21: conservatively estimate all input at USD 2.50/million
+(the cache-write rate) and output including reasoning at USD 10/million. No tools
+are enabled. Usage stores response ID, token counts, rate snapshot and amounts.
+Cached discounts are deliberately not deducted. The estimate is not a guarantee
+of an exact billing cap: pricing, actual processing and provider billing can vary.
 https://developers.openai.com/api/docs/models/gpt-6.1-sol
-Responses API and tools are documented; account access remains unchecked.
-The monthly estimate is not a guaranteed billing ceiling: pricing changes,
-provider billing delays and usage discrepancies can change actual charges.
+
+Run node --test tests/access.test.mjs tests/mobile.test.mjs tests/research-room.test.mjs
+and node scripts/build.mjs. The unified Site mounts the runtime below /dashboard,
+passes only the server secret, and owns schema migrations. Never log API errors
+verbatim, store credentials in source, or pass keys to the browser.
