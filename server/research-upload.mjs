@@ -79,19 +79,47 @@ export async function attachResearchFile(env,b,fetchFile=fetch){
  const prior=await env.DB.prepare('SELECT payload FROM research_records WHERE id=?').bind(key).first();
  const index=(prior?JSON.parse(prior.payload).importImages||[]:[]).findIndex(x=>x.uploadId===id);
  if(index>=0)return {ok:true,duplicate:true,imagesSaved:1,index};
- let url;try{url=new URL(file.download_url);}catch{throw ruFail('ChatGPT 파일 다운로드 주소가 전달되지 않았습니다. 원본 파일로 다시 호출해주세요.');}
- const allowed=['oaiusercontent.com','oaistatic.com','blob.core.windows.net'];
- if(url.protocol!=='https:'||url.username||url.password||url.port||!allowed.some(h=>url.hostname===h||url.hostname.endsWith('.'+h)))throw ruFail('ChatGPT의 임시 파일 다운로드 주소만 허용됩니다. sandbox 경로는 사용할 수 없습니다.');
- const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
- let bytes;
- try{
- const response=await fetchFile(url.href,{redirect:'error',signal:controller.signal});
- if(!response.ok)throw ruFail('원본 파일을 가져오지 못했습니다. 파일 링크가 만료되었을 수 있으니 원본 파일로 다시 호출해주세요.',502);
- if(Number(response.headers.get('Content-Length'))>ruMax)throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);
- const reader=response.body?.getReader();if(!reader)throw ruFail('파일 내용이 없습니다.');
- const chunks=[];let size=0;
- while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>ruMax){await reader.cancel();throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);}chunks.push(value);}
- bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
- }catch(e){if(e.status)throw e;throw ruFail('ChatGPT 원본 파일에 연결하지 못했습니다. 파일을 다시 선택해 전송해주세요.',502);}finally{clearTimeout(timeout);}
+ const {bytes}=await ruDownloadNative(file,fetchFile);
  return ruStoreImage(env,{topic:b.topicId,message:b.messageId,imageIndex:b.imageIndex,caption:String(b.caption||file.file_name||'첨부한 그림').slice(0,500)},id,bytes);
+}
+
+function ruFileUrl(value){
+ let url;try{url=new URL(value);}catch{throw ruFail('FILE_URL_MISSING: ChatGPT 원본 파일 주소가 전달되지 않았습니다.');}
+ const allowed=['oaiusercontent.com','oaistatic.com','blob.core.windows.net'];
+ if(url.protocol!=='https:'||url.username||url.password||url.port||!allowed.some(h=>url.hostname===h||url.hostname.endsWith('.'+h)))throw ruFail('FILE_HOST_DENIED: ChatGPT 파일 저장소 주소만 허용됩니다.');
+ return url;
+}
+async function ruDownloadNative(file,fetchFile){
+ let url=ruFileUrl(file?.download_url),stage='connect',redirects=0;
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
+ try{
+ let response;
+ for(;;){
+ response=await fetchFile(url.href,{redirect:'manual',signal:controller.signal});
+ if(![301,302,303,307,308].includes(response.status))break;
+ await response.body?.cancel();
+ if(++redirects>3)throw ruFail('FILE_REDIRECT_LIMIT: 파일 주소 이동 횟수를 초과했습니다.',502);
+ const next=response.headers.get('location');if(!next)throw ruFail('FILE_REDIRECT_MISSING: 파일 이동 주소가 없습니다.',502);
+ url=ruFileUrl(new URL(next,url).href);
+ }
+ if(!response.ok)throw ruFail('FILE_HTTP_'+response.status+': 원본 파일 서버가 다운로드를 거절했습니다. 새 파일 참조가 필요합니다.',502);
+ stage='read';
+ if(Number(response.headers.get('Content-Length'))>ruMax)throw ruFail('FILE_TOO_LARGE: 그림은 20MB 이내로 첨부해주세요.',413);
+ const reader=response.body?.getReader();if(!reader)throw ruFail('FILE_EMPTY: 파일 내용이 없습니다.');
+ const chunks=[];let size=0;
+ while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>ruMax){await reader.cancel();throw ruFail('FILE_TOO_LARGE: 그림은 20MB 이내로 첨부해주세요.',413);}chunks.push(value);}
+ const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+ return {bytes,redirects,host:url.hostname};
+ }catch(e){
+ if(e.status)throw e;
+ const detail=String(e?.message||'')+' '+String(e?.cause?.code||'');
+ const code=controller.signal.aborted?'TIMEOUT':/ENOTFOUND|DNS|resolve/i.test(detail)?'DNS':/denied|not allowed|blocked|policy|restricted/i.test(detail)?'POLICY':/certificate|TLS|SSL/i.test(detail)?'TLS':/redirect/i.test(detail)?'REDIRECT':'NETWORK';
+ // Do not log signed URLs, file IDs, query strings, or raw exception messages.
+ console.error(JSON.stringify({event:'research_file_download_failed',stage,code,host:url.hostname}));
+ throw ruFail('FILE_'+code+'_'+stage.toUpperCase()+': 원본 파일 전송에 실패했습니다. 이 오류 코드를 관리자에게 전달해주세요.',502);
+ }finally{clearTimeout(timeout);}
+}
+export async function diagnoseResearchFile(b,fetchFile=fetch){
+ const {bytes,redirects,host}=await ruDownloadNative(b.file,fetchFile);
+ return {ok:true,downloaded:true,bytes:bytes.length,sha256:await ruHash(bytes),redirects,host,saved:false};
 }
