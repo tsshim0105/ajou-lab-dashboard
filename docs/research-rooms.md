@@ -57,3 +57,7 @@ Saved papers are automatically added to the topic library. Original formatting
 is safely rendered Markdown, not an exact clone of ChatGPT interactive UI.
 Project name is workflow context, not an authenticated project-level boundary:
 only the owner can invoke this tool, from any chat where the plugin is enabled.
+
+## Ordered imported content
+
+`save_research_result` accepts optional ordered `blocks` (answer) and `questionBlocks` (question attachments). The original question/answer remain unchanged in message storage and copy operations. Blocks support markdown, table, metrics, image/paper zero-based references, and bar/line charts with explicit source values. Never infer numerical data from an unavailable chart. Transfer a rendered chart as a PNG when its underlying values are unavailable. Safe SVG images may be supplied as `images[].svg`; script, external references and active markup are rejected, and SVG is served as an isolated image. Interactive ChatGPT UI/HTML is not executed or automatically mirrored. Existing text-only imports may be enriched by retrying the same question/answer with blocks and all referenced assets. Missing-image warnings must be surfaced. Topic viewing permissions also protect image assets.
