@@ -861,3 +861,13 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 @media(max-width:760px){#researchRoomRoot.rr-chat-open .rr-topic-heading{justify-content:flex-start}#researchRoomRoot .rr-views{order:2}#researchRoomRoot .rr-overflow{order:1}#researchRoomRoot .rr-back{order:0}}
 
 .rr-file-link{display:block;max-width:100%;margin:8px 0;padding:10px 14px;border:1px solid #ccd9e8;border-radius:10px;background:linear-gradient(110deg,#eff7f7,#f3eff9);color:#29465b;text-align:left;overflow-wrap:anywhere;font:inherit;cursor:pointer}.rr-file-library{display:grid;gap:12px;padding:14px}.rr-stored-file{display:flex;flex-direction:column;gap:9px;padding:16px;border:1px solid #d5deea;border-radius:13px;background:linear-gradient(120deg,#f2f8f8,#f5f2fa);overflow-wrap:anywhere}.rr-stored-file img{max-width:100%;max-height:65vh;object-fit:contain}.rr-stored-file small{color:#637b93}.rr-stored-file:focus,.rr-image-results figure:focus{outline:2px solid #246be9;outline-offset:2px}.rr-views{overflow-x:auto;flex-wrap:nowrap}.rr-views button{white-space:nowrap}
+
+/* Research images open in-place; documents remain downloads. */
+.rr-image-results img{cursor:zoom-in}
+.rr-image-popup{box-sizing:border-box;width:max-content;max-width:calc(100vw - 24px);max-height:calc(100dvh - 32px);padding:14px;border:1px solid #d3dfeb;border-radius:16px;background:var(--card,#fff);color:var(--text,#21384b);overflow:auto;box-shadow:0 20px 80px #10284040}
+.rr-image-popup::backdrop{background:#10243880;backdrop-filter:blur(3px)}
+.rr-image-popup header{display:flex;align-items:center;gap:16px;justify-content:space-between;margin-bottom:10px}
+.rr-image-popup header strong{overflow-wrap:anywhere;font-size:14px}
+.rr-image-popup header button{flex:none;width:40px;height:40px;font-size:28px;border-radius:12px;border:1px solid #d3dfeb;background:transparent;color:inherit;cursor:pointer}
+.rr-image-popup>img{display:block;max-width:100%;max-height:calc(100dvh - 122px);object-fit:contain;margin:auto}
+.rr-document-title{font-weight:700;color:inherit;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
