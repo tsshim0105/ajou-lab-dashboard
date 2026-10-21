@@ -1,3 +1,4 @@
+import {researchRoomRequest} from './research-room.mjs';
 import {applyPaperGrants} from './paper-grants.mjs';
 import {recordScheduleAdditions,recordScheduleDay} from './schedule-notifications.mjs';
 import {homepageManagers,updateHomepageManagers} from './homepage-access.mjs';
@@ -157,6 +158,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(!admin&&!state.students.includes(email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
   const read=['GET','HEAD'].includes(req.method),origin=req.headers.get('Origin');
   if((origin&&origin!==url.origin)||(!read&&(origin!==url.origin||req.headers.get('X-Lab-Request')!=='1'||req.headers.get('Content-Type')!=='application/json')))return reply({error:'허용되지 않는 요청입니다.'},403);
+  if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
   if(admin&&read&&url.pathname==='/api/data'&&env.PAPER_CATALOG_REVISION&&state.paperCatalogRevision!==env.PAPER_CATALOG_REVISION){
@@ -201,7 +203,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   const snapshot=(state.conferenceCatalog?.events||meetingEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
+   const snapshot=(meetingEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
    if(meetingEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot)){
     if(state.meetingNotificationSnapshot)recordNotifications(state,state.meetingNotificationSnapshot,snapshot,'meetingInfo','자동 갱신');
     state.meetingNotificationSnapshot=snapshot;
@@ -209,7 +211,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[],conferenceInfo:state.conferenceCatalog||null});
+   if(url.pathname==='/api/notifications')return reply({notifications:state.notifications||[]});
   }
   if(read&&url.pathname==='/_mobile-preview'){
    if(!admin)return reply({error:'교수님만 확인할 수 있습니다.'},403);
@@ -227,7 +229,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(saved.meta?.changes)break;
    }
   }
-  if(read&&url.pathname==='/api/data')return reply({conferenceInfo:state.conferenceCatalog||null,version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:state.notifications||[],data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
