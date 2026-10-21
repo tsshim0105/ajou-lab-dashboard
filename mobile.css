@@ -871,3 +871,26 @@ html .app,html[data-active-tab="papers"] .app{position:fixed;inset:0;width:100%;
 .rr-image-popup header button{flex:none;width:40px;height:40px;font-size:28px;border-radius:12px;border:1px solid #d3dfeb;background:transparent;color:inherit;cursor:pointer}
 .rr-image-popup>img{display:block;max-width:100%;max-height:calc(100dvh - 122px);object-fit:contain;margin:auto}
 .rr-document-title{font-weight:700;color:inherit;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+
+/* Shared soft aurora palette for archive and presentation cards only. */
+html[data-active-tab="papers"] .paper-archive,
+html[data-active-tab="conferences"] .card-layout tbody tr{background:linear-gradient(115deg,#eef7f5,#f0f3fb);border-color:#cedcec;color:#20394d}
+html[data-active-tab="papers"] .paper-archive .archive-main{background:transparent}
+html[data-active-tab="papers"] .paper-archive.lab-paper{background:linear-gradient(115deg,#e1f1e9,#eaf2f8);border-color:#c5ddcf}
+html[data-active-tab="papers"] .paper-archive.lab-paper .archive-main{background:transparent}
+html[data-active-tab="papers"] .archive-facts,
+html[data-active-tab="papers"] .archive-mobile-actions{background:#eef2f9;border-color:#cedcec}
+html[data-active-tab="papers"] .paper-archive.lab-paper .archive-facts,
+html[data-active-tab="papers"] .paper-archive.lab-paper .archive-mobile-actions{background:#eaf2f3}
+html[data-active-tab="papers"] .paper-archive :is(dt,.archive-meta,.archive-journal),
+html[data-active-tab="conferences"] .card-layout td::before{color:#627b94}
+html[data-active-tab="conferences"] .card-layout :is(td,.record-title){background:transparent;border-color:#cedcec!important}
+html[data-theme="dark"][data-active-tab="papers"] .paper-archive,
+html[data-theme="dark"][data-active-tab="conferences"] .card-layout tbody tr{background:linear-gradient(115deg,#203937,#292e44);border-color:#40556b;color:#e4edf7}
+html[data-theme="dark"][data-active-tab="papers"] .paper-archive.lab-paper{background:linear-gradient(115deg,#214237,#26394a);border-color:#527e68}
+html[data-theme="dark"][data-active-tab="papers"] .archive-facts,
+html[data-theme="dark"][data-active-tab="papers"] .archive-mobile-actions{background:#263349;border-color:#40556b}
+html[data-theme="dark"][data-active-tab="papers"] .paper-archive.lab-paper .archive-facts,
+html[data-theme="dark"][data-active-tab="papers"] .paper-archive.lab-paper .archive-mobile-actions{background:#253b3d}
+html[data-theme="dark"][data-active-tab="papers"] .paper-archive :is(dt,.archive-meta,.archive-journal),
+html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{color:#aabed1}
