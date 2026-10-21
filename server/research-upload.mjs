@@ -35,6 +35,17 @@ export async function receiveResearchImageUpload(req,env){
  const reader=req.body?.getReader();if(!reader)throw ruFail('그림 파일이 없습니다.');const chunks=[];let size=0;
  while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>ruMax){await reader.cancel();throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);}chunks.push(value);}
  const bytes=new Uint8Array(size);let offset=0;for(const c of chunks){bytes.set(c,offset);offset+=c.length;}
+ return reply(await ruStoreImage(env,grant,id,bytes));
+ }catch(e){return reply({error:e.message||'그림을 저장하지 못했습니다.'},e.status||500);}
+}
+export async function listResearchImageTargets(env,topicId){
+ if(!/^[\w-]{8,100}$/.test(topicId||''))throw ruFail('채팅 ID를 확인해주세요.');
+ const rows=await env.DB.prepare("SELECT id,content,created FROM research_messages WHERE topic=? AND kind='assistant' ORDER BY created DESC LIMIT 20").bind(topicId).all();
+ return {topicId,answers:rows.results.map(x=>({messageId:x.id,created:x.created,preview:x.content.slice(0,160)}))};
+}
+
+async function ruStoreImage(env,grant,id,bytes){
+ const key=await ruTarget(env,grant.topic,grant.message);
  const mime=bytes.length>24&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)?'image/png':bytes.length>4&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255?'image/jpeg':bytes.length>12&&String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP'?'image/webp':null;
  if(!mime)throw ruFail('PNG, JPEG, WebP 그림 파일을 선택해주세요.');
  const asset='research-upload/'+grant.topic+'/'+id+'/'+await ruHash(bytes);await env.BUCKET.put(asset,bytes,{httpMetadata:{contentType:mime}});
@@ -42,7 +53,7 @@ export async function receiveResearchImageUpload(req,env){
  for(let attempt=0;attempt<5;attempt++){
  await ruTarget(env,grant.topic,grant.message);
  const current=await env.DB.prepare('SELECT payload,version FROM research_records WHERE id=?').bind(key).first(),rich=JSON.parse(current.payload);rich.importImages||=[];
- const duplicate=rich.importImages.findIndex(x=>x.uploadId===id);if(duplicate>=0)return reply({ok:true,duplicate:true,imagesSaved:1,index:duplicate});
+ const duplicate=rich.importImages.findIndex(x=>x.uploadId===id);if(duplicate>=0)return ({ok:true,duplicate:true,imagesSaved:1,index:duplicate});
  let index=grant.imageIndex??rich.importImages.findIndex(x=>x.missing);if(index<0)index=rich.importImages.length;
  if(index>rich.importImages.length||index>=40)throw ruFail('그림 위치 또는 첨부 개수를 확인해주세요.');
  if(rich.importImages[index]&&!rich.importImages[index].missing)throw ruFail('이미 연결된 그림입니다. 새 그림으로 첨부해주세요.',409);
@@ -51,13 +62,36 @@ export async function receiveResearchImageUpload(req,env){
  rich.importImages[index]={caption:grant.caption,asset,mime,uploadId:id};
  rich.importWarnings=(rich.importWarnings||[]).filter(w=>!w.startsWith('그림 '+(index+1)+':'));
  const result=await env.DB.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(rich),key,current.version).run();
- if(result.meta?.changes||result.changes)return reply({ok:true,imagesSaved:1,topic:grant.topic,message:grant.message,index});
+ if(result.meta?.changes||result.changes)return ({ok:true,imagesSaved:1,topic:grant.topic,message:grant.message,index});
  }
  throw ruFail('다른 수정이 진행 중입니다. 같은 업로드를 다시 시도해주세요.',409);
- }catch(e){return reply({error:e.message||'그림을 저장하지 못했습니다.'},e.status||500);}
 }
-export async function listResearchImageTargets(env,topicId){
- if(!/^[\w-]{8,100}$/.test(topicId||''))throw ruFail('채팅 ID를 확인해주세요.');
- const rows=await env.DB.prepare("SELECT id,content,created FROM research_messages WHERE topic=? AND kind='assistant' ORDER BY created DESC LIMIT 20").bind(topicId).all();
- return {topicId,answers:rows.results.map(x=>({messageId:x.id,created:x.created,preview:x.content.slice(0,160)}))};
+
+// ChatGPT resolves native file parameters; the server fetches the file without
+// requiring networking from the ChatGPT code execution sandbox.
+export async function attachResearchFile(env,b,fetchFile=fetch){
+ if(!env.BUCKET)throw ruFail('그림 저장소가 연결되지 않았습니다.',503);
+ const key=await ruTarget(env,b.topicId,b.messageId);
+ if(b.imageIndex!==undefined&&(!Number.isInteger(b.imageIndex)||b.imageIndex<0||b.imageIndex>39))throw ruFail('그림 위치를 확인해주세요.');
+ const file=b.file;
+ if(!file||typeof file.file_id!=='string'||!file.file_id||file.file_id.length>512)throw ruFail('ChatGPT 원본 파일을 선택해주세요.');
+ const id='native-'+await ruHash(JSON.stringify([b.topicId,b.messageId,file.file_id,b.imageIndex??null]));
+ const prior=await env.DB.prepare('SELECT payload FROM research_records WHERE id=?').bind(key).first();
+ const index=(prior?JSON.parse(prior.payload).importImages||[]:[]).findIndex(x=>x.uploadId===id);
+ if(index>=0)return {ok:true,duplicate:true,imagesSaved:1,index};
+ let url;try{url=new URL(file.download_url);}catch{throw ruFail('ChatGPT 파일 다운로드 주소가 전달되지 않았습니다. 원본 파일로 다시 호출해주세요.');}
+ const allowed=['oaiusercontent.com','oaistatic.com','blob.core.windows.net'];
+ if(url.protocol!=='https:'||url.username||url.password||url.port||!allowed.some(h=>url.hostname===h||url.hostname.endsWith('.'+h)))throw ruFail('ChatGPT의 임시 파일 다운로드 주소만 허용됩니다. sandbox 경로는 사용할 수 없습니다.');
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
+ let bytes;
+ try{
+ const response=await fetchFile(url.href,{redirect:'error',signal:controller.signal});
+ if(!response.ok)throw ruFail('원본 파일을 가져오지 못했습니다. 파일 링크가 만료되었을 수 있으니 원본 파일로 다시 호출해주세요.',502);
+ if(Number(response.headers.get('Content-Length'))>ruMax)throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);
+ const reader=response.body?.getReader();if(!reader)throw ruFail('파일 내용이 없습니다.');
+ const chunks=[];let size=0;
+ while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>ruMax){await reader.cancel();throw ruFail('그림은 20MB 이내로 첨부해주세요.',413);}chunks.push(value);}
+ bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+ }catch(e){if(e.status)throw e;throw ruFail('ChatGPT 원본 파일에 연결하지 못했습니다. 파일을 다시 선택해 전송해주세요.',502);}finally{clearTimeout(timeout);}
+ return ruStoreImage(env,{topic:b.topicId,message:b.messageId,imageIndex:b.imageIndex,caption:String(b.caption||file.file_name||'첨부한 그림').slice(0,500)},id,bytes);
 }
