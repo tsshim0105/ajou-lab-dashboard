@@ -20,7 +20,7 @@ test('client topic changes preserve continuous recorder; pauses exclude wall tim
  let now=0,pauses=0,resumes=0;const context=vm.createContext({console,Blob,setInterval(){},setTimeout,window:{addEventListener(){}},document:{querySelectorAll(){return []},querySelector(){return null},getElementById(){return null}},performance:{now:()=>now},admin:()=>true,user:{email:'owner@example.test'},tab:'researchRooms',researchRoomState:{selected:'topic-0001',rooms:{topics:[{id:'topic-0001',title:'A'},{id:'topic-0002',title:'B'}]}},crypto:globalThis.crypto});
  vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),context);
  vm.runInContext(`mrLocal=async()=>{};mrPaint=()=>{};mrUpdateControls=()=>{};meetingRecorder.session={markers:[{at:0,topic:'topic-0001'}],segments:[]};meetingRecorder.active=true;meetingRecorder.clockStarted=0;meetingRecorder.recorder={pause(){},resume(){}}`,context);
- now=10000;vm.runInContext("mrChooseTopic('topic-0002')",context);now=15000;vm.runInContext('mrPause()',context);now=25000;assert.equal(vm.runInContext('mrSeconds()',context),15);vm.runInContext("mrChooseTopic(mrUnclassified);mrPause()",context);now=30000;assert.equal(vm.runInContext('mrSeconds()',context),20);assert.equal(vm.runInContext('meetingRecorder.session.markers.length',context),3);assert.equal(vm.runInContext('meetingRecorder.active',context),true);assert.equal(vm.runInContext('meetingRecorder.session.markers[2].at',context),15);
+ now=10000;vm.runInContext("mrChooseTopic('topic-0002')",context);now=15000;await vm.runInContext('mrPause()',context);now=25000;assert.equal(vm.runInContext('mrSeconds()',context),15);await vm.runInContext("mrChooseTopic(mrUnclassified);mrPause()",context);now=30000;assert.equal(vm.runInContext('mrSeconds()',context),20);assert.equal(vm.runInContext('meetingRecorder.session.markers.length',context),3);assert.equal(vm.runInContext('meetingRecorder.active',context),true);assert.equal(vm.runInContext('meetingRecorder.session.markers[2].at',context),15);
 });
 test('large browser audio chunks are split losslessly for upload limits',async()=>{
  const context=vm.createContext({console,Blob,setInterval(){},window:{addEventListener(){}},document:{},admin:()=>true,user:{email:'owner@example.test'}});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),context);vm.runInContext("mrLocal=async()=>{};mrChanged=async()=>{};meetingRecorder.session={id:'test-session'}",context);context.sample=new Blob([new Uint8Array(1200000).fill(7)]);await vm.runInContext('mrQueueAudio(sample)',context);assert.equal(vm.runInContext('meetingRecorder.pendingAudio.length',context),3);assert.equal(vm.runInContext('meetingRecorder.pendingAudio.reduce((n,x)=>n+x.blob.size,0)',context),1200000);
@@ -45,3 +45,26 @@ test('summary draft and confirmation persist separately without exposing transcr
 test('summary sections retain detailed and legacy content',()=>{const c=vm.createContext({setInterval(){},window:{addEventListener(){}}});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);assert.equal(vm.runInContext("mrSummarySections('기존 상세 회의록')[0]",c),'기존 상세 회의록');assert.equal(vm.runInContext("mrSummarySections('## 연구진행상황\\n- 30도 2시간\\n## 문제점 · 학생\\n- 기포')[1]",c),'- 기포');});
 
 test('presentation log preserves facts and escapes text without conference links',()=>{const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');const c=vm.createContext({esc:x=>String(x??'').replaceAll('<','&lt;').replaceAll('>','&gt;'),conferenceScope:r=>r.scope,conferenceCity:r=>r.city,canEditResearch:()=>true});vm.runInContext(source.slice(source.indexOf('function conferenceLogCard(')),c);const html=vm.runInContext("conferenceLogCard({date:'2026-10-22',title:'<test>',conference:'학회',presenter:'학생',coauthors:'공동저자',scope:'국내',kind:'구두',venue:'장소',note:'수상',url:'https://example.test'},2)",c);assert.match(html,/10.22/);assert.match(html,/공동저자/);assert.match(html,/수상/);assert.match(html,/&lt;test&gt;/);assert.doesNotMatch(html,/<a\b|href=|https:/);assert.match(html,/data-conf="2"/);});
+
+function nativeContext(handler=async()=>({ok:true}),owner=true){
+ const c=vm.createContext({console,Blob,setInterval(){},setTimeout,window:{addEventListener(){},webkit:{messageHandlers:{nismlMeeting:{postMessage:handler}}}},document:{querySelectorAll:()=>[],getElementById:()=>null},performance:{now:()=>10000},admin:()=>owner,user:{email:'owner@example.test'},tab:'other',researchRoomState:{rooms:{topics:[{id:'topic-A',title:'A'},{id:'archived',title:'Old',archived:true}]}},crypto:globalThis.crypto});
+ vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);vm.runInContext('mrPaint=()=>{};mrPaintTranscript=()=>{};mrUpdateControls=()=>{};mrLocal=async()=>{};',c);return c;
+}
+test('native controls reject student and stale topic, preserve recorder and mark unclassified',async()=>{
+ const student=nativeContext(undefined,false);await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'pause'})",student),/교수님/);
+ const calls=[],c=nativeContext(async x=>{calls.push(x.action);return {ok:true};});
+ vm.runInContext("Object.assign(meetingRecorder,{active:true,native:true,session:{id:'test',markers:[{at:0,topic:'topic-A'}],segments:[]}})",c);
+ await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'topic',topic:'archived'})",c),/선택/);
+ await vm.runInContext("window.nismlRecorderCommand({action:'topic',topic:mrUnclassified})",c);
+ assert.equal(vm.runInContext('meetingRecorder.session.markers[1].topic',c),null);assert.equal(vm.runInContext('meetingRecorder.active',c),true);
+ await vm.runInContext("window.nismlRecorderCommand({action:'pause'})",c);assert.equal(vm.runInContext('meetingRecorder.paused',c),true);
+ await vm.runInContext("window.nismlRecorderCommand({action:'pause'})",c);assert.deepEqual(calls,['pause','resume']);
+});
+test('native audio retries deterministic pieces and keeps pending state after network failure',async()=>{
+ const audio=Buffer.alloc(1000003,19),saved=new Map();let fail=true;
+ const c=nativeContext(async x=>x.action==='recover'?{size:audio.length}:x.action==='read'?{length:audio.subarray(x.offset,x.offset+450000).length,base64:audio.subarray(x.offset,x.offset+450000).toString('base64')}:{ok:true});
+ c.researchFetch=async(action,x)=>{assert.equal(action,'recording-audio');if(fail&&x.index===1)throw Error('offline');saved.set(x.index,Buffer.from(x.base64,'base64'));return {ok:true};};
+ vm.runInContext("meetingRecorder.session={id:'test',nativePending:true};",c);
+ await assert.rejects(vm.runInContext('mrNativeUpload()',c),/offline/);assert.equal(vm.runInContext('meetingRecorder.session.nativePending',c),true);
+ fail=false;await vm.runInContext('mrNativeUpload()',c);assert.equal(saved.size,3);assert.deepEqual(Buffer.concat([...saved.values()]),audio);assert.equal(vm.runInContext('meetingRecorder.audioIndex',c),3);assert.equal(vm.runInContext('meetingRecorder.session.nativePending',c),false);
+});
