@@ -16,6 +16,14 @@ struct FloatingMeeting: Identifiable { let id: String; let title: String }
     var resize: () -> Void = {}
     var current: String { topics.first { $0.id == selected }?.title ?? "미분류" }
 }
+private final class PanelDragView: NSView {
+    override func mouseDown(with event: NSEvent) { window?.performDrag(with: event) }
+    override func resetCursorRects() { addCursorRect(bounds,cursor:.openHand) }
+}
+private struct PanelDragHandle: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { let v=PanelDragView();v.toolTip="드래그하여 패널 이동";return v }
+    func updateNSView(_ view:NSView,context:Context) {}
+}
 private struct MeetingPanelView: View {
     @ObservedObject var model: MeetingPanelModel
     let ink = Color(red:0.15,green:0.25,blue:0.34)
@@ -37,7 +45,7 @@ private struct MeetingPanelView: View {
                 }.frame(height:min(228,CGFloat((model.topics.count+2)/3)*59+24))
             }
             HStack(spacing:10) {
-                Image(systemName:"circle.grid.2x3.fill").foregroundColor(.gray).help("빈 곳을 드래그하여 위치 이동")
+                Image(systemName:"circle.grid.2x3.fill").foregroundColor(.gray).frame(width:26,height:38).overlay(PanelDragHandle()).accessibilityLabel("패널 이동 손잡이")
                 Circle().fill(model.paused ? Color.orange : Color.red).frame(width:8,height:8)
                 Text(model.elapsed).font(.system(size:16,weight:.semibold,design:.monospaced)).frame(width:72)
                 Button { toggle() } label: { HStack { Text(model.current).lineLimit(1); Spacer(minLength:4); Image(systemName:model.expanded ? "chevron.down" : "chevron.up").font(.system(size:11)) }.padding(10).background(Color.white.opacity(0.7)).cornerRadius(11) }.accessibilityLabel("현재 미팅: " + model.current + ", 목록 열기")
@@ -51,13 +59,8 @@ private struct MeetingPanelView: View {
     func toggle() { model.expanded.toggle(); model.resize() }
 }
 final class FloatingPanel: NSPanel {
-    var fade: DispatchWorkItem?
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
-    override func mouseEntered(with event: NSEvent) { fade?.cancel(); NSAnimationContext.runAnimationGroup { $0.duration=0.2; animator().alphaValue=1 } }
-    override func mouseExited(with event: NSEvent) {
-        fade?.cancel(); let task=DispatchWorkItem { [weak self] in guard let self else{return}; NSAnimationContext.runAnimationGroup { $0.duration=0.28; self.animator().alphaValue=0.78 } }; fade=task; DispatchQueue.main.asyncAfter(deadline:.now()+0.45,execute:task)
-    }
 }
 @MainActor final class MeetingController: NSObject, WKScriptMessageHandlerWithReply, AVAudioRecorderDelegate {
     weak var owner: AppDelegate?
@@ -101,9 +104,8 @@ final class FloatingPanel: NSPanel {
     func show() {
         if panel == nil {
             let p=FloatingPanel(contentRect:NSRect(x:0,y:0,width:620,height:66),styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false)
-            p.level = .floating;p.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary];p.hidesOnDeactivate=false;p.isFloatingPanel=true;p.isOpaque=false;p.backgroundColor = .clear;p.hasShadow=true;p.isMovableByWindowBackground=true;p.isReleasedWhenClosed=false
+            p.alphaValue=0.78;p.level = .floating;p.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary];p.hidesOnDeactivate=false;p.isFloatingPanel=true;p.isOpaque=false;p.backgroundColor = .clear;p.hasShadow=true;p.isMovableByWindowBackground=true;p.isReleasedWhenClosed=false
             let host=NSHostingView(rootView:MeetingPanelView(model:model));p.contentView=host
-            host.addTrackingArea(NSTrackingArea(rect:.zero,options:[.mouseEnteredAndExited,.activeAlways,.inVisibleRect],owner:p,userInfo:nil))
             p.setFrameAutosaveName("MeetingFloatingPanel");if !p.setFrameUsingName("MeetingFloatingPanel"), let screen=NSScreen.main { p.setFrameOrigin(NSPoint(x:screen.visibleFrame.midX-310,y:screen.visibleFrame.minY+80)) }
             panel=p
         }

@@ -31,6 +31,16 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
  }
  const current=await read(id);
+ if(action==='recording-discard-transcript'){
+  if(!['ended','interrupted'].includes(current.status))throw mrFail('회의 종료 후 전사를 폐기할 수 있습니다.',409);
+  if(Object.values(current.summary||{}).some(x=>x.status==='reviewed'))throw mrFail('확정된 회의 요약이 있어 전사를 폐기할 수 없습니다.',409);
+  if(!current.segments.length&&!current.transcription&&!Object.keys(current.summary||{}).length)return reply(current);
+  if(b.version!==current.version)throw mrFail('회의 기록이 변경되었습니다. 다시 확인해주세요.',409);
+  const next={...current,segments:[],speakers:{},summary:{},transcription:null,transcriptionEpoch:(current.transcriptionEpoch||0)+1,summaryEpoch:(current.summaryEpoch||0)+1,discardedAt:new Date().toISOString()};delete next.version;
+  const result=await db.prepare("UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=? AND NOT EXISTS(SELECT 1 FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain'))").bind(JSON.stringify(next),key,b.version,key).run();
+  if(!result.meta?.changes)throw mrFail('전사·요약 처리 중이거나 기록이 변경되었습니다. 처리가 끝난 뒤 다시 시도해주세요.',409);
+  return reply(await read(id));
+ }
  if(action==='recording-create-topic'){
   const topicId=mrId(b.newTopic),title=typeof b.title==='string'?b.title.trim():'';
   if(current.conversions?.[topicId])return reply(current);
@@ -75,12 +85,13 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
    input=current.segments.filter(s=>(meetingTopicAt(current.markers,s.start)||'unclassified')===topic).map(s=>'['+s.start.toFixed(1)+'초] '+(current.speakers?.[s.speaker]||s.speaker)+': '+s.text).join('\n');
    if(!input)throw mrFail('이 주제의 전사 내용이 없습니다.');if(input.length>120000)throw mrFail('전사문이 너무 깁니다. 회의를 나누어 처리해주세요.');
   }
-  const jobId='meeting-'+(transcribe?'transcribe-':'summary-')+id+(transcribe?'':'-'+topic+(current.summaryEpoch?'-r'+current.summaryEpoch:'')),month=new Date().toISOString().slice(0,7);
+  const jobId='meeting-'+(transcribe?'transcribe-':'summary-')+id+(transcribe?(current.transcriptionEpoch?'-r'+current.transcriptionEpoch:''):'-'+topic+(current.summaryEpoch?'-r'+current.summaryEpoch:'')),month=new Date().toISOString().slice(0,7);
   const cfgRow=await db.prepare("SELECT payload FROM research_records WHERE id='config'").first();const budget=Number((cfgRow?JSON.parse(cfgRow.payload):{}).budget??50);
   const reserve=transcribe?Math.ceil(Math.max(1,current.duration/60)*20000):Math.ceil(new TextEncoder().encode(input).length*2.5+4000*10);
   await db.prepare("DELETE FROM research_jobs WHERE id=? AND status='failed'").bind(jobId).run();
   const result=await helpers.reserveResearchJob(db,{id:jobId,topic:'recording:'+id,author:actor.email,month,reserve,budget:Math.round(budget*1000000)});
   if(!result.admitted)throw mrFail(result.job?'이미 처리 중이거나 처리 상태 확인이 필요합니다. 중복 과금 방지를 위해 재요청하지 않았습니다.':'다른 처리가 진행 중이거나 월 AI 예산을 초과했습니다.',409);
+  if((await read(id)).version!==current.version){await db.prepare("UPDATE research_jobs SET status='failed',reserve=0 WHERE id=?").bind(jobId).run();throw mrFail('회의 기록이 변경되었습니다. 다시 시도해주세요.',409);}
   try{
    let response;
    if(transcribe){const form=new FormData();form.append('file',audio,'meeting.'+(current.mime.includes('mp4')?'m4a':'webm'));form.append('model',model);form.append('response_format','diarized_json');form.append('chunking_strategy','auto');form.append('language','ko');response=await fetch('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY},body:form,signal:AbortSignal.timeout(180000)});}
