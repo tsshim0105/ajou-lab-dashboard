@@ -967,3 +967,5 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  .conference-pass .meeting-deadline-line{align-items:center}
  .conference-pass .meeting-deadline .badge{font-size:13px;line-height:1.4;padding:2px 8px;align-self:center;vertical-align:middle}
 }
+
+.rr-list-filter .rr-add-meeting{margin-left:auto;padding:4px 10px;min-width:32px;font-size:21px;line-height:1.2;font-weight:500}
