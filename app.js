@@ -351,17 +351,18 @@ function renderNotifications(){
  const prefs=notificationPrefs(),hidden=new Set(prefs.hidden||[]),read=new Set(prefs.read||[]);
  const rows=notifications.filter(n=>!hidden.has(n.id));
  const open=!$('notificationCenter').classList.contains('hidden');
- if(open){rows.forEach(n=>read.add(n.id));saveNotificationPrefs({hidden:[...hidden].slice(-400),read:[...read].slice(-400)});}
+ if(open){rows.filter(n=>n.type!=='researchRooms').forEach(n=>read.add(n.id));saveNotificationPrefs({hidden:[...hidden].slice(-400),read:[...read].slice(-400)});}
  const unread=rows.filter(n=>!read.has(n.id)).length;$('notificationCount').textContent=unread>99?'99+':unread;$('notificationToggle').setAttribute('aria-label','알림 센터, 미확인 '+unread+'건');
  $('notificationList').innerHTML=rows.map(n=>`<button class="notification-item" data-notification="${esc(n.id)}"><div class="notification-meta"><b>${esc(n.actor)}</b><time datetime="${esc(n.at)}" title="${esc(new Date(n.at).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))}">${esc(new Date(n.at).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric'}))}</time></div><strong>${esc(n.label)}</strong><p>${esc(n.title)}</p>${n.detail?`<small>${esc(n.detail)}</small>`:''}</button>`).join('')||'<p class="muted">새로운 알림이 없습니다.</p>';
- $('notificationList').querySelectorAll('[data-notification]').forEach(b=>b.onclick=()=>openResearchNotification(notifications.find(n=>n.id===b.dataset.notification)));
+ $('notificationList').querySelectorAll('[data-notification]').forEach(b=>b.onclick=()=>openResearchNotification(notifications.find(n=>n.id===b.dataset.notification)));if(typeof rrPaintUnread==='function')rrPaintUnread();
 }
 async function openResearchNotification(n){
  if(busy)return;
  if(!n){$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');renderNotifications();return;}
  if(n.type==='researchRooms'){
+  if(n.recording){if(!admin())return;if(meetingRecorder.active||meetingRecorder.processing||meetingRecorder.dirty||meetingRecorder.pendingAudio.length){alert('현재 회의 녹음과 저장을 마친 뒤 요약 알림을 열어주세요.');return;}try{const s=await researchFetch('recording-detail?id='+encodeURIComponent(n.recording));Object.assign(meetingRecorder,{session:s,version:s.version,clockBase:s.duration,audioIndex:s.audioCount||0,dirty:false});}catch(e){alert(e.message);return;}}
   const p=notificationPrefs();saveNotificationPrefs({hidden:p.hidden||[],read:[...new Set([...(p.read||[]),n.id])].slice(-400)});
-  researchRoomState.selected=n.topic;researchRoomState.archived=!!n.archived;researchRoomState.mobileChatOpen=true;researchRoomState.view='chat';
+  researchRoomState.selected=n.topic;researchRoomState.archived=!!n.archived;researchRoomState.mobileChatOpen=true;researchRoomState.view=n.recording?'meeting':'chat';
   tab='researchRooms';closeNotifications();render();renderNotifications();return;
  }
  if(!['papers','conferences','meetingInfo','groupMeetings'].includes(n.type))return;
@@ -378,7 +379,7 @@ $('notificationClose').onclick=()=>{closeNotifications();$('notificationToggle')
 $('notificationClear').onclick=()=>{const p=notificationPrefs();saveNotificationPrefs({read:p.read||[],hidden:[...new Set([...(p.hidden||[]),...notifications.map(n=>n.id)])].slice(-400)});renderNotifications();};
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-anchor'))closeNotifications();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
-async function refreshNotifications(){if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch('/api/notifications',{cache:'no-store'});if(!res.ok)return;notifications=(await res.json()).notifications||[];renderNotifications();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
+async function refreshNotifications(){if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch('/api/notifications',{cache:'no-store'});if(!res.ok)return;notifications=(await res.json()).notifications||[];renderNotifications();if(typeof rrPaintUnread==='function')rrPaintUnread();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
 setInterval(refreshNotifications,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNotifications();});
 
 function studentAccountList(){return students.length?students.map(email=>`<div class="source" style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0;overflow-wrap:anywhere"><strong>${esc(studentNames[email]||'학생')}</strong><div class="muted">${esc(email)}</div></div><button class="secondary" data-remove-student="${esc(email)}" ${offline?'disabled':''} aria-label="${esc(studentNames[email]||email)} 계정 삭제">삭제</button></div>`).join(''):'<p class="muted">등록된 학생 계정이 없습니다.</p>';}

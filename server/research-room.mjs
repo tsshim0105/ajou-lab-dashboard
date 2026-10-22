@@ -159,5 +159,13 @@ export async function researchNotifications(db,actor,existing=[]){
    events.push(make('rr-message:'+m.id,m.created,'새 내용'));
   }
  }
+ if(actor.admin){
+  const topics=new Map((rows?.results||[]).map(r=>{const t=JSON.parse(r.payload);return [t.id,t];}));
+  const recordings=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'recording:%' ORDER BY json_extract(payload,'$.created') DESC LIMIT 200").all?.();
+  for(const row of recordings?.results||[]){const meeting=JSON.parse(row.payload);for(const [key,summary] of Object.entries(meeting.summary||{})){
+   if(!summary.notificationAt)continue;const topic=key==='unclassified'?{id:'__unclassified__',title:'미분류'}:topics.get(key);if(!topic||topic.deleted)continue;
+   events.push({id:'rr-summary:'+meeting.id+':'+key+':'+(summary.notificationEpoch||0),at:summary.notificationAt,actor:'연구미팅',type:'researchRooms',topic:topic.id,recording:meeting.id,archived:!!topic.archived,action:'요약 완료',label:'신규 회의 요약 완료',title:topic.title,detail:'화자별 전사와 회의 요약 초안이 저장되었습니다.'});
+  }}
+ }
  return [...existing,...events].sort((a,b)=>b.at.localeCompare(a.at)).slice(0,200);
 }
