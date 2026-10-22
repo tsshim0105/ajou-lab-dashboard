@@ -84,3 +84,27 @@ test('discard refuses active capture, reviewed summary and in-flight AI jobs',as
  f.sql.prepare("UPDATE research_jobs SET status='completed',cost=12 WHERE id='job'").run();await f.call('recording-summary-save',{id,version:1,topic:'topic-0001',content:'confirmed',status:'reviewed'});
  assert.equal((await f.call('recording-discard-transcript',{id,version:2})).status,409);assert.equal(f.sql.prepare("SELECT cost FROM research_jobs WHERE id='job'").get().cost,12);
 });
+
+test('first chronological speaker is professor; remaining voices retain numbered student roles',async()=>{
+ const {meetingSpeakerRoles}=await import('../server/meeting-recording.mjs');
+ assert.deepEqual(meetingSpeakerRoles([{speaker:'speaker-2',start:8,text:'second'},{speaker:'speaker-0',start:1,text:'first'},{speaker:'speaker-1',start:10,text:'third'}]),{'speaker-0':'교수님','speaker-2':'학생 1','speaker-1':'학생 2'});
+ assert.deepEqual(meetingSpeakerRoles(snap.segments,'speaker-1'),{'speaker-0':'학생 1','speaker-1':'교수님'});
+ assert.throws(()=>meetingSpeakerRoles(snap.segments,'missing'));
+});
+test('professor correction persists roles and preserves reviewed minutes with a review flag',async()=>{
+ const f=fixture();await create(f);await f.call('recording-save',snap);
+ await f.call('recording-summary-save',{id,version:1,topic:'topic-0001',content:'Reviewed original'});
+ assert.equal((await f.call('recording-speaker-roles',{id,version:2,professor:'speaker-1'},STUDENT)).status,403);
+ assert.equal((await f.call('recording-speaker-roles',{id,version:1,professor:'speaker-1'})).status,409);
+ assert.equal((await f.call('recording-speaker-roles',{id,version:2,professor:'missing'})).status,400);
+ let r=await f.call('recording-speaker-roles',{id,version:2,professor:'speaker-1'});assert.equal(r.status,200);let s=await r.json();
+ assert.equal(s.speakers['speaker-1'],'교수님');assert.equal(s.speakers['speaker-0'],'학생 1');assert.equal(s.summary['topic-0001'].content,'Reviewed original');assert.equal(s.summary['topic-0001'].rolesChanged,true);assert.equal(s.summaryEpoch,1);assert.equal(s.segments.length,4);
+ assert.equal((await f.call('recording-speaker-roles',{id,version:s.version,professor:'speaker-1'})).status,200);
+ const now=new Date().toISOString();f.sql.prepare('INSERT INTO research_jobs VALUES(?,?,?,?,?,?,?,?,?)').run('pending-role-test','recording:'+id,OWNER.email,'2026-10','pending',1,0,'{}');
+ assert.equal((await f.call('recording-speaker-roles',{id,version:s.version,professor:'speaker-0'})).status,409);
+});
+test('corrected roles regenerate only on request and retain the original summary',async()=>{
+ const f=fixture();await create(f);await f.call('recording-save',snap);await f.call('recording-summary-save',{id,version:1,topic:'topic-0001',content:'Original reviewed'});await f.call('recording-speaker-roles',{id,version:2,professor:'speaker-1'});f.env.OPENAI_API_KEY='test-secret';const old=globalThis.fetch;let calls=0;
+ globalThis.fetch=async(url,init)=>{if(url.includes('/models/'))return Response.json({});calls++;assert.ok(JSON.parse(init.body).input[1].content.includes('학생 1: A finding'));return Response.json({status:'completed',output:[{content:[{type:'output_text',text:'Corrected draft'}]}],usage:{input_tokens:1,output_tokens:1}});};
+ try{let r=await f.call('recording-summarize',{id,topic:'topic-0001'});assert.equal((await r.json()).summary['topic-0001'].content,'Original reviewed');assert.equal(calls,0);r=await f.call('recording-summarize',{id,topic:'topic-0001',regenerate:true});assert.equal(r.status,200);const s=await r.json();assert.equal(s.summary['topic-0001'].content,'Corrected draft');assert.equal(s.summary['topic-0001'].status,'draft');assert.equal(s.summaryHistory[0].content,'Original reviewed');assert.equal(s.summaryHistory[0].status,'reviewed');assert.equal(calls,1);}finally{globalThis.fetch=old;}
+});
