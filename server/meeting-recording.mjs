@@ -31,6 +31,29 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
  }
  const current=await read(id);
+ if(action==='recording-create-topic'){
+  const topicId=mrId(b.newTopic),title=typeof b.title==='string'?b.title.trim():'';
+  if(current.conversions?.[topicId])return reply(current);
+  if(!title||title.length>120)throw mrFail('새 연구미팅 이름을 입력해주세요.');
+  if(b.version!==current.version)throw mrFail('회의 기록이 변경되었습니다. 저장 후 다시 시도해주세요.',409);
+  if(!Array.isArray(b.markerIndexes)||!b.markerIndexes.length||b.markerIndexes.length>500)throw mrFail('옮길 미분류 구간을 선택해주세요.');
+  const indexes=[...new Set(b.markerIndexes)];
+  if(indexes.some(i=>!Number.isInteger(i)||!current.markers[i]||current.markers[i].topic!==null))throw mrFail('미분류 구간만 새 연구미팅으로 옮길 수 있습니다.');
+  if(await db.prepare('SELECT id FROM research_records WHERE id=?').bind('topic:'+topicId).first())throw mrFail('이미 사용된 연구미팅 ID입니다.',409);
+  const next={...current,markers:current.markers.map((m,i)=>indexes.includes(i)?{...m,topic:topicId,title}:m),summary:{...current.summary},summaryEpoch:(current.summaryEpoch||0)+1};delete next.version;
+  next.segments=current.segments.map(x=>({...x,topic:meetingTopicAt(next.markers,x.start)}));
+  const priorSummary=next.summary.unclassified;
+  if(priorSummary){if(!next.markers.some(m=>m.topic===null))next.summary[topicId]=priorSummary;delete next.summary.unclassified;}
+  const created=new Date().toISOString();next.conversions={...current.conversions,[topicId]:{indexes,created,...(priorSummary?{originalSummary:priorSummary}:{})}};
+  const topic={id:topicId,title,description:'',archived:false,created,summary:'',viewers:[],sourceRecording:id};
+  // Both statements run atomically: no orphan topic or partially reassigned meeting.
+  const results=await db.batch([
+   db.prepare("INSERT INTO research_records(id,version,payload) SELECT ?,0,? WHERE EXISTS(SELECT 1 FROM research_records WHERE id=? AND version=?) AND NOT EXISTS(SELECT 1 FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain'))").bind('topic:'+topicId,JSON.stringify(topic),key,b.version,key),
+   db.prepare("UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=? AND EXISTS(SELECT 1 FROM research_records WHERE id=?) AND NOT EXISTS(SELECT 1 FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain'))").bind(JSON.stringify(next),key,b.version,'topic:'+topicId,key)
+  ]);
+  if(!results[1].meta?.changes)throw mrFail('전사·요약 처리 중이거나 기록이 변경되었습니다. 처리가 끝난 뒤 다시 시도해주세요.',409);
+  return reply(await read(id));
+ }
  if(action==='recording-transcribe'||action==='recording-summarize'){
   if(!env.OPENAI_API_KEY)throw mrFail('서버 OpenAI 키가 등록되지 않았습니다.',503);
   if(!['ended','interrupted'].includes(current.status))throw mrFail('회의 종료 후 처리할 수 있습니다.',409);
@@ -52,7 +75,7 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
    input=current.segments.filter(s=>(meetingTopicAt(current.markers,s.start)||'unclassified')===topic).map(s=>'['+s.start.toFixed(1)+'초] '+(current.speakers?.[s.speaker]||s.speaker)+': '+s.text).join('\n');
    if(!input)throw mrFail('이 주제의 전사 내용이 없습니다.');if(input.length>120000)throw mrFail('전사문이 너무 깁니다. 회의를 나누어 처리해주세요.');
   }
-  const jobId='meeting-'+(transcribe?'transcribe-':'summary-')+id+(transcribe?'':'-'+topic),month=new Date().toISOString().slice(0,7);
+  const jobId='meeting-'+(transcribe?'transcribe-':'summary-')+id+(transcribe?'':'-'+topic+(current.summaryEpoch?'-r'+current.summaryEpoch:'')),month=new Date().toISOString().slice(0,7);
   const cfgRow=await db.prepare("SELECT payload FROM research_records WHERE id='config'").first();const budget=Number((cfgRow?JSON.parse(cfgRow.payload):{}).budget??50);
   const reserve=transcribe?Math.ceil(Math.max(1,current.duration/60)*20000):Math.ceil(new TextEncoder().encode(input).length*2.5+4000*10);
   await db.prepare("DELETE FROM research_jobs WHERE id=? AND status='failed'").bind(jobId).run();
