@@ -946,13 +946,24 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 
 .rr-unread-dot{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#e33f4e;vertical-align:middle;flex-shrink:0}.rr-unread-dot[hidden]{display:none}
 
-/* Desktop archive: eight bibliographic fields in two compact four-column rows. */
+/* Desktop compact archive: full-width title and four-column bibliography. */
+.archive-desktop-actions{display:none}
 @media(min-width:761px){
- html[data-active-tab="papers"] .paper-archive{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
- html[data-active-tab="papers"] .archive-main{padding:16px 20px}
- html[data-active-tab="papers"] .archive-journal{margin-bottom:12px}
- html[data-active-tab="papers"] .archive-edit{margin-top:10px}
- html[data-active-tab="papers"] .archive-facts{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 14px;padding:16px}
+ html[data-active-tab="papers"] .paper-archive{grid-template-columns:minmax(0,1fr)}
+ html[data-active-tab="papers"] .archive-main{padding:14px 18px 11px}
+ html[data-active-tab="papers"] .archive-meta{margin-bottom:6px;gap:10px}
+ html[data-active-tab="papers"] .archive-desktop-actions{display:flex;align-items:center;gap:6px;margin-left:auto}
+ html[data-active-tab="papers"] .archive-desktop-actions :is(button,a){margin:0;padding:4px 9px;font-size:12px;line-height:1.5}
+ html[data-active-tab="papers"] .paper-archive h2{font-size:18px;line-height:1.4;margin-bottom:4px}
+ html[data-active-tab="papers"] .paper-archive h2 .paper-page-link{display:none}
+ html[data-active-tab="papers"] .archive-journal{font-size:14px;margin-bottom:9px}
+ html[data-active-tab="papers"] .archive-authors{gap:4px;font-size:14px;line-height:1.5}
+ html[data-active-tab="papers"] .archive-authors>div{grid-template-columns:65px minmax(0,1fr);gap:8px}
+ html[data-active-tab="papers"] .archive-edit{display:none}
+ html[data-active-tab="papers"] .archive-facts{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px 16px;padding:10px 18px 13px;border-left:0;border-top:1px solid var(--edge,#dce5ec);background:transparent}
  html[data-active-tab="papers"] .archive-facts>div{min-width:0;grid-column:auto}
- html[data-active-tab="papers"] .archive-facts dd{overflow-wrap:anywhere}
+ html[data-active-tab="papers"] .archive-facts dt{margin-bottom:1px}
+ html[data-active-tab="papers"] .archive-facts dd{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+ .conference-pass .meeting-deadline-line{align-items:center}
+ .conference-pass .meeting-deadline .badge{font-size:13px;line-height:1.4;padding:2px 8px;align-self:center;vertical-align:middle}
 }
