@@ -57,7 +57,7 @@ private struct MeetingPanelView: View {
                 Circle().fill(model.paused ? Color.orange : Color.red).frame(width:8,height:8)
                 Text(model.elapsed).font(.system(size:16,weight:.semibold,design:.monospaced)).frame(width:72)
                 Button { toggle() } label: { HStack { Text(model.current).lineLimit(1); Spacer(minLength:4); Image(systemName:model.expanded ? "chevron.down" : "chevron.up").font(.system(size:11)) }.padding(10).background(Color.white.opacity(0.7)).cornerRadius(11) }.accessibilityLabel("현재 미팅: " + model.current + ", 목록 열기")
-                Button { model.action("pause",nil) } label: { Image(systemName:model.paused ? "play.fill" : "pause.fill").frame(width:24,height:28) }.help(model.paused ? "녹음 재개" : "일시정지").accessibilityLabel(model.paused ? "녹음 재개" : "일시정지").disabled(model.working)
+                Button { model.action("pause",nil) } label: { Image(systemName:model.paused ? "play.fill" : "pause.fill").frame(width:24,height:28) }.help((model.paused ? "녹음 재개" : "일시정지") + " · ⌃⌥⌘R").accessibilityLabel(model.paused ? "녹음 재개" : "일시정지").disabled(model.working)
                 Divider().frame(height:22)
                 Button { model.action("stop",nil) } label: { Image(systemName:"stop.fill").foregroundColor(Color(red:0.73,green:0.25,blue:0.34)).frame(width:24,height:28) }.help("녹음 저장 후 종료").accessibilityLabel("녹음 종료").disabled(model.working)
             }.padding(13).frame(height:66)

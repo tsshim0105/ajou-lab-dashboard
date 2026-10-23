@@ -9,6 +9,8 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate {
     lazy var meeting = MeetingController(owner: self)
+    let meetingHotKey = MeetingHotKey()
+    var meetingHotKeyStatus: OSStatus = noErr
     var window: NSWindow!
     var web: WKWebView!
     var statusItem: NSStatusItem!
@@ -51,8 +53,11 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         NSApp.setActivationPolicy(.regular)
         center.delegate = self
         makeMenu()
+        meetingHotKey.onToggle = { [weak self] in self?.toggleMeetingRecording() }
+        meetingHotKeyStatus = meetingHotKey.register()
         makeWindow()
         showDashboard()
+        if meetingHotKeyStatus != noErr { alert("녹음 단축키 등록 실패", "⌃⌥⌘R을 등록하지 못했습니다. 다른 앱에서 같은 단축키를 쓰는지 확인해주세요. 플로팅 바 버튼은 계속 사용할 수 있습니다.") }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in Task { @MainActor in await self?.poll() } }
         timer?.tolerance = 10
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(woke), name: NSWorkspace.didWakeNotification, object: nil)
@@ -67,6 +72,11 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "NISML Dashboard 종료", action: #selector(quit), keyEquivalent: "q").target = self
         appItem.submenu = appMenu
+        let fileItem = NSMenuItem(title: "파일", action: nil, keyEquivalent: "")
+        let fileMenu = NSMenu(title: "파일")
+        let closeItem = NSMenuItem(title: "창 닫기", action: #selector(closeActiveWindow), keyEquivalent: "w")
+        closeItem.keyEquivalentModifierMask = [.command]; closeItem.target = self
+        fileMenu.addItem(closeItem); fileItem.submenu = fileMenu; main.addItem(fileItem)
         let edit = NSMenuItem(title: "편집", action: nil, keyEquivalent: ""); let edits = NSMenu()
         for (title, action, key) in [("복사", "copy:", "c"), ("붙여넣기", "paste:", "v"), ("잘라내기", "cut:", "x"), ("전체 선택", "selectAll:", "a"), ("실행 취소", "undo:", "z")] { edits.addItem(withTitle: title, action: Selector(action), keyEquivalent: key) }
         edit.submenu = edits; main.addItem(edit); NSApp.mainMenu = main
@@ -83,6 +93,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         _ = item("홈페이지 열기", #selector(openHomepage))
         _ = item("대시보드 열기", #selector(showDashboard))
         _ = item("최근 알림 보기", #selector(showRecentNotifications))
+        _ = item("녹음 일시정지 / 재개  ⌃⌥⌘R", #selector(toggleMeetingRecording))
         updateItems.append(item("업데이트 확인", #selector(checkForUpdates)))
         _ = item("로그아웃", #selector(logout))
         _ = item("앱 완전종료", #selector(quit))
@@ -232,6 +243,17 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         }
     }
     func updateError(_ text:String)->NSError { NSError(domain:"NISMLUpdate",code:1,userInfo:[NSLocalizedDescriptionKey:text]) }
+    @objc func toggleMeetingRecording() {
+        guard meeting.recording, !meeting.commandPending, !meeting.model.working else { return }
+        meeting.command("pause", nil)
+    }
+    func applicationWillTerminate(_ notification: Notification) { meetingHotKey.unregister() }
+    @objc func closeActiveWindow() {
+        // Preserve native recording and tray lifetime; use the red close button's path.
+        if let active=NSApp.keyWindow, active !== meeting.panel, active.styleMask.contains(.closable) {
+            active.performClose(nil)
+        } else { window?.performClose(nil) }
+    }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func woke() { Task { await poll() } }
     @objc func checkNow() { Task { await poll() } }
