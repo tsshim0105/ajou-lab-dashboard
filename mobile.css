@@ -969,3 +969,15 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 }
 
 .rr-list-filter .rr-add-meeting{margin-left:auto;padding:4px 10px;min-width:32px;font-size:21px;line-height:1.2;font-weight:500}
+
+/* Research topic image wash: preserve compact layout and readable labels. */
+#researchRoomRoot .rr-topic,.rr-cover-preview{position:relative;isolation:isolate;overflow:hidden;background:var(--panel,#fff)}
+.rr-topic-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;opacity:.27;pointer-events:none;z-index:0}
+.rr-topic-wash{position:absolute;inset:0;background:linear-gradient(100deg,rgba(255,255,255,.72),rgba(255,255,255,.12));pointer-events:none;z-index:1}
+.rr-topic-copy{position:relative;z-index:2;flex:1}
+#researchRoomRoot .rr-topic.selected{background:linear-gradient(120deg,#e7f1f2,#f0edf9);box-shadow:inset 0 0 0 1.5px #8bafb9}
+#researchRoomRoot .rr-topic:hover{box-shadow:inset 0 0 0 1px #abc2cf}
+#researchRoomRoot .rr-topic:focus-visible{outline:2px solid #2369c8;outline-offset:2px}
+.rr-cover-preview{min-height:88px;padding:16px;border:1px solid var(--edge);border-radius:10px;box-sizing:border-box}
+[data-theme=dark] .rr-topic-wash{background:linear-gradient(100deg,rgba(23,35,51,.85),rgba(23,35,51,.35))}
+[data-theme=dark] #researchRoomRoot .rr-topic.selected{background:#28374b;box-shadow:inset 0 0 0 1.5px #729cae}

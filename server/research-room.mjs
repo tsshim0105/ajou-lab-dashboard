@@ -20,6 +20,13 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  try{
  if(req.method==='POST'&&['generate','search','image','summarize','message','config'].includes(action)&&env.RESEARCH_AI_ENABLED!==true)return reply({error:'대시보드 AI 질문 기능이 종료되었습니다. ChatGPT에서 질문한 뒤 저장해주세요.'},410);
  const config=await rrConfig(db),month=new Date().toISOString().slice(0,7);
+
+ if(req.method==='GET'&&action==='topic-cover'){
+  const topic=await readTopic(url.searchParams.get('topic'));
+  if(topic.deleted||!topic.cover?.asset||!env.BUCKET)throw rrError('배경 이미지가 없습니다.',404);
+  const object=await env.BUCKET.get(topic.cover.asset);if(!object)throw rrError('배경 이미지가 없습니다.',404);
+  return new Response(object.body,{headers:{'Content-Type':'image/jpeg','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+ }
  if(req.method==='GET'){
   if(action==='bootstrap'){
    const topicRows=await db.prepare("SELECT payload,version FROM research_records WHERE id LIKE 'topic:%' ORDER BY id").all();
@@ -56,6 +63,22 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  if(action==='delete-topic'||action==='restore-topic'){const id=rrId(b.id),t=await rrTopic(db,id);await rrUpdate(db,'topic:'+id,b.version,{...t,deleted:action==='delete-topic',deletedAt:action==='delete-topic'?new Date().toISOString():null});return reply({ok:true});}
  if(action==='topic'){const id=rrId(b.id),title=rrText(b.title,120),description=String(b.description||'').slice(0,2000);if(b.create){await db.prepare('INSERT OR IGNORE INTO research_records(id,version,payload) VALUES(?,0,?)').bind('topic:'+id,JSON.stringify({id,title,description,archived:false,created:new Date().toISOString(),summary:''})).run();}else{const t=await rrTopic(db,id);let viewers=t.viewers||[];if(b.viewers!==undefined){if(!Array.isArray(b.viewers)||b.viewers.length>100)throw rrError('열람 계정을 확인해주세요.');viewers=[...new Set(b.viewers.map(v=>String(v).trim().toLowerCase()))];if(viewers.some(email=>!(actor.members||[]).some(m=>m.email===email)))throw rrError('승인된 연구실 계정만 선택할 수 있습니다.');}await rrUpdate(db,'topic:'+id,b.version,{...t,title,description,archived:!!b.archived,viewers});}return reply({ok:true,id});}
  const topic=await rrTopic(db,b.topic);if(topic.deleted)throw rrError('삭제된 채팅은 복원 후 수정해주세요.',409);if(topic.archived)throw rrError('보관된 주제는 복원한 뒤 수정할 수 있습니다.',409);
+
+ if(action==='topic-cover'){
+  if(b.version!==topic.version)throw rrError('다른 화면에서 수정되었습니다. 다시 열어주세요.',409);
+  let cover=null;
+  if(b.image!==null){
+   if(!env.BUCKET)throw rrError('이미지 저장소가 연결되지 않았습니다.',503);
+   if(typeof b.image!=='string'||!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(b.image)||b.image.length>82000)throw rrError('배경 이미지 형식을 확인해주세요.');
+   let bytes;try{bytes=Uint8Array.from(atob(b.image.split(',')[1]),c=>c.charCodeAt(0));}catch{throw rrError('배경 이미지 형식을 확인해주세요.');}
+   if(bytes.length>60000||bytes.length<4||bytes[0]!==255||bytes[1]!==216||bytes[2]!==255)throw rrError('배경 이미지 형식을 확인해주세요.');
+   const revision=crypto.randomUUID(),asset='research-cover/'+topic.id+'/'+revision+'.jpg';
+   await env.BUCKET.put(asset,bytes,{httpMetadata:{contentType:'image/jpeg'}});cover={asset,revision};
+  }
+  try{await rrUpdate(db,'topic:'+topic.id,b.version,{...topic,cover});}catch(error){if(cover)await env.BUCKET.delete(cover.asset).catch(()=>{});throw error;}
+  if(topic.cover?.asset&&env.BUCKET)await env.BUCKET.delete(topic.cover.asset).catch(()=>{});
+  return reply({ok:true});
+ }
  if(action==='clear-chat'){
   if(!Array.isArray(b.messageIds)||b.messageIds.length>1000)throw rrError('삭제할 대화 목록을 확인해주세요.');
   const ids=[...new Set(b.messageIds.map(rrId))];if(!ids.length)return reply({ok:true,deleted:0});

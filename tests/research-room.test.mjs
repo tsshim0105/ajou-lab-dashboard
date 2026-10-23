@@ -138,3 +138,18 @@ test('bootstrap includes all authorized text threads, no binaries or raw transcr
  await f.call('topic',{...topic(),create:false,version:1,viewers:[]});
  const revoked=await (await f.call('bootstrap',null,'student@example.test')).json();assert.equal(revoked.rooms.topics.length,0);assert.deepEqual(revoked.threads,{});
 });
+
+test('topic cover is owner-managed, versioned, and readable only by topic viewers',async()=>{
+ const f=fixture(),files=new Map();f.env.BUCKET={async put(k,bytes){files.set(k,bytes);},async get(k){return files.has(k)?{body:files.get(k)}:null;},async delete(k){files.delete(k);}};
+ await f.call('topic',topic());const image='data:image/jpeg;base64,'+Buffer.from([255,216,255,224,0,0,255,217]).toString('base64');
+ assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:0,image},'student@example.test')).status,403);
+ assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:0,image:'data:image/jpeg;base64,SGVsbG8='})).status,400);
+ assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:0,image})).status,200);assert.equal(files.size,1);
+ assert.equal((await f.call('topic-cover?topic=topic-0001',null,'student@example.test')).status,403);
+ const response=await f.call('topic-cover?topic=topic-0001');assert.equal(response.status,200);assert.equal(response.headers.get('Content-Type'),'image/jpeg');assert.equal((await response.arrayBuffer()).byteLength,8);
+ assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:0,image:null})).status,409);assert.equal(files.size,1);
+ await f.call('topic',{...topic(),create:false,version:1,viewers:['student@example.test']});
+ assert.equal((await f.call('topic-cover?topic=topic-0001',null,'student@example.test')).status,200);
+ const batch=await (await f.call('bootstrap',null,'student@example.test')).json();assert.ok(batch.rooms.topics[0].cover.revision);assert.ok(!JSON.stringify(batch).includes('base64'));
+ assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:2,image:null})).status,200);assert.equal(files.size,0);assert.equal((await f.call('topic-cover?topic=topic-0001')).status,404);
+});
