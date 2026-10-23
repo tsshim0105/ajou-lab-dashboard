@@ -144,7 +144,7 @@ function mrSummaryView(root){
 function mrDiscardButton(){const m=meetingRecorder;return admin()&&m.session?.segments?.length?`<button class="secondary" data-mr="discard-transcript" ${m.active||m.processing||m.stopping||m.discarding?'disabled':''}>이번 전사 폐기</button>`:'';}
 async function mrDiscardTranscript(){
  const m=meetingRecorder;if(!admin()||!m.session||m.active||m.processing||m.stopping||m.converting||m.discarding)return;
- if(!confirm('현재 회의의 전사와 미확정 요약을 폐기할까요? 녹음 원본과 다른 회의는 유지됩니다. 확정된 요약이 있으면 폐기할 수 없습니다.'))return;
+ if(!confirm('현재 회의의 전사와 미확정 요약을 폐기할까요? 다른 회의는 유지됩니다. 전사가 완료된 녹음은 이미 삭제되므로 다시 전사할 수 없습니다. 확정된 요약이 있으면 폐기할 수 없습니다.'))return;
  m.discarding=true;try{await mrSync();if(m.dirty||m.pendingAudio.length||m.session.nativePending)throw Error('서버 저장이 끝난 뒤 다시 시도해주세요.');const s=await researchFetch('recording-discard-transcript',{id:m.session.id,version:m.version});m.session=s;m.version=s.version;m.dirty=false;for(const k of Object.keys(m.summaryDrafts))if(k.startsWith(s.id+':'))delete m.summaryDrafts[k];m.summaryEditing=null;await mrLocal(mrDraftKey(),{session:s,version:s.version});await mrLoadHistory();m.message='이번 전사와 미확정 요약을 폐기했습니다. 전사가 완료된 녹음 원본은 삭제되므로 다시 전사할 수 없습니다.';rrDraw();}finally{m.discarding=false;mrUpdateControls();}
 }
 
