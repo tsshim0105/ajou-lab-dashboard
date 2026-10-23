@@ -117,3 +117,24 @@ test('student sees only confirmed summaries for a shared topic and no transcript
  await f.call('topic',{...topic(),create:false,version:0,viewers:['student@example.test']});
  const r=await f.call('thread?topic=topic-0001',null,'student@example.test'),text=await r.text(),t=JSON.parse(text);assert.equal(t.meetingSummaries.length,1);assert.equal(t.meetingSummaries[0].content,'shared reviewed');assert.ok(!text.includes('private transcript'));assert.ok(!text.includes('private other topic'));assert.ok(!text.includes('shared draft'));assert.equal((await f.call('recording-detail?id=meeting-0001',null,'student@example.test')).status,403);
 });
+
+test('bootstrap includes all authorized text threads, no binaries or raw transcript, and respects summary review',async()=>{
+ const f=fixture();await f.call('topic',topic());await f.call('topic',topic('topic-0002'));
+ await f.call('topic',{...topic(),create:false,version:0,viewers:['student@example.test']});
+ await f.call('message',{topic:'topic-0001',id:'message-0001',content:'shared question'});
+ await f.call('message',{topic:'topic-0002',id:'message-0002',content:'private question'});
+ await f.call('memo',{topic:'topic-0001',content:'Shared memo',version:0});
+ const seed=(id,payload)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run(id,JSON.stringify(payload));
+ seed('answer:topic-0001:message-0001',{files:[{name:'figure.png',kind:'image',asset:'private/file'}]});
+ seed('recording:record-0001',{id:'record-0001',created:'2026-10-23',transcript:'PRIVATE TRANSCRIPT',summary:{'topic-0001':{content:'reviewed summary',status:'reviewed'},'topic-0002':{content:'private draft',status:'draft'}}});
+ seed('recording:record-0002',{id:'record-0002',created:'2026-10-24',summary:{'topic-0001':{content:'unreviewed',status:'draft'}}});
+ f.env.BUCKET={get(){throw Error('preload must not download files');}};
+ const admin=await (await f.call('bootstrap')).json();assert.equal(Object.keys(admin.threads).length,2);
+ const direct=await (await f.call('thread?topic=topic-0001')).json();assert.deepEqual(admin.threads['topic-0001'],direct);
+ const student=await (await f.call('bootstrap',null,'student@example.test')).json();assert.deepEqual(Object.keys(student.threads),['topic-0001']);
+ assert.equal(student.threads['topic-0001'].memo.content,'Shared memo');assert.equal(student.threads['topic-0001'].meetingSummaries.length,1);
+ assert.equal(student.rooms.canEdit,false);assert.equal(student.rooms.config,undefined);assert.equal(student.threads['topic-0001'].topic.viewers,undefined);
+ assert.ok(!JSON.stringify(student).includes('private question'));assert.ok(!JSON.stringify(student).includes('unreviewed'));assert.ok(!JSON.stringify(admin).includes('PRIVATE TRANSCRIPT'));
+ await f.call('topic',{...topic(),create:false,version:1,viewers:[]});
+ const revoked=await (await f.call('bootstrap',null,'student@example.test')).json();assert.equal(revoked.rooms.topics.length,0);assert.deepEqual(revoked.threads,{});
+});

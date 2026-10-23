@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+const source=readFileSync(new URL('../research-room.js',import.meta.url),'utf8').split('function rrDraw(){')[0];
+function setup(){let calls=[];const c=vm.createContext({user:{email:'owner@test'},admin:()=>true,offline:false,tab:'researchRooms',document:{getElementById:()=>null},calls});vm.runInContext(source,c);c.batch={rooms:{topics:[{id:'a',archived:false}]},threads:{a:{topic:{id:'a'},messages:[]}}};vm.runInContext('researchFetch=async action=>{calls.push(action);return batch;}',c);return {c,calls,run:x=>vm.runInContext(x,c)};}
+test('one startup request preloads all metadata; cached read makes no extra request',async()=>{const {run,calls}=setup();await Promise.all([run('rrPrefetch()'),run('rrPrefetch()')]);assert.deepEqual(calls,['bootstrap']);assert.equal((await run("rrReadCached('thread:a','thread?topic=a',true)")).topic.id,'a');assert.equal(calls.length,1);await run('rrPrefetch(true)');assert.equal(calls.length,2);});
+test('new account never receives old cached threads and revoked threads are removed',async()=>{const {run,c}=setup();await run('rrPrefetch()');c.batch={rooms:{topics:[]},threads:{}};await run('rrPrefetch(true)');assert.equal(run("rrCache.entries.has('thread:a')"),false);run("user.email='student@test';rrEnsureScope()");assert.equal(run('rrCache.entries.size'),0);});
+test('failed preload is retryable without blocking dashboard',async()=>{const {run}=setup();run("researchFetch=async()=>{throw Error('offline')}");assert.equal(await run('rrPrefetch()'),false);run('researchFetch=async()=>batch');assert.equal(await run('rrPrefetch()'),true);});
+test('late response from previous account cannot populate current cache',async()=>{const {run,c}=setup();run('researchFetch=()=>new Promise(resolve=>globalThis.resolve=resolve)');const p=run('rrPrefetch()');run("user.email='student@test';rrEnsureScope()");c.resolve(c.batch);await p;assert.equal(run('rrCache.entries.size'),0);});

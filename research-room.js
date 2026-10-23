@@ -1,16 +1,68 @@
 /* Server-persisted research workspace; browser state contains only unsent drafts. */
 let researchRoomState={rooms:null,thread:null,selected:null,mobileChatOpen:false,archived:false,view:'meeting',mode:'search',drafts:{},reply:null,loading:false};
 const rrMoney=value=>'$'+Number(value||0).toFixed(3);
-async function researchFetch(action,body){const response=await fetch('/api/ai/'+action,{cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json','X-Lab-Request':'1'},body:JSON.stringify(body)}:{})});let result;try{result=await response.json();}catch{throw Error('로그인 또는 서버 연결을 확인해주세요.');}if(!response.ok)throw Error(result.error||'저장하지 못했습니다.');return result;}
+async function researchFetch(action,body){const response=await fetch('/api/ai/'+action,{cache:'no-store',...(body?{method:'POST',headers:{'Content-Type':'application/json','X-Lab-Request':'1'},body:JSON.stringify(body)}:{})});let result;try{result=await response.json();}catch{throw Error('로그인 또는 서버 연결을 확인해주세요.');}if(!response.ok){const error=Error(result.error||'저장하지 못했습니다.');error.status=response.status;throw error;}return result;}
 function rrTime(value){if(!value||!Number.isFinite(new Date(value).getTime()))return '보관 자료';return new Date(value).toLocaleString('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});}
 function rrNotice(message){const status=document.getElementById('rrStatus');if(status)status.textContent=message;}
-async function mountResearchRooms(){const root=document.getElementById('researchRoomRoot');if(!root)return;root.innerHTML='<div class="empty">연구미팅을 불러오는 중입니다.</div>';await rrRefresh(true);}
-async function rrRefresh(full=false){if(tab!=='researchRooms')return;if(researchRoomState.loading){if(full)researchRoomState.queued=true;return;}researchRoomState.loading=true;try{const rooms=await researchFetch('rooms');if(tab!=='researchRooms')return;researchRoomState.rooms=rooms;if(admin())rooms.topics.push({id:mrUnclassified,title:'미분류',archived:false,privateRecording:true});const available=rooms.topics.filter(t=>!t.deleted&&t.archived===researchRoomState.archived);if(!available.some(t=>t.id===researchRoomState.selected)){researchRoomState.selected=available[0]?.id||null;full=true;}if(!researchRoomState.selected&&researchRoomState.thread)full=true;const selected=researchRoomState.selected;const thread=selected===mrUnclassified&&admin()?mrEmptyThread():selected?await researchFetch('thread?topic='+encodeURIComponent(selected)):null;if(tab!=='researchRooms')return;if(selected!==researchRoomState.selected){researchRoomState.queued=true;return;}researchRoomState.thread=thread;if(full)rrDraw();else if(researchRoomState.view==='chat')rrDrawMessages();else if(researchRoomState.view!=='memo'||!admin())rrDrawContent();return true;}catch(e){const root=document.getElementById('researchRoomRoot');if(root&&!root.querySelector('#rrStatus'))root.innerHTML='<p role="alert">'+esc(e.message)+'</p><button class="secondary" id="rrRetry">다시 연결</button>';document.getElementById('rrRetry')?.addEventListener('click',mountResearchRooms);rrNotice(e.message);}finally{researchRoomState.loading=false;if(researchRoomState.queued){researchRoomState.queued=false;rrRefresh(true);}}}
+// Account-scoped, memory-only preload. Never persist conversations or download binaries.
+const rrCache={scope:'',entries:new Map(),prefetch:null};
+function rrScope(){return String(user.email||'')+':'+String(admin());}
+function rrEnsureScope(){const scope=rrScope();if(rrCache.scope!==scope){const changed=!!rrCache.scope;rrCache.scope=scope;rrCache.entries.clear();rrCache.prefetch=null;if(changed){researchRoomState.rooms=null;researchRoomState.thread=null;researchRoomState.selected=null;}}return scope;}
+async function rrReadCached(key,action,preferCache=false){
+ const scope=rrEnsureScope();let entry=rrCache.entries.get(key);
+ if(preferCache&&entry?.value)return entry.value;
+ if(entry?.pending)return entry.pending;
+ entry??={};rrCache.entries.set(key,entry);
+ const pending=researchFetch(action).then(value=>{if(scope===rrScope()&&rrCache.entries.get(key)===entry){entry.value=value;entry.at=Date.now();}return value;}).catch(error=>{if([401,403].includes(error.status)&&scope===rrScope()){rrCache.entries.delete(key);}throw error;}).finally(()=>{if(entry.pending===pending)entry.pending=null;});
+ entry.pending=pending;return pending;
+}
+async function rrPrefetch(force=false){
+ if(offline||!user.email)return;const scope=rrEnsureScope();if(rrCache.prefetch)return rrCache.prefetch;
+ const started=Date.now(),job=(async()=>{
+  const batch=await rrReadCached('bootstrap','bootstrap',!force);if(scope!==rrScope())return;
+  const prime=(key,value)=>{const previous=rrCache.entries.get(key);if(!previous?.pending&&(!previous?.at||previous.at<=started))rrCache.entries.set(key,{value,at:Date.now()});};
+  prime('rooms',batch.rooms);const allowed=new Set(batch.rooms.topics.map(t=>t.id));
+  for(const key of rrCache.entries.keys())if(key.startsWith('thread:')&&!allowed.has(key.slice(7)))rrCache.entries.delete(key);
+  for(const [id,thread] of Object.entries(batch.threads))prime('thread:'+id,thread);
+  return true;
+ })().catch(error=>{if([401,403].includes(error.status)&&scope===rrScope()){rrCache.entries.clear();researchRoomState.rooms=null;researchRoomState.thread=null;}return false;}).finally(()=>{if(rrCache.prefetch===job)rrCache.prefetch=null;});rrCache.prefetch=job;return job;
+}
+
+async function mountResearchRooms(){
+ const root=document.getElementById('researchRoomRoot');if(!root)return;rrEnsureScope();const s=researchRoomState,warm=!!rrCache.entries.get('rooms')?.value;
+ if(s.rooms&&s.thread?.topic.id===s.selected)rrDraw();else root.innerHTML='<div class="empty">연구미팅을 불러오는 중입니다.</div>';
+ if(!warm&&rrCache.prefetch)await rrCache.prefetch;
+ await rrRefresh(true,true);
+ if(warm&&tab==='researchRooms')void rrPrefetch(true).then(ok=>{if(tab==='researchRooms')rrRefresh(true,!!ok);});
+}
+
+async function rrRefresh(full=false,preferCache=false){
+ if(tab!=='researchRooms')return;const scope=rrEnsureScope(),s=researchRoomState;
+ if(s.loading){if(full)s.queued=true;return;}s.loading=true;
+ try{
+  const loaded=await rrReadCached('rooms','rooms',preferCache);if(tab!=='researchRooms'||scope!==rrScope())return;
+  const rooms={...loaded,topics:[...loaded.topics]};s.rooms=rooms;
+  if(admin())rooms.topics.push({id:mrUnclassified,title:'미분류',archived:false,privateRecording:true});
+  const allowed=new Set(rooms.topics.filter(t=>!t.deleted).map(t=>t.id));for(const key of rrCache.entries.keys())if(key.startsWith('thread:')&&!allowed.has(key.slice(7)))rrCache.entries.delete(key);
+  const available=rooms.topics.filter(t=>!t.deleted&&t.archived===s.archived);
+  if(!available.some(t=>t.id===s.selected)){s.selected=available[0]?.id||null;full=true;}
+  if(!s.selected&&s.thread)full=true;const selected=s.selected;
+  const thread=selected===mrUnclassified&&admin()?mrEmptyThread():selected?await rrReadCached('thread:'+selected,'thread?topic='+encodeURIComponent(selected),preferCache):null;
+  if(tab!=='researchRooms'||scope!==rrScope())return;if(selected!==s.selected){s.queued=true;return;}
+  s.thread=thread;if(full)rrDraw();else if(s.view==='chat')rrDrawMessages();else if(s.view!=='memo'||!admin())rrDrawContent();return true;
+ }catch(e){
+  if(scope!==rrScope())return;
+  if([401,403].includes(e.status)){rrCache.entries.clear();s.rooms=null;s.thread=null;}
+  const root=document.getElementById('researchRoomRoot');if(root&&(!root.querySelector('#rrStatus')||[401,403].includes(e.status)))root.innerHTML='<p role="alert">'+esc(e.message)+'</p><button class="secondary" id="rrRetry">다시 연결</button>';
+  document.getElementById('rrRetry')?.addEventListener('click',mountResearchRooms);rrNotice(e.message);
+ }finally{s.loading=false;if(s.queued){s.queued=false;rrRefresh(true);}}
+}
+
 function rrDraw(){const root=document.getElementById('researchRoomRoot');if(!root||!researchRoomState.rooms)return;const s=researchRoomState,{rooms,thread}=s,topics=rooms.topics.filter(t=>!t.deleted&&!t.privateRecording&&t.archived===s.archived),topic=thread?.topic;
  root.classList.toggle('mr-owner',admin());root.classList.toggle('rr-chat-open',!!topic&&!!s.mobileChatOpen);
  const views=`<nav class="rr-segments rr-views" aria-label="주제 자료 보기">${[['meeting','회의요약'],['chat','AI대화'],['papers','논문'],['images','이미지'],['documents','문서'],['memo','메모']].map(([k,v])=>`<button data-view="${k}" class="${s.view===k?'active':''}" aria-pressed="${s.view===k}">${v}</button>`).join('')}</nav>`;
  root.innerHTML=`<div class="research-title"><div class="research-title-label"><h1>연구미팅</h1></div></div><p id="rrStatus" class="rr-status" role="status"></p><div class="rr-workspace"><aside class="rr-sidebar">${admin()?mrSidebar():''}<div class="rr-segments rr-list-filter"><button class="${s.archived?'':'active'}" data-rr="active">내 미팅</button><button class="${s.archived?'active':''}" data-rr="archive-list">보관함</button>${admin()?'<button class="rr-add-meeting" data-rr="new" aria-label="미팅 추가" title="미팅 추가">+</button>':''}</div><div class="rr-topic-list" aria-label="채팅 선택">${topics.length?topics.map(t=>`<button class="rr-topic ${t.id===s.selected?'selected':''}" data-topic="${esc(t.id)}" aria-pressed="${t.id===s.selected}"><div><strong>${esc(t.title)}<span class="rr-unread-dot" data-unread-topic="${esc(t.id)}" hidden aria-label="확인하지 않은 새 내용"></span></strong>${(t.viewerNames||[]).length?'<span class="rr-student-chips">'+t.viewerNames.map(name=>'<span>'+esc(name)+'</span>').join('')+'</span>':''}</div></button>`).join(''):'<p class="muted">등록한 주제가 없습니다.</p>'}${admin()?mrUnclassifiedButton():''}</div></aside><section class="rr-main">${topic?`<header class="rr-topic-heading"><span class="rr-mobile-section-name">연구미팅</span><h2 title="${esc(topic.title)}">${esc(topic.title)}</h2><button class="rr-back" data-rr="choose-chat" aria-label="대화창 선택 화면으로 돌아가기" title="대화창 선택 화면으로 돌아가기"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12"/></svg></button>${views}<details class="rr-overflow"><summary aria-label="채팅 메뉴">···</summary><div>${admin()&&topic.id!==mrUnclassified?'<button data-rr="edit">수정 · 공개 대상 관리</button><button data-rr="clear-chat">AI대화 비우기</button><button data-rr="delete">채팅 삭제</button>':''}<button data-rr="active">내 미팅</button><button data-rr="archive-list">보관함</button></div></details></header><div id="rrContent"></div>`:`<div class="rr-welcome"><h2>표시할 채팅이 없습니다</h2><p>${admin()?'ChatGPT에서 저장한 대화가 여기에 표시됩니다.':'교수님이 공유한 채팅이 여기에 표시됩니다.'}</p></div>`}${admin()?mrDrawer():''}</section></div>`;
- root.querySelectorAll('[data-rr]').forEach(b=>b.onclick=()=>rrAction(b.dataset.rr));root.querySelectorAll('[data-topic]').forEach(b=>b.onclick=async()=>{if(admin()&&meetingRecorder.converting)return;s.selected=b.dataset.topic;if(admin()){mrChooseTopic(s.selected);if(s.selected===mrUnclassified)s.view='meeting';}s.mobileChatOpen=true;s.reply=null;if(await rrRefresh(true))rrAcknowledgeView();});root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{s.view=b.dataset.view;rrDraw();rrAcknowledgeView();});document.querySelector('#panel > .mobile-section-title')?.remove();syncSectionClock();rrDrawContent();rrFitChat();rrPaintUnread();if(admin())mrBind();}
+ root.querySelectorAll('[data-rr]').forEach(b=>b.onclick=()=>rrAction(b.dataset.rr));root.querySelectorAll('[data-topic]').forEach(b=>b.onclick=async()=>{if(admin()&&meetingRecorder.converting)return;s.selected=b.dataset.topic;if(admin()){mrChooseTopic(s.selected);if(s.selected===mrUnclassified)s.view='meeting';}s.mobileChatOpen=true;s.reply=null;if(await rrRefresh(true,true))rrAcknowledgeView();void rrRefresh(false);});root.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{s.view=b.dataset.view;rrDraw();rrAcknowledgeView();});document.querySelector('#panel > .mobile-section-title')?.remove();syncSectionClock();rrDrawContent();rrFitChat();rrPaintUnread();if(admin())mrBind();}
 function rrFitChat(){const messages=document.getElementById('rrMessages');if(!messages)return;const bottom=document.getElementById('tabs');const bottomHeight=window.innerWidth<=760?(bottom?.getBoundingClientRect().height||85):20;const available=window.innerHeight-messages.getBoundingClientRect().top-bottomHeight-12-(admin()?220:0);messages.style.height=Math.max(280,available)+'px';}
 window.addEventListener('resize',rrFitChat);
 function rrDrawContent(){const root=document.getElementById('rrContent'),s=researchRoomState,t=s.thread;if(!root||!t)return;const signature=JSON.stringify([s.view,t.topic.id,admin(),t.topic.archived,t.messages,t.selectedImages,t.papers,t.memo,t.meetingSummaries,t.retainedResources]);if(s.view!=='chat'&&root.dataset.contentSignature===signature)return;root.dataset.contentSignature=signature;if(s.view==='meeting'){if(admin())mrSummaryView(root);else rrStudentMeetingView(root,t);return;}if(s.view==='chat'){root.innerHTML=`<div id="rrMessages" class="rr-messages" aria-label="연구 대화"></div>`;rrDrawMessages();
