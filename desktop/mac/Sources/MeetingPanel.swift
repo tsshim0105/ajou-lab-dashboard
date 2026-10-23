@@ -18,6 +18,8 @@ struct FloatingMeeting: Identifiable { let id: String; let title: String; var qu
     @Published var paused = false
     @Published var expanded = false
     @Published var working = false
+    @Published var recording = false
+    @Published var readyToStart = false
     @Published var message = ""
     var action: (String, String?) -> Void = { _, _ in }
     var resize: () -> Void = {}
@@ -54,12 +56,22 @@ private struct MeetingPanelView: View {
             }
             HStack(spacing:10) {
                 Image(systemName:"circle.grid.2x3.fill").foregroundColor(.gray).frame(width:26,height:38).overlay(PanelDragHandle()).accessibilityLabel("패널 이동 손잡이")
-                Circle().fill(model.paused ? Color.orange : Color.red).frame(width:8,height:8)
-                Text(model.elapsed).font(.system(size:16,weight:.semibold,design:.monospaced)).frame(width:72)
+                Circle().fill(!model.recording ? Color.gray : model.paused ? Color.orange : Color.red).frame(width:8,height:8)
+                Text(model.recording ? model.elapsed : "녹음 대기").font(.system(size:16,weight:.semibold,design:.monospaced)).frame(width:72)
                 Button { toggle() } label: { HStack { Text(model.current).lineLimit(1); Spacer(minLength:4); Image(systemName:model.expanded ? "chevron.down" : "chevron.up").font(.system(size:11)) }.padding(10).background(Color.white.opacity(0.7)).cornerRadius(11) }.accessibilityLabel("현재 미팅: " + model.current + ", 목록 열기")
-                Button { model.action("pause",nil) } label: { Image(systemName:model.paused ? "play.fill" : "pause.fill").frame(width:24,height:28) }.help((model.paused ? "녹음 재개" : "일시정지") + " · ⌃⌥⌘R").accessibilityLabel(model.paused ? "녹음 재개" : "일시정지").disabled(model.working)
+                if model.recording {
+                    Button { model.action("pause",nil) } label: { Image(systemName:model.paused ? "play.fill" : "pause.fill").frame(width:24,height:28) }.help((model.paused ? "녹음 재개" : "일시정지") + " · ⌃⌥⌘R").accessibilityLabel(model.paused ? "녹음 재개" : "일시정지").disabled(model.working)
+                }
                 Divider().frame(height:22)
-                Button { model.action("stop",nil) } label: { Image(systemName:"stop.fill").foregroundColor(Color(red:0.73,green:0.25,blue:0.34)).frame(width:24,height:28) }.help("녹음 저장 후 종료").accessibilityLabel("녹음 종료").disabled(model.working)
+                Button { model.action(model.recording ? "summary" : "start",nil) } label: {
+                    Label(model.recording ? "회의 요약 시작" : model.readyToStart ? "새 회의 녹음 시작" : "업로드 중…",systemImage:model.recording ? "doc.text" : "mic.fill")
+                        .font(.system(size:12,weight:.semibold)).padding(.horizontal,10).frame(height:36)
+                        .foregroundColor(Color(red:0.14,green:0.36,blue:0.58)).background(Color.white.opacity(0.75)).cornerRadius(10)
+                }.help(model.recording ? "현재 녹음을 마무리하고 회의 요약을 시작합니다. 패널은 유지됩니다." : "선택한 연구주제로 새 회의를 녹음합니다. 이전 회의 요약은 계속됩니다.")
+                    .disabled(model.working || (!model.recording && !model.readyToStart))
+                if !model.recording {
+                    Button { model.action("hide",nil) } label: { Image(systemName:"xmark").font(.system(size:11)).frame(width:18,height:28) }.help("플로팅 바 숨기기 · 요약은 계속 진행됩니다.").accessibilityLabel("플로팅 바 숨기기")
+                }
             }.padding(13).frame(height:66)
             if !model.message.isEmpty { Text(model.message).font(.system(size:11)).lineLimit(2).padding(.horizontal,14).padding(.bottom,8) }
         }.foregroundColor(ink).buttonStyle(.plain).background(aurora).clipShape(RoundedRectangle(cornerRadius:19)).overlay(RoundedRectangle(cornerRadius:19).stroke(Color(red:0.83,green:0.9,blue:0.94),lineWidth:1)).preferredColorScheme(.light)
@@ -100,6 +112,7 @@ final class FloatingPanel: NSPanel {
     var clock: Timer?
     var activity: NSObjectProtocol?
     var protectsSession=false
+    var keepPanelVisible=false
     var commandPending=false
     var lastCompletedParts=0
     var processingClock: Timer?
@@ -119,7 +132,7 @@ final class FloatingPanel: NSPanel {
         guard format.sampleRate>0,format.channelCount>0 else { throw fail("마이크를 확인해주세요.") }
         input.installTap(onBus:0,bufferSize:4096,format:format) { buffer,_ in writer.append(buffer) }
         do { try audio.start() } catch { input.removeTap(onBus:0);throw error }
-        lastCompletedParts=0;recorder=audio;segmented=writer;recordingID=id;protectsSession=true;model.paused=false;model.message="";show()
+        lastCompletedParts=0;recorder=audio;segmented=writer;recordingID=id;protectsSession=true;keepPanelVisible=true;model.recording=true;model.readyToStart=false;model.paused=false;model.message="";show()
         activity=ProcessInfo.processInfo.beginActivity(options:[.userInitiated,.idleSystemSleepDisabled],reason:"연구미팅 녹음 유지")
         clock=Timer.scheduledTimer(withTimeInterval:0.5,repeats:true) { [weak self] _ in Task { @MainActor in self?.tick() } }
     }
@@ -142,7 +155,7 @@ final class FloatingPanel: NSPanel {
         clock?.invalidate();clock=nil
         try segmented?.stop()
         if let activity { ProcessInfo.processInfo.endActivity(activity);self.activity=nil }
-        model.working=true;model.message="녹음 저장 중…";resize();return try parts(id)
+        model.recording=false;model.readyToStart=false;model.working=true;model.message="마지막 구간 업로드 중 · 완료되면 새 회의를 시작할 수 있습니다.";resize();return try parts(id)
     }
     func show() {
         if panel == nil {
@@ -161,6 +174,7 @@ final class FloatingPanel: NSPanel {
         panel.setFrame(f,display:true)
     }
     func command(_ action:String,_ topic:String?,confirm:Bool=true) {
+        if action == "hide" && !recording { keepPanelVisible=false;panel?.orderOut(nil);return }
         guard !commandPending,let web=owner?.web, let url=web.url,Lab.isDashboard(url) else { model.message="대시보드를 다시 열어주세요.";return }
         if action == "stop" && confirm { let box=NSAlert();box.messageText="녹음을 저장하고 종료할까요?";box.addButton(withTitle:"저장 후 종료");box.addButton(withTitle:"계속 녹음");guard box.runModal() == .alertFirstButtonReturn else{return} }
         let payload:[String:Any]=["action":action,"topic":topic ?? ""]
@@ -169,7 +183,7 @@ final class FloatingPanel: NSPanel {
             defer { commandPending=false;model.working=false;resize() }
             do { _ = try await web.callAsyncJavaScript("if (!window.nismlRecorderCommand) throw new Error('대시보드를 새로고침해주세요.'); return await window.nismlRecorderCommand(command);",arguments:["command":payload],in:nil,contentWorld:.page)
                 if action == "topic" { model.expanded=false;model.otherExpanded=false }
-            } catch { model.message="연결 오류 · 녹음은 앱에 보관됩니다. 대시보드를 확인해주세요.";owner?.showDashboard() }
+            } catch { model.message="작업을 완료하지 못했습니다. 대시보드에서 연결 상태와 안내를 확인해주세요.";owner?.showDashboard() }
         }
     }
 
@@ -179,13 +193,16 @@ final class FloatingPanel: NSPanel {
             do {
                 if action == "state" {
                     let admin=body["admin"] as? Bool == true
-                    if admin && body["backgroundProcessing"] as? Bool == true { if processingActivity == nil { processingActivity=ProcessInfo.processInfo.beginActivity(options:[.userInitiated,.idleSystemSleepDisabled],reason:"회의 전사 및 요약 완료");processingClock=Timer.scheduledTimer(withTimeInterval:5,repeats:true) { [weak self] _ in Task { @MainActor in _ = try? await self?.owner?.web?.evaluateJavaScript("if(typeof mrPump==='function')mrPump();void 0") } } } }
+                    if admin && body["backgroundProcessing"] as? Bool == true { if processingActivity == nil { processingActivity=ProcessInfo.processInfo.beginActivity(options:[.userInitiated,.idleSystemSleepDisabled],reason:"회의 전사 및 요약 완료");processingClock=Timer.scheduledTimer(withTimeInterval:5,repeats:true) { [weak controller = self] _ in Task { @MainActor in _ = try? await controller?.owner?.web?.evaluateJavaScript("if(typeof mrPump==='function')mrPump();void 0") } } } }
                     else if let processingActivity { ProcessInfo.processInfo.endActivity(processingActivity);self.processingActivity=nil;processingClock?.invalidate();processingClock=nil }
-                    if !admin { panel?.orderOut(nil);replyHandler(["ok":true],nil);return }
+                    if !admin { keepPanelVisible=false;panel?.orderOut(nil);replyHandler(["ok":true],nil);return }
                     let items=body["topics"] as? [[String:String]] ?? [];model.topics=items.prefix(300).compactMap { x in guard let id=x["id"],let title=x["title"] else{return nil};return FloatingMeeting(id:id,title:String(title.prefix(120)),quick:x["quick"] != "false",participants:String((x["participants"] ?? "").prefix(180))) }
                     model.participantNames=body["participantNames"] as? [String] ?? [];resize()
                     model.selected=body["selected"] as? String ?? "__unclassified__";protectsSession=recording || body["protect"] as? Bool == true
-                    if body["active"] as? Bool != true && !recording && !protectsSession { panel?.orderOut(nil) }
+                    model.recording=recording || body["active"] as? Bool == true
+                    model.readyToStart = !model.recording && body["startReady"] as? Bool == true
+                    if !model.recording && model.readyToStart { model.message="이전 회의는 별도로 처리됩니다. 주제를 선택하고 새 녹음을 시작하세요." }
+                    if !model.recording && !protectsSession && !keepPanelVisible { panel?.orderOut(nil) }
                     replyHandler(["ok":true],nil);return
                 }
                 // Independently check current page role before any audio operation.

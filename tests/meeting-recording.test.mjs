@@ -172,3 +172,31 @@ test('failed AI calls retain audio; successful transcript cleanup retries after 
  assert.equal((await f.call('recording-discard-transcript',{id,version:s.version})).status,409); // queued summary must finish before destructive editing
  }finally{globalThis.fetch=old;}
 });
+
+test('floating panel chooses next topic while idle without modifying previous meeting markers',async()=>{
+ const c=nativeContext();vm.runInContext("researchRoomState.selected='topic-A';Object.assign(meetingRecorder,{active:false,session:{id:'previous',markers:[{at:0,topic:'topic-A'}],segments:[]}});",c);
+ await vm.runInContext("window.nismlRecorderCommand({action:'topic',topic:mrUnclassified})",c);
+ assert.equal(vm.runInContext('meetingRecorder.session.markers.length',c),1);
+ assert.equal(vm.runInContext('researchRoomState.selected',c),'__unclassified__');
+ assert.equal(vm.runInContext('meetingRecorder.selected',c),null);
+});
+test('summary action finishes once and next meeting starts while prior queue continues',async()=>{
+ const c=nativeContext();vm.runInContext("Object.assign(meetingRecorder,{active:true,session:{id:'previous',markers:[],segments:[]}});mrStop=async()=>{meetingRecorder.active=false;mrQueue.pending=1;mrQueue.busy=true;};mrStart=async()=>{meetingRecorder.active=true;meetingRecorder.session={id:'next',markers:[],segments:[]};};",c);
+ await vm.runInContext("window.nismlRecorderCommand({action:'summary'})",c);
+ assert.equal(vm.runInContext('meetingRecorder.active',c),false);
+ await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'summary'})",c),/진행 중인/);
+ await vm.runInContext("window.nismlRecorderCommand({action:'start'})",c);
+ assert.equal(vm.runInContext('meetingRecorder.session.id',c),'next');assert.equal(vm.runInContext('mrQueue.busy',c),true);
+ await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'start'})",c),/이미 녹음/);
+ vm.runInContext("mrMergeTranscript({id:'previous',segments:[{text:'old'}],processing:{status:'completed'}})",c);
+ assert.equal(vm.runInContext('meetingRecorder.session.id',c),'next');assert.equal(vm.runInContext('meetingRecorder.session.segments.length',c),0);
+});
+test('floating start is disabled during final upload, independent of background summary',async()=>{
+ const calls=[],c=nativeContext(async body=>{calls.push(body);return {};});
+ vm.runInContext('meetingRecorder.dirty=true;',c);
+ await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'start'})",c),/업로드/);
+ vm.runInContext('mrNativeState()',c);assert.equal(calls.at(-1).startReady,false);
+ vm.runInContext('meetingRecorder.dirty=false;mrQueue.busy=true;mrQueue.pending=1;mrNativeState()',c);
+ assert.equal(calls.at(-1).startReady,true);assert.equal(calls.at(-1).backgroundProcessing,true);
+ const student=nativeContext(undefined,false);await assert.rejects(vm.runInContext("window.nismlRecorderCommand({action:'start'})",student),/교수님/);
+});
