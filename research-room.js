@@ -179,19 +179,61 @@ function rrStudentMeetingView(root,t){
 // Small, access-controlled thumbnails decorate the topic selector only.
 function rrCoverURL(t){return t.cover?.revision?'/api/ai/topic-cover?topic='+encodeURIComponent(t.id)+'&v='+encodeURIComponent(t.cover.revision):'';}
 function rrTopicCover(t){const src=rrCoverURL(t);return src?'<img class="rr-topic-cover" src="'+esc(src)+'" alt="" loading="lazy" decoding="async" aria-hidden="true"><span class="rr-topic-wash" aria-hidden="true"></span>':'';}
-async function rrPrepareCover(file){
+function rrCoverCropRect(width,height,{zoom=1,x=.5,y=.5,ratio=2}={}){
+ const clamp=(n,a,b)=>Math.max(a,Math.min(b,Number.isFinite(n)?n:a));
+ zoom=clamp(zoom,1,4);ratio=clamp(ratio,1,5);
+ const w=Math.min(width,height*ratio)/zoom,h=w/ratio;
+ return {sx:clamp(x,0,1)*(width-w),sy:clamp(y,0,1)*(height-h),sw:w,sh:h};
+}
+function rrDrawCover(canvas,bitmap,crop){
+ const r=rrCoverCropRect(bitmap.width,bitmap.height,crop),ctx=canvas.getContext('2d');
+ canvas.width=640;canvas.height=Math.round(640/crop.ratio);ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ ctx.drawImage(bitmap,r.sx,r.sy,r.sw,r.sh,0,0,canvas.width,canvas.height);
+}
+function rrEncodeCover(canvas){
+ for(const quality of [.8,.65,.5,.35,.2]){const data=canvas.toDataURL('image/jpeg',quality);if(data.length<=80000)return data;}
+ throw Error('이미지가 너무 복잡합니다. 조금 더 확대하거나 다른 이미지를 선택해주세요.');
+}
+async function rrPrepareCover(file,crop={ratio:2}){
  if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('JPG, PNG, WebP 이미지를 선택해주세요.');
  if(file.size>20*1024*1024)throw Error('20MB 이내 이미지를 선택해주세요.');
  const bitmap=await createImageBitmap(file);
- try{const canvas=document.createElement('canvas');canvas.width=640;canvas.height=320;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,640,320);const scale=Math.max(640/bitmap.width,320/bitmap.height);ctx.drawImage(bitmap,(640-bitmap.width*scale)/2,(320-bitmap.height*scale)/2,bitmap.width*scale,bitmap.height*scale);
- for(const quality of [.8,.65,.5,.35,.2]){const data=canvas.toDataURL('image/jpeg',quality);if(data.length<=80000)return data;}throw Error('이미지가 너무 복잡합니다. 작은 이미지로 다시 선택해주세요.');
- }finally{bitmap.close();}
+ try{const canvas=document.createElement('canvas');rrDrawCover(canvas,bitmap,crop);return rrEncodeCover(canvas);}finally{bitmap.close();}
 }
 function rrCoverDialog(topic){
- let image=undefined,processing=false,sequence=0;
- const d=rrDialog('연구주제 배경 이미지',`<div class="rr-cover-preview rr-topic">${rrTopicCover(topic)}<div class="rr-topic-copy"><strong>${esc(topic.title)}</strong><span class="rr-student-chips">${(topic.viewerNames||researchRoomState.rooms?.topics.find(t=>t.id===topic.id)?.viewerNames||[]).map(n=>'<span>'+esc(n)+'</span>').join('')}</span></div></div><label>이미지 선택<input id="rrCoverFile" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="muted">버튼에 맞춰 가운데를 잘라 옅게 표시합니다. JPG · PNG · WebP, 최대 20MB.</p><button type="button" class="secondary" id="rrCoverRemove">배경 이미지 없애기</button>`,async()=>{if(processing)throw Error('이미지를 준비하고 있습니다. 잠시 후 저장해주세요.');if(image===undefined)return;await researchFetch('topic-cover',{topic:topic.id,version:topic.version,image});});
- const status=d.querySelector('[role=status]'),preview=d.querySelector('.rr-cover-preview');
+ let image=undefined,processing=false,sequence=0,bitmap=null,changed=false,drag=null,frame=0,closed=false,saving=false;
+ const card=[...document.querySelectorAll('.rr-topic[data-topic]')].find(e=>e.dataset.topic===topic.id),bounds=card?.getBoundingClientRect();
+ const ratio=bounds?.width&&bounds?.height?Math.max(1.5,Math.min(5,bounds.width/bounds.height)):2.7;
+ const crop={zoom:1,x:.5,y:.5,ratio};
+ const d=rrDialog('연구주제 배경 이미지',`<label>이미지 선택<input id="rrCoverFile" type="file" accept="image/jpeg,image/png,image/webp"></label><section class="rr-crop-editor" hidden><p class="rr-crop-hint">이미지를 드래그해 위치를 맞추고, 확대해서 원하는 부분만 남기세요.</p><canvas class="rr-crop-canvas" tabindex="0" role="img" aria-label="이미지 자르기 영역. 드래그하거나 방향키로 위치를 조절하세요."></canvas><div class="rr-crop-controls"><label for="rrCoverZoom">확대 <output id="rrCoverZoomValue">100%</output></label><input id="rrCoverZoom" type="range" min="100" max="400" value="100" aria-label="이미지 확대"><button type="button" class="secondary" id="rrCoverReset">위치 초기화</button></div><small class="muted">마우스·손가락으로 이동 · 방향키로 미세 조절</small></section><p class="rr-crop-preview-label">카드 미리보기</p><div class="rr-cover-preview rr-topic">${rrTopicCover(topic)}<div class="rr-topic-copy"><strong>${esc(topic.title)}</strong><span class="rr-student-chips">${(topic.viewerNames||researchRoomState.rooms?.topics.find(t=>t.id===topic.id)?.viewerNames||[]).map(n=>'<span>'+esc(n)+'</span>').join('')}</span></div></div><p class="muted">JPG · PNG · WebP, 최대 20MB. 선택한 부분만 저장됩니다.</p><button type="button" class="secondary" id="rrCoverRemove">배경 이미지 없애기</button>`,async()=>{
+  if(processing)throw Error('이미지를 준비하고 있습니다. 잠시 후 저장해주세요.');
+  if(bitmap&&changed){rrDrawCover(canvas,bitmap,crop);image=rrEncodeCover(canvas);}
+  if(image===undefined)return;saving=true;try{await researchFetch('topic-cover',{topic:topic.id,version:topic.version,image});}finally{saving=false;}
+ },'크롭 적용 · 저장');
+ const status=d.querySelector('[role=status]'),preview=d.querySelector('.rr-cover-preview'),editor=d.querySelector('.rr-crop-editor'),canvas=d.querySelector('canvas'),zoom=d.querySelector('#rrCoverZoom');
+ preview.style.maxWidth=(bounds?.width||300)+'px';preview.style.width='100%';preview.style.aspectRatio=String(ratio);canvas.style.aspectRatio=String(ratio);
  const show=src=>{preview.querySelectorAll('.rr-topic-cover,.rr-topic-wash').forEach(n=>n.remove());if(src){const img=document.createElement('img');img.className='rr-topic-cover';img.alt='';img.src=src;const wash=document.createElement('span');wash.className='rr-topic-wash';preview.prepend(img,wash);}};
- d.querySelector('#rrCoverFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;const ticket=++sequence;processing=true;status.textContent='이미지 준비 중…';try{const ready=await rrPrepareCover(file);if(ticket!==sequence)return;image=ready;show(image);status.textContent='';}catch(error){if(ticket===sequence)status.textContent=error.message;}finally{if(ticket===sequence)processing=false;}};
- d.querySelector('#rrCoverRemove').onclick=()=>{sequence++;processing=false;image=null;show('');d.querySelector('#rrCoverFile').value='';status.textContent='저장하면 배경 이미지가 제거됩니다.';};
+ const draw=()=>{frame=0;if(!bitmap||closed)return;rrDrawCover(canvas,bitmap,crop);show(canvas.toDataURL('image/jpeg',.65));d.querySelector('#rrCoverZoomValue').textContent=Math.round(crop.zoom*100)+'%';};
+ const schedule=()=>{changed=true;if(!frame)frame=requestAnimationFrame(draw);};
+ const load=async(file,isExisting=false)=>{
+  const ticket=++sequence;processing=true;status.textContent='이미지 준비 중…';
+  try{
+   if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('JPG, PNG, WebP 이미지를 선택해주세요.');
+   if(file.size>20*1024*1024)throw Error('20MB 이내 이미지를 선택해주세요.');
+   const next=await createImageBitmap(file);if(ticket!==sequence||closed){next.close();return;}
+   bitmap?.close();bitmap=next;Object.assign(crop,{zoom:1,x:.5,y:.5});zoom.value='100';changed=!isExisting;image=undefined;editor.hidden=false;draw();status.textContent='';
+  }catch(error){if(ticket===sequence&&!closed)status.textContent=error.message;}finally{if(ticket===sequence)processing=false;}
+ };
+ d.querySelector('#rrCoverFile').onchange=e=>{const file=e.target.files[0];if(file&&!saving)load(file);};
+ zoom.oninput=()=>{if(!bitmap||saving)return;const before=rrCoverCropRect(bitmap.width,bitmap.height,crop),cx=before.sx+before.sw/2,cy=before.sy+before.sh/2;crop.zoom=Number(zoom.value)/100;const after=rrCoverCropRect(bitmap.width,bitmap.height,crop);crop.x=Math.max(0,Math.min(1,(cx-after.sw/2)/(bitmap.width-after.sw)||0));crop.y=Math.max(0,Math.min(1,(cy-after.sh/2)/(bitmap.height-after.sh)||0));schedule();};
+ const move=(dx,dy)=>{if(!bitmap||saving)return;const r=rrCoverCropRect(bitmap.width,bitmap.height,crop),display=canvas.getBoundingClientRect();crop.x=Math.max(0,Math.min(1,crop.x-dx/display.width*r.sw/Math.max(1,bitmap.width-r.sw)));crop.y=Math.max(0,Math.min(1,crop.y-dy/display.height*r.sh/Math.max(1,bitmap.height-r.sh)));schedule();};
+ canvas.onpointerdown=e=>{if(!bitmap||saving||e.button!==0)return;e.preventDefault();canvas.focus();drag={id:e.pointerId,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging');};
+ canvas.onpointermove=e=>{if(!drag||drag.id!==e.pointerId)return;move(e.clientX-drag.x,e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;};
+ const end=()=>{drag=null;canvas.classList.remove('dragging');};canvas.onpointerup=end;canvas.onpointercancel=end;canvas.onlostpointercapture=end;
+ canvas.onkeydown=e=>{const step=e.shiftKey?20:4,delta={ArrowLeft:[-step,0],ArrowRight:[step,0],ArrowUp:[0,-step],ArrowDown:[0,step]}[e.key];if(delta){e.preventDefault();move(...delta);}};
+ d.querySelector('#rrCoverReset').onclick=()=>{Object.assign(crop,{zoom:1,x:.5,y:.5});zoom.value='100';schedule();};
+ d.querySelector('#rrCoverRemove').onclick=()=>{sequence++;processing=false;bitmap?.close();bitmap=null;changed=false;image=null;editor.hidden=true;show('');d.querySelector('#rrCoverFile').value='';status.textContent='저장하면 배경 이미지가 제거됩니다.';};
+ d.addEventListener('close',()=>{closed=true;sequence++;cancelAnimationFrame(frame);bitmap?.close();bitmap=null;},{once:true});
+ if(topic.cover?.revision){const ticket=sequence;fetch(rrCoverURL(topic),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('기존 이미지를 불러오지 못했습니다. 새 파일을 선택해주세요.');return r.blob();}).then(blob=>{if(ticket===sequence&&!closed)load(blob,true);}).catch(e=>{if(ticket===sequence&&!closed)status.textContent=e.message;});}
+ return d;
 }
