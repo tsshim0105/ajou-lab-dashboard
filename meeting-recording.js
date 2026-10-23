@@ -4,7 +4,20 @@ const meetingRecorder={session:null,version:0,active:false,paused:false,busy:fal
 // Native capture survives closing the Mac window; web/browser capture remains unchanged.
 function mrNativeAvailable(){return !!window.webkit?.messageHandlers?.nismlMeeting?.postMessage;}
 function mrNative(action,body={}){if(!mrNativeAvailable())return Promise.reject(Error('Mac 앱에서 녹음 파일을 복구해주세요.'));return window.webkit.messageHandlers.nismlMeeting.postMessage({action,...body});}
-function mrNativeState(){if(!mrNativeAvailable())return;const m=meetingRecorder;mrNative('state',{admin:admin(),active:m.active,protect:!!(m.active||m.busy||m.stopping||m.processing||m.dirty||m.pendingAudio.length||m.session?.nativePending),selected:m.selected||mrUnclassified,topics:[...(researchRoomState.rooms?.topics||[]).filter(t=>!t.archived).map(t=>({id:t.id,title:t.title})),{id:mrUnclassified,title:'미분류'}]}).catch(()=>{});}
+// Use the latest classified marker, so unclassified intervals retain the last participants.
+function mrQuickTopics(){
+ const m=meetingRecorder,rooms=researchRoomState.rooms||{},topics=(rooms.topics||[]).filter(t=>!t.archived);
+ const basisID=m.active?[...(m.session?.markers||[])].reverse().find(x=>x.topic)?.topic||m.selected:mrTopic();
+ const basis=topics.find(t=>t.id===basisID),normalize=x=>String(x||'').trim().toLowerCase();
+ const students=t=>[...new Set((t?.viewers||[]).map(normalize).filter(x=>x&&x!==normalize(user.email)))];
+ const people=students(basis),names=people.map(email=>{const member=(rooms.members||[]).find(x=>normalize(x.email)===email);return member?.name&&member.name!==email?member.name:'연구실 구성원';});
+ const quick=topics.filter(t=>t.id===basisID||students(t).some(x=>people.includes(x)));
+ const other=topics.filter(t=>!quick.includes(t));
+ const item=(t,priority)=>({id:t.id,title:t.title,quick:priority?'true':'false',participants:students(t).map(email=>{const member=(rooms.members||[]).find(x=>normalize(x.email)===email);return member?.name&&member.name!==email?member.name:'연구실 구성원';}).join(' · ')});
+ return {names,topics:[...quick.map(t=>item(t,true)),{id:mrUnclassified,title:'미분류',quick:'true',participants:'임시 주제 기록'},...other.map(t=>item(t,false))]};
+}
+function mrNativeState(){if(!mrNativeAvailable())return;const m=meetingRecorder,quick=mrQuickTopics();mrNative('state',{admin:admin(),active:m.active,protect:!!(m.active||m.busy||m.stopping||m.processing||m.dirty||m.pendingAudio.length||m.session?.nativePending),selected:m.selected||mrUnclassified,topics:quick.topics,participantNames:quick.names}).catch(()=>{});}
+
 window.nismlRecorderCommand=async function(command){
  if(!admin())throw Error('교수님만 녹음에 접근할 수 있습니다.');
  const m=meetingRecorder;if(!m.active||m.busy||m.stopping||m.converting)throw Error('현재 녹음을 조작할 수 없습니다.');

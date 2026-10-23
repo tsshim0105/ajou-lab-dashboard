@@ -108,3 +108,15 @@ test('corrected roles regenerate only on request and retain the original summary
  globalThis.fetch=async(url,init)=>{if(url.includes('/models/'))return Response.json({});calls++;assert.ok(JSON.parse(init.body).input[1].content.includes('학생 1: A finding'));return Response.json({status:'completed',output:[{content:[{type:'output_text',text:'Corrected draft'}]}],usage:{input_tokens:1,output_tokens:1}});};
  try{let r=await f.call('recording-summarize',{id,topic:'topic-0001'});assert.equal((await r.json()).summary['topic-0001'].content,'Original reviewed');assert.equal(calls,0);r=await f.call('recording-summarize',{id,topic:'topic-0001',regenerate:true});assert.equal(r.status,200);const s=await r.json();assert.equal(s.summary['topic-0001'].content,'Corrected draft');assert.equal(s.summary['topic-0001'].status,'draft');assert.equal(s.summaryHistory[0].content,'Original reviewed');assert.equal(s.summaryHistory[0].status,'reviewed');assert.equal(calls,1);}finally{globalThis.fetch=old;}
 });
+
+test('floating quick switch follows last classified participants and keeps unclassified last in quick group',()=>{
+ const c=nativeContext();vm.runInContext(`researchRoomState.rooms={members:[{email:'a@test',name:'학생 A'},{email:'b@test',name:'학생 B'}],topics:[{id:'a',title:'A',viewers:['a@test','owner@example.test']},{id:'ab',title:'AB',viewers:['a@test','b@test']},{id:'b',title:'B',viewers:['b@test']},{id:'owner',title:'Owner',viewers:['owner@example.test']},{id:'old',title:'Old',viewers:['a@test'],archived:true}]};meetingRecorder.active=true;meetingRecorder.selected='a';meetingRecorder.session={markers:[{topic:'a',at:0}]};`,c);
+ const read=()=>JSON.parse(vm.runInContext('JSON.stringify(mrQuickTopics())',c));
+ assert.deepEqual(read().topics.map(t=>t.id),['a','ab','__unclassified__','b','owner']);
+ assert.deepEqual(read().names,['학생 A']);
+ vm.runInContext("meetingRecorder.session.markers.push({topic:'b',at:5},{topic:null,at:10});meetingRecorder.selected=null",c);
+ assert.deepEqual(read().topics.filter(t=>t.quick==='true').map(t=>t.id),['ab','b','__unclassified__']);
+ assert.deepEqual(read().names,['학생 B']);
+ vm.runInContext("meetingRecorder.session.markers=[{topic:null,at:0}]",c);
+ assert.deepEqual(read().topics.filter(t=>t.quick==='true').map(t=>t.id),['__unclassified__']);
+});

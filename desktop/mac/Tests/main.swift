@@ -1,0 +1,35 @@
+import Foundation
+func check(_ value: @autoclosure () -> Bool, _ label: String) { precondition(value(), label); print("PASS: " + label) }
+let a = LabNotice(id:"a",type:"papers",title:"첫 논문",label:"논문 등록",at:"2026-10-16T00:00:00Z")
+let b = LabNotice(id:"b",type:"papers",title:"새 논문",label:"논문 수정",at:"2026-10-16T01:00:00Z")
+var ledger = SeenLedger(ids:nil)
+check(ledger.observe([a]).isEmpty,"first login does not flood historical notifications")
+check(ledger.observe([b,a]).map(\.id) == ["b"],"new notification delivered once")
+check(ledger.observe([b,a]).isEmpty,"duplicate feed suppressed")
+var restored = SeenLedger(ids:ledger.ids)
+check(restored.observe([b,a]).isEmpty,"restart retains seen state")
+var other = SeenLedger(ids:nil)
+check(other.observe([b,a]).isEmpty,"new account establishes independent baseline")
+check(Lab.accountKey("A@EXAMPLE.COM") == Lab.accountKey("a@example.com"),"account normalization")
+check(Lab.accountKey("a@example.com") != Lab.accountKey("b@example.com"),"account isolation")
+check(!Lab.isSite(URL(string:"https://nisml.ajou.ac.kr.attacker.example/")!),"reject hostname suffix spoof")
+check(!Lab.isSite(URL(string:"http://nisml.ajou.ac.kr/")!),"reject insecure origin")
+check(!Lab.isSite(URL(string:"https://nisml.ajou.ac.kr:8443/")!),"reject different port")
+let target=Lab.target(type:"papers",title:"A & B # α")
+check(URLComponents(url:target,resolvingAgainstBaseURL:false)!.queryItems!.first(where:{$0.name=="q"})!.value == "A & B # α","notification deep link encoding")
+func cookie(_ domain:String,_ path:String)->HTTPCookie { HTTPCookie(properties:[.domain:domain,.path:path,.name:"test",.value:"dummy",.secure:"TRUE"])! }
+let all=[cookie("nisml.ajou.ac.kr","/"),cookie("accounts.google.com","/"),cookie("nisml.ajou.ac.kr","/other"),cookie(".ajou.ac.kr","/dashboard")]
+check(Lab.matchingCookies(all,url:URL(string:"https://nisml.ajou.ac.kr/dashboard/api/notifications")!).count == 2,"only own origin and valid path cookies used")
+check(Lab.matchingCookies(all,url:URL(string:"https://accounts.google.com/")!).isEmpty,"no cookies sent to external endpoints")
+
+check(!Lab.shouldRevealOnNotification(windowVisible:true,miniaturized:false,appHidden:false),"notification click leaves open window untouched")
+check(Lab.shouldRevealOnNotification(windowVisible:false,miniaturized:false,appHidden:false),"notification click reveals closed window")
+check(Lab.shouldRevealOnNotification(windowVisible:true,miniaturized:true,appHidden:false),"notification click restores minimized window")
+check(Lab.shouldRevealOnNotification(windowVisible:true,miniaturized:false,appHidden:true),"notification click restores hidden app")
+let history = (0..<8).map { LabNotice(id:"h\($0)",type:"groupMeetings",title:"Meeting",label:"일정 등록",at:"2026-10-18T0\($0):00:00Z") }
+check(recentNotices(history + history).map(\.id) == ["h7","h6","h5","h4","h3"],"recent history is newest first, deduplicated, limited to five")
+check(Lab.target(type:"groupMeetings",title:"Meeting").absoluteString.contains("view=groupMeetings"),"schedule notification opens schedule tab")
+check(Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/dashboard")!),"current hosted dashboard native bridge")
+check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/dashboard-other")!),"reject similar path for recorder bridge")
+check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site.attacker.example/dashboard")!),"reject spoofed native bridge origin")
+check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/")!),"homepage cannot read meeting recordings")
