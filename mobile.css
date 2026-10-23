@@ -999,3 +999,15 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 /* Champagne gold selection stays visible above the cover and on hover. */
 #researchRoomRoot .rr-topic.selected,#researchRoomRoot .rr-topic.selected:hover,[data-theme=dark] #researchRoomRoot .rr-topic.selected{border-color:#c5a66c;box-shadow:0 0 0 1px #c5a66c}
 #researchRoomRoot .rr-topic.selected::after{content:"";position:absolute;inset:0;border:2px solid #c5a66c;border-radius:inherit;pointer-events:none;z-index:3}
+
+/* Mobile research layout: full-width sections, two-column topic picker. */
+@media(max-width:760px){
+ #researchRoomRoot .rr-workspace,#researchRoomRoot.mr-owner .rr-workspace{display:flex;flex-direction:column;align-items:stretch;width:100%;min-width:0;gap:0}
+ #researchRoomRoot .rr-sidebar,#researchRoomRoot.mr-owner .rr-sidebar{width:100%;max-width:none;min-width:0;box-sizing:border-box;align-self:stretch}
+ #researchRoomRoot .rr-topic-list,#researchRoomRoot.mr-owner .rr-topic-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;min-width:0;overflow:visible}
+ #researchRoomRoot .rr-topic,#researchRoomRoot.mr-owner .rr-topic{width:100%;min-width:0;max-width:none;margin:0;box-sizing:border-box;min-height:82px;padding:10px}
+ #researchRoomRoot .rr-topic strong{font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+ #researchRoomRoot .rr-student-chips{flex-wrap:wrap;gap:4px}
+ #researchRoomRoot .rr-main,#researchRoomRoot #rrContent,#researchRoomRoot .mr-controls{width:100%;max-width:none;min-width:0;box-sizing:border-box}
+ #researchRoomRoot .mr-summary-grid{grid-template-columns:minmax(0,1fr)}
+}

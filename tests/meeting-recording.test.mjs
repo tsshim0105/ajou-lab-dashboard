@@ -209,3 +209,13 @@ test('in-flight transcription cannot revive a cancelled meeting',async()=>{
  globalThis.fetch=async()=>{signal();await pending;return Response.json({duration:40,segments:snap.segments});};
  try{const work=f.call('recording-transcribe',{id});await started;assert.equal((await f.call('recording-cancel',{id})).status,200);finish();await work;const result=await(await f.call('recording-detail?id='+id)).json();assert.equal(result.status,'cancelled');assert.deepEqual(result.segments,[]);assert.deepEqual(result.summary,{});assert.equal(result.processing,null);}finally{finish();globalThis.fetch=old;}
 });
+
+test('history marks only topics with nonblank transcripts and does not expose transcript text',async()=>{
+ const f=fixture();await create(f);let rows=(await (await f.call('recording-list')).json()).meetings;assert.deepEqual(rows[0].transcriptTopics,[]);
+ await f.call('recording-save',{...snap,segments:[snap.segments[0],{...snap.segments[1],text:'   '}]});
+ rows=(await (await f.call('recording-list')).json()).meetings;assert.deepEqual(rows[0].transcriptTopics,['topic-0001']);assert.equal(rows[0].segments,undefined);
+});
+test('summary date filter excludes empty and cancelled meetings per topic',()=>{
+ const context=vm.createContext({console,Blob,setInterval(){},window:{addEventListener(){}},document:{}});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),context);
+ for(const [record,key,expected] of [[{markers,segments:[]},'topic-0001',false],[{markers,segments:[snap.segments[0]]},'topic-0002',false],[{markers,segments:[snap.segments[0]]},'topic-0001',true],[{transcriptTopics:['topic-0001']},'topic-0001',true],[{summary:{'topic-0001':{content:'saved summary'}}},'topic-0001',true],[{status:'cancelled',transcriptTopics:['topic-0001']},'topic-0001',false]]){context.record=record;context.key=key;assert.equal(!!vm.runInContext('mrHasMeetingContent(record,key)',context),expected);}
+});
