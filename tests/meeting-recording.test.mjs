@@ -120,3 +120,55 @@ test('floating quick switch follows last classified participants and keeps uncla
  vm.runInContext("meetingRecorder.session.markers=[{topic:null,at:0}]",c);
  assert.deepEqual(read().topics.filter(t=>t.quick==='true').map(t=>t.id),['__unclassified__']);
 });
+
+test('five-minute live queue survives capture updates, isolates next meeting, deletes audio only after final transcript',async()=>{
+ const f=fixture();await create(f);f.env.OPENAI_API_KEY='test-secret';const deleted=[];
+ f.env.BUCKET.delete=async keys=>{deleted.push(...keys);};
+ const parts=[{first:0,count:1,start:0,end:8,mime:'audio/webm'},{first:1,count:1,start:8,end:300,mime:'audio/webm'}];
+ for(let index=0;index<2;index++)await f.call('recording-audio',{id,index,base64:btoa('part'+index)});
+ let r=await f.call('recording-save',{...snap,duration:305,segments:[],status:'recording',audioCount:2,audioParts:parts});assert.equal(r.status,200);
+ await f.call('recording-enqueue',{id});
+ const old=globalThis.fetch;let calls=0;
+ globalThis.fetch=async(url,init)=>{if(url.includes('/models/'))return Response.json({});if(url.includes('transcriptions')){calls++;
+  if(calls===2){assert.equal(init.body.get('known_speaker_names[]'),'professor');let latest=await(await f.call('recording-detail?id='+id)).json();assert.equal((await f.call('recording-save',{...latest,duration:450,markers:[...latest.markers,{at:320,topic:'topic-0002',title:'B'}]})).status,200);}
+  return Response.json({segments:[{speaker:calls===1?'A':'professor',start:calls===3?30:0,end:calls===3?32:2,text:'테스트 발언'}]});}
+ return Response.json({status:'completed',output:[{content:[{type:'output_text',text:'회의 요약 초안'}]}],usage:{input_tokens:1,output_tokens:1}});};
+ try{
+  let s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.completedParts,1);assert.equal(s.status,'recording');assert.equal(deleted.length,0);
+  s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.completedParts,2);assert.equal(s.duration,450);assert.equal(s.segments[1].start,8);assert.equal(s.segments[1].speaker,'speaker-0');assert.equal(deleted.length,0);
+  s=await(await f.call('recording-work',{id})).json();assert.equal(s.processing.status,'waiting');
+  assert.equal((await f.call('recording-audio',{id,index:2,base64:btoa('last')})).status,200);
+  s=await(await f.call('recording-detail?id='+id)).json();r=await f.call('recording-save',{...s,status:'ended',audioCount:3,audioParts:[...parts,{first:2,count:1,start:300,end:450,mime:'audio/webm'}]});assert.equal(r.status,200);
+  await f.call('recording-create',{id:'next-meeting-001',markers:[markers[0]],mime:'audio/webm'});
+  await f.call('recording-enqueue',{id});s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.status,'completed');assert.ok(s.audioDeletedAt);assert.equal(deleted.length,3);
+  assert.equal((await(await f.call('recording-detail?id=next-meeting-001')).json()).status,'recording');
+  for(let i=0;i<5&&s.processing.status!=='completed';i++)s=await(await f.call('recording-work',{id})).json();assert.equal(s.processing.status,'completed');assert.equal(calls,3);assert.ok(s.summary['topic-0001']);assert.ok(s.summary['topic-0002']);
+  assert.equal((await f.call('recording-audio',{id,index:3,base64:btoa('unexpected')})).status,409);
+ }finally{globalThis.fetch=old;}
+});
+test('recordings longer than one hour are valid; finalized segment manifest cannot be rewritten',async()=>{
+ assert.equal(validateMeetingSnapshot({...snap,duration:10800}).duration,10800);
+ const f=fixture();await create(f);const part={first:0,count:1,start:0,end:300,mime:'audio/webm'};
+ await f.call('recording-save',{...snap,duration:600,status:'recording',audioParts:[part]});
+ assert.equal((await f.call('recording-save',{...snap,version:1,duration:600,audioParts:[{...part,end:299}]})).status,409);
+ assert.equal((await f.call('recording-enqueue',{id},STUDENT)).status,403);
+ assert.equal((await f.call('recording-work',{id},STUDENT)).status,403);
+});
+test('browser rotation starts replacement before stopping old recorder and never stops microphone',async()=>{
+ const calls=[];let now=300000;
+ class Recorder{constructor(){this.state='inactive';}start(){calls.push('start');this.state='recording';}stop(){calls.push('stop');this.state='inactive';this.ondataavailable({data:new Blob(['audio'])});this.onstop();}}
+ const c=vm.createContext({console,Blob,MediaRecorder:Recorder,setInterval(){},setTimeout,window:{addEventListener(){}},document:{},admin:()=>true,user:{email:'owner'},performance:{now:()=>now}});
+ vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);
+ vm.runInContext("mrPaint=()=>{};mrChanged=async()=>{};mrLocal=async()=>{};mrSync=async()=>{};Object.assign(meetingRecorder,{session:{id:'session-1',mime:'audio/webm',audioParts:[]},active:true,clockStarted:0,stream:{},audioChain:Promise.resolve()});mrBeginPart(8);",c);
+ await vm.runInContext('mrRotatePart();meetingRecorder.audioChain',c);await new Promise(r=>setTimeout(r,0));assert.deepEqual(calls,['start','start','stop']);assert.equal(vm.runInContext('meetingRecorder.active',c),true);assert.equal(vm.runInContext('meetingRecorder.recorder.boundary',c),600);
+});
+test('failed AI calls retain audio; successful transcript cleanup retries after storage outage',async()=>{
+ const f=fixture();await create(f);await f.call('recording-audio',{id,index:0,base64:btoa('audio')});await f.call('recording-save',{...snap,segments:[]});f.env.OPENAI_API_KEY='test-secret';let deleteAttempts=0,deleted=false,failAPI=true;
+ f.env.BUCKET.delete=async()=>{deleteAttempts++;if(deleteAttempts===1)throw Error('storage offline');deleted=true;};
+ const old=globalThis.fetch;globalThis.fetch=async url=>url.includes('/models/')?Response.json({}):failAPI?new Response('',{status:400}):Response.json({segments:[{speaker:'A',start:0,end:2,text:'hello'}]});
+ try{await f.call('recording-enqueue',{id});let s=await(await f.call('recording-work',{id})).json();assert.equal(s.processing.status,'failed');assert.equal(deleteAttempts,0);assert.equal((await(await f.call('recording-enqueue',{id})).json()).processing.status,'failed');
+ failAPI=false;await f.call('recording-enqueue',{id,retry:true});s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.status,'completed');assert.equal(s.audioDeletedAt,undefined);assert.equal(deleted,false);
+ s=await(await f.call('recording-clean-audio',{id})).json();assert.ok(s.audioDeletedAt);assert.equal(deleted,true);
+ assert.equal((await f.call('recording-discard-transcript',{id,version:s.version})).status,409); // queued summary must finish before destructive editing
+ }finally{globalThis.fetch=old;}
+});
