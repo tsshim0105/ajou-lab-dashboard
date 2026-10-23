@@ -9,12 +9,16 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate {
     lazy var meeting = MeetingController(owner: self)
+    let meetingHotKey = MeetingHotKey()
+    var meetingHotKeyStatus: OSStatus = noErr
     var window: NSWindow!
     var web: WKWebView!
     var statusItem: NSStatusItem!
     var statusLine = NSTextField(labelWithString: "로그인 후 알림을 연결합니다")
     var addressLine = NSTextField(labelWithString: Lab.home.absoluteString)
     var timer: Timer?
+    var updating = false
+    var updateItems: [NSMenuItem] = []
     var polling = false
     var paused = false
     var generation = 0
@@ -49,8 +53,11 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         NSApp.setActivationPolicy(.regular)
         center.delegate = self
         makeMenu()
+        meetingHotKey.onToggle = { [weak self] in self?.toggleMeetingRecording() }
+        meetingHotKeyStatus = meetingHotKey.register()
         makeWindow()
         showDashboard()
+        if meetingHotKeyStatus != noErr { alert("녹음 단축키 등록 실패", "⌃⌥⌘R을 등록하지 못했습니다. 다른 앱에서 같은 단축키를 쓰는지 확인해주세요. 플로팅 바 버튼은 계속 사용할 수 있습니다.") }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in Task { @MainActor in await self?.poll() } }
         timer?.tolerance = 10
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(woke), name: NSWorkspace.didWakeNotification, object: nil)
@@ -65,6 +72,11 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "NISML Dashboard 종료", action: #selector(quit), keyEquivalent: "q").target = self
         appItem.submenu = appMenu
+        let fileItem = NSMenuItem(title: "파일", action: nil, keyEquivalent: "")
+        let fileMenu = NSMenu(title: "파일")
+        let closeItem = NSMenuItem(title: "창 닫기", action: #selector(closeActiveWindow), keyEquivalent: "w")
+        closeItem.keyEquivalentModifierMask = [.command]; closeItem.target = self
+        fileMenu.addItem(closeItem); fileItem.submenu = fileMenu; main.addItem(fileItem)
         let edit = NSMenuItem(title: "편집", action: nil, keyEquivalent: ""); let edits = NSMenu()
         for (title, action, key) in [("복사", "copy:", "c"), ("붙여넣기", "paste:", "v"), ("잘라내기", "cut:", "x"), ("전체 선택", "selectAll:", "a"), ("실행 취소", "undo:", "z")] { edits.addItem(withTitle: title, action: Selector(action), keyEquivalent: key) }
         edit.submenu = edits; main.addItem(edit); NSApp.mainMenu = main
@@ -81,6 +93,8 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         _ = item("홈페이지 열기", #selector(openHomepage))
         _ = item("대시보드 열기", #selector(showDashboard))
         _ = item("최근 알림 보기", #selector(showRecentNotifications))
+        _ = item("녹음 일시정지 / 재개  ⌃⌥⌘R", #selector(toggleMeetingRecording))
+        updateItems.append(item("업데이트 확인", #selector(checkForUpdates)))
         _ = item("로그아웃", #selector(logout))
         _ = item("앱 완전종료", #selector(quit))
         statusItem.menu = menu
@@ -114,6 +128,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         item.state = SMAppService.mainApp.status == .enabled ? .on : .off
         loginItems.append(item)
         addCommand(menu, "브라우저에서 대시보드 열기", #selector(openBrowser))
+        updateItems.append(addCommand(menu, "업데이트 확인", #selector(checkForUpdates)))
         return menu
     }
     func iconButton(_ symbol: String, label: String, action: Selector) -> NSButton {
@@ -190,6 +205,55 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     @objc func reload() { guard !recordingProtected() else { return }; web.reload() }
     @objc func openHomepage() { NSWorkspace.shared.open(URL(string: "https://nisml.ajou.ac.kr/")!) }
     @objc func openBrowser() { NSWorkspace.shared.open(Lab.home) }
+    @objc func checkForUpdates() {
+        guard !updating else{return};updating=true
+        updateItems.forEach { $0.title="업데이트 확인 중…" }
+        Task { @MainActor in
+            let config=URLSessionConfiguration.ephemeral
+            config.httpCookieStorage=nil;config.httpShouldSetCookies=false;config.urlCache=nil
+            config.timeoutIntervalForRequest=60;config.timeoutIntervalForResource=300
+            let updateSession=URLSession(configuration:config,delegate:redirectDelegate,delegateQueue:nil)
+            defer { updateSession.invalidateAndCancel();updating=false;updateItems.forEach { $0.title="업데이트 확인" } }
+            do {
+                let manifest=URL(string:"/downloads/manifest",relativeTo:Lab.home)!.absoluteURL
+                let (data,response)=try await updateSession.data(for:URLRequest(url:manifest,cachePolicy:.reloadIgnoringLocalCacheData))
+                guard (response as? HTTPURLResponse)?.statusCode == 200,data.count < 100000 else{throw updateError("버전 정보를 확인하지 못했습니다.")}
+                guard let release=try JSONDecoder().decode(DesktopReleases.self,from:data).mac,let url=release.downloadURL else{throw updateError("올바른 Mac 업데이트 정보가 없습니다.")}
+                let current=Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "0.0.0"
+                guard Lab.isNewer(release.version,than:current) else{alert("최신 버전입니다", "현재 설치된 버전: \(current)");return}
+                updateItems.forEach { $0.title="v\(release.version) 다운로드 중…" }
+                let (temporary,result)=try await updateSession.download(for:URLRequest(url:url,cachePolicy:.reloadIgnoringLocalCacheData))
+                defer { try? FileManager.default.removeItem(at:temporary) }
+                guard (result as? HTTPURLResponse)?.statusCode == 200 else{throw updateError("설치 파일을 다운로드하지 못했습니다.")}
+                let bytes=try Data(contentsOf:temporary,options:.mappedIfSafe)
+                guard release.matches(bytes) else{throw updateError("파일 검증에 실패했습니다. 다시 업데이트를 확인해주세요.")}
+                let folder=FileManager.default.urls(for:.downloadsDirectory,in:.userDomainMask)[0]
+                try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:true)
+                var destination=folder.appendingPathComponent(url.lastPathComponent)
+                if FileManager.default.fileExists(atPath:destination.path) {
+                    if let existing=try? Data(contentsOf:destination,options:.mappedIfSafe),release.matches(existing) {
+                        NSWorkspace.shared.activateFileViewerSelecting([destination]);alert("업데이트 다운로드 완료", "v\(release.version) 설치 파일이 다운로드 폴더에 있습니다. 회의 녹음을 마친 뒤 앱을 완전히 종료하고 교체해주세요.");return
+                    }
+                    destination=folder.appendingPathComponent("NISML-Dashboard-\(release.version)-\(UUID().uuidString.prefix(8)).dmg")
+                }
+                try FileManager.default.moveItem(at:temporary,to:destination)
+                NSWorkspace.shared.activateFileViewerSelecting([destination])
+                alert("업데이트 다운로드 완료", "v\(release.version) 설치 파일을 다운로드 폴더에 저장했습니다. 회의 녹음을 마친 뒤 앱을 완전히 종료하고 교체해주세요.")
+            } catch { alert("업데이트 확인 실패",error.localizedDescription+"\n잠시 후 다시 시도하거나 브라우저에서 다운로드해주세요.") }
+        }
+    }
+    func updateError(_ text:String)->NSError { NSError(domain:"NISMLUpdate",code:1,userInfo:[NSLocalizedDescriptionKey:text]) }
+    @objc func toggleMeetingRecording() {
+        guard meeting.recording, !meeting.commandPending, !meeting.model.working else { return }
+        meeting.command("pause", nil)
+    }
+    func applicationWillTerminate(_ notification: Notification) { meetingHotKey.unregister() }
+    @objc func closeActiveWindow() {
+        // Preserve native recording and tray lifetime; use the red close button's path.
+        if let active=NSApp.keyWindow, active !== meeting.panel, active.styleMask.contains(.closable) {
+            active.performClose(nil)
+        } else { window?.performClose(nil) }
+    }
     @objc func quit() { NSApp.terminate(nil) }
     @objc func woke() { Task { await poll() } }
     @objc func checkNow() { Task { await poll() } }
@@ -346,6 +410,9 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { if (error as NSError).code != NSURLErrorCancelled { setStatus("페이지 연결 실패 · 새로고침을 눌러주세요") } }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if let url=navigationAction.request.url,Lab.isInstaller(url) {
+            NSWorkspace.shared.open(url);decisionHandler(.cancel);return
+        }
         if webView === web && navigationAction.targetFrame?.isMainFrame == true && meeting.protectsSession { decisionHandler(.cancel); setStatus("녹음 저장 후 페이지를 이동할 수 있습니다"); return }
         guard let url = navigationAction.request.url else { decisionHandler(.cancel); return }
         if url.absoluteString == "about:blank" { decisionHandler(.allow); return }
@@ -360,6 +427,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         } else { decisionHandler(.allow) }
     }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url=navigationAction.request.url,Lab.isInstaller(url) { NSWorkspace.shared.open(url);return nil }
         let popup = WKWebView(frame: .zero, configuration: configuration); popup.navigationDelegate = self; popup.uiDelegate = self
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 740), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         w.title = "NISML · 로그인"; w.contentView = popup; w.isReleasedWhenClosed = false; w.center(); w.makeKeyAndOrderFront(nil); popups.append(w); return popup

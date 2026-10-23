@@ -38,6 +38,15 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
  }
  const current=await read(id);
+ if(action==='recording-cancel'){
+  if(Object.values(current.summary||{}).some(x=>x.status==='reviewed'))throw mrFail('확정된 회의는 취소할 수 없습니다.',409);
+  const next={...current,status:'cancelled',processing:null,segments:[],speakers:{},summary:{},summaryProgress:{},cancelledAt:new Date().toISOString()};delete next.version;
+  const saved=await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(next),key,current.version).run();
+  if(!saved.meta?.changes)throw mrFail('회의 상태가 변경되었습니다. 취소를 다시 시도해주세요.',409);
+  await purgeMeetingAudio(env,next);return reply(await read(id));
+ }
+ if(current.status==='cancelled')throw mrFail('취소된 회의입니다.',409);
+
 
  if(action==='recording-enqueue'){
   if(!current.audioParts?.length&&!['ended','interrupted'].includes(current.status))throw mrFail('완료된 녹음 구간을 먼저 저장해주세요.',409);
@@ -139,6 +148,8 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
    if(!response.ok){if(response.status>=400&&response.status<500){await db.prepare("UPDATE research_jobs SET status='failed',reserve=0 WHERE id=?").bind(jobId).run();}throw mrFail('OpenAI 요청이 완료되지 않았습니다 ('+response.status+'). 원본 기록은 보관되어 있습니다.',502);}
    const data=await response.json(),latest=await read(id);const updated={...latest};delete updated.version;
    let cost=reserve,usage={};
+   if(latest.status==='cancelled'){await helpers.settleResearchJob(db,jobId,reserve,{cancelled:true,estimated:true});return reply(latest);}
+
    if(transcribe){
     if(!Array.isArray(data.segments))throw mrFail('화자별 전사 결과가 반환되지 않았습니다.',502);
     const previous=partIndex?latest.segments:[],speakers=new Map();let nextSpeaker=Math.max(0,...previous.map(x=>Number(x.speaker.replace('speaker-',''))||0))+1;
@@ -148,7 +159,7 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
     updated.transcription={status:['ended','interrupted'].includes(latest.status)&&partIndex+1===(latest.audioParts?.length||parts.length)?'completed':'partial',completedParts:partIndex+1,totalParts:parts.length,model,created:new Date().toISOString()};
     cost=Math.ceil(Math.max(part.end-part.start,Number(data.duration)||0)/60*6000);usage={transcription:cost,estimated:true};
    }else{if(data.status&&data.status!=='completed')throw mrFail('요약이 완성되지 않았습니다. 원문은 보관되어 있습니다.',502);const content=(data.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n');if(!content)throw mrFail('요약이 반환되지 않았습니다.',502);if(latest.summary?.[topic])updated.summaryHistory=[...(latest.summaryHistory||[]),{topic,...latest.summary[topic]}];const contents=[...(latest.summaryProgress?.[topic]?.contents||[]),content];updated.summaryProgress={...latest.summaryProgress,[topic]:{contents,total:summaryTotal}};if(contents.length===summaryTotal){updated.summary={...latest.summary,[topic]:{content:contents.join('\n\n'),status:'draft',model,updated:new Date().toISOString(),notificationAt:new Date().toISOString(),notificationEpoch:current.summaryEpoch||0}};delete updated.summaryProgress[topic];}cost=Math.ceil((data.usage?.input_tokens||0)*2.5+(data.usage?.output_tokens||0)*10)||reserve;usage={input:Math.ceil((data.usage?.input_tokens||0)*2.5),output:Math.ceil((data.usage?.output_tokens||0)*10),estimated:true};}
-   const saved=transcribe?await db.prepare("UPDATE research_records SET payload=json_set(payload,'$.segments',json(?),'$.speakers',json(?),'$.transcription',json(?)),version=version+1 WHERE id=? AND COALESCE(json_extract(payload,'$.transcription.completedParts'),0)=?").bind(JSON.stringify(updated.segments),JSON.stringify(updated.speakers),JSON.stringify(updated.transcription),key,partIndex).run():await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(updated),key,latest.version).run();if(!saved.meta?.changes)throw mrFail('처리 중 회의가 수정되었습니다. 원본은 보관되어 있습니다.',409);
+   const saved=transcribe?await db.prepare("UPDATE research_records SET payload=json_set(payload,'$.segments',json(?),'$.speakers',json(?),'$.transcription',json(?)),version=version+1 WHERE id=? AND COALESCE(json_extract(payload,'$.transcription.completedParts'),0)=? AND json_extract(payload,'$.status')!='cancelled'").bind(JSON.stringify(updated.segments),JSON.stringify(updated.speakers),JSON.stringify(updated.transcription),key,partIndex).run():await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(updated),key,latest.version).run();if(!saved.meta?.changes)throw mrFail('처리 중 회의가 수정되었습니다. 원본은 보관되어 있습니다.',409);
    await helpers.settleResearchJob(db,jobId,cost,usage);if(transcribe&&updated.transcription.status==='completed')await purgeMeetingAudio(env,await read(id));return reply(await read(id));
   }catch(e){await db.prepare("UPDATE research_jobs SET status='uncertain' WHERE id=? AND status='pending'").bind(jobId).run();throw e;}
  }
@@ -188,11 +199,11 @@ export function validateMeetingAudioParts(parts,count,duration){
 export function meetingTextChunks(input){const chunks=[];let part='';for(const line of input.split('\n')){if(part.length+line.length>50000&&part){chunks.push(part);part='';}part+=line+'\n';}if(part)chunks.push(part);return chunks;}
 async function meetingAudioBlob(env,id,part){const chunks=[];let size=0;for(let i=part.first;i<part.first+part.count;i++){const obj=await env.BUCKET.get('meeting-audio/'+id+'/'+i);if(!obj)throw mrFail('녹음 업로드가 완료되지 않았습니다.');const bytes=await obj.arrayBuffer();size+=bytes.byteLength;if(size>24000000)throw mrFail('이전 형식의 녹음이 전사 용량 한도를 넘습니다. 최신 앱에서 녹음해주세요.');chunks.push(bytes);}return new Blob(chunks,{type:part.mime});}
 export async function purgeMeetingAudio(env,current){
- if(current.transcription?.status!=='completed'||current.audioDeletedAt)return;
+ if((current.transcription?.status!=='completed'&&current.status!=='cancelled')||current.audioDeletedAt)return;
  if(!env.BUCKET?.delete)return;
  // The transcript has been committed before deletion. Deletion is idempotent and retryable.
  try{for(let i=0;i<(current.audioCount||0);i+=100)await env.BUCKET.delete(Array.from({length:Math.min(100,current.audioCount-i)},(_,n)=>'meeting-audio/'+current.id+'/'+(i+n)));
- await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.audioDeletedAt',?),version=version+1 WHERE id=? AND json_extract(payload,'$.transcription.status')='completed'").bind(new Date().toISOString(),'recording:'+current.id).run();
+ await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.audioDeletedAt',?),version=version+1 WHERE id=? AND (json_extract(payload,'$.transcription.status')='completed' OR json_extract(payload,'$.status')='cancelled')").bind(new Date().toISOString(),'recording:'+current.id).run();
  }catch{await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.audioCleanupPending',1) WHERE id=?").bind('recording:'+current.id).run();}
 }
 async function processMeetingQueueItem(req,env,actor,helpers,current,read,reply){
@@ -202,7 +213,7 @@ async function processMeetingQueueItem(req,env,actor,helpers,current,read,reply)
  if(current.processing.status==='attention')return reply({error:current.processing.error||'처리 결과 확인이 필요합니다.'},409);
  const key='recording:'+current.id;
  const active=await env.DB.prepare("SELECT id,status FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain') LIMIT 1").bind(key).first();
- if(active){await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=?").bind(JSON.stringify({status:'attention',error:'이전 AI 요청의 완료 여부를 확인해야 합니다. 중복 과금 방지를 위해 재전송하지 않았습니다.',updated:new Date().toISOString()}),key).run();return reply(await read(current.id));}
+ if(active){await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=? AND json_extract(payload,'$.status')!='cancelled'").bind(JSON.stringify({status:'attention',error:'이전 AI 요청의 완료 여부를 확인해야 합니다. 중복 과금 방지를 위해 재전송하지 않았습니다.',updated:new Date().toISOString()}),key).run();return reply(await read(current.id));}
  const available=current.audioParts?.length||1,done=current.transcription?.completedParts||0;
  if(['recording','paused'].includes(current.status)&&(done>=available||(current.audioParts?.at(-1)?.end||0)<300)){if(current.processing.status==='waiting')return reply(current);await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing.status','waiting'),version=version+1 WHERE id=? AND version=?").bind(key,current.version).run();return reply(await read(current.id));}
  const phase=current.transcription?.status!=='completed'?'transcribing':'summarizing';
@@ -213,8 +224,8 @@ async function processMeetingQueueItem(req,env,actor,helpers,current,read,reply)
   else{await purgeMeetingAudio(env,current);const topic=[...new Set(current.markers.map(m=>m.topic||'unclassified'))].find(t=>!current.summary?.[t]&&current.segments.some(s=>(meetingTopicAt(current.markers,s.start)||'unclassified')===t));if(topic)result=await meetingRecordingRequest(new Request(new URL('/api/ai/recording-summarize',req.url),{method:'POST',body:JSON.stringify({id:current.id,topic})}),env,actor,helpers);}
   let state={status:result?'queued':'completed',updated:new Date().toISOString()};
   if(result&&!result.ok){const body=await result.json();const uncertain=await env.DB.prepare("SELECT id FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain') LIMIT 1").bind(key).first();state={status:uncertain?'attention':'failed',error:body.error||'처리하지 못했습니다.',updated:new Date().toISOString()};}
-  await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=?").bind(JSON.stringify(state),key).run();return reply(await read(current.id));
- }catch{await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=?").bind(JSON.stringify({status:'attention',error:'연결이 중단되었습니다. 기존 요청 상태를 확인해주세요.',updated:new Date().toISOString()}),key).run();return reply(await read(current.id));}
+  await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=? AND json_extract(payload,'$.status')!='cancelled'").bind(JSON.stringify(state),key).run();return reply(await read(current.id));
+ }catch{await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.processing',json(?)),version=version+1 WHERE id=? AND json_extract(payload,'$.status')!='cancelled'").bind(JSON.stringify({status:'attention',error:'연결이 중단되었습니다. 기존 요청 상태를 확인해주세요.',updated:new Date().toISOString()}),key).run();return reply(await read(current.id));}
 }
 
 function meetingBytesEqual(a,b){return a.length===b.length&&a.every((x,i)=>x===b[i]);}
