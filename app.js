@@ -8,7 +8,7 @@ let studentPreview=false;
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['home','연구실 활동'],['groupMeetings','그룹미팅/게임나잇'],['researchRooms','연구미팅'],['papers','논문아카이브'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
+const menu=[['home','대시보드'],['groupMeetings','그룹미팅/게임나잇'],['researchRooms','연구미팅'],['papers','논문아카이브'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}

@@ -1,5 +1,5 @@
 // Mobile UI uses the existing actions and role checks; no separate account state.
-const mobileLabels={home:['현황','⌂'],groupMeetings:['그룹미팅','◷'],papers:['논문','▤'],conferences:['발표','▣'],meetingInfo:['학술대회','◷'],reagents:['시약','⚗']};
+const mobileLabels={home:['대시보드','⌂'],groupMeetings:['그룹미팅','◷'],papers:['논문','▤'],conferences:['발표','▣'],meetingInfo:['학술대회','◷'],reagents:['시약','⚗']};
 function mobileSheet(title){
  const dialog=document.createElement('dialog');dialog.className='mobile-sheet';dialog.setAttribute('aria-label',title);
  dialog.innerHTML=`<div class="mobile-sheet-heading"><h2>${esc(title)}</h2><button class="secondary" type="button" aria-label="닫기">×</button></div><div class="mobile-sheet-content"></div>`;
