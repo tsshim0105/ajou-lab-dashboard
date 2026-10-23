@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+android {
+ namespace 'kr.ac.ajou.nisml.dashboard'
+ compileSdk 36
+ defaultConfig {
+  applicationId 'kr.ac.ajou.nisml.dashboard'
+  minSdk 24
+  targetSdk 36
+        versionCode 3
+        versionName '0.1.2'
+ }
+ buildTypes { release { minifyEnabled false } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+dependencies { implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2' }

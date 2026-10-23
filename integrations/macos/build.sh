@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p build/ModuleCache build/NISML.iconset
-APP="$PWD/build/NISML Dashboard.app"
+APP="$PWD/build/NISML Hub.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 for size in 16 32 128 256 512; do
   sips -z "$size" "$size" Resources/Logo.png --out "build/NISML.iconset/icon_${size}x${size}.png" >/dev/null
@@ -17,7 +17,7 @@ for kind,name in [('icp4','icon_16x16.png'),('icp5','icon_32x32.png'),('icp6','i
     data=Path('build/NISML.iconset',name).read_bytes()
     chunks.append(kind.encode()+struct.pack('>I',len(data)+8)+data)
 body=b''.join(chunks)
-Path('build/NISML Dashboard.app/Contents/Resources/AppIcon.icns').write_bytes(b'icns'+struct.pack('>I',len(body)+8)+body)
+Path('build/NISML Hub.app/Contents/Resources/AppIcon.icns').write_bytes(b'icns'+struct.pack('>I',len(body)+8)+body)
 PYICON
 cp Resources/Logo.png "$APP/Contents/Resources/Logo.png"
 xcrun swiftc -swift-version 5 -O -target arm64-apple-macosx13.0 -module-cache-path "$PWD/build/ModuleCache" Sources/Core.swift Sources/SegmentedAudio.swift Sources/MeetingPanel.swift Sources/MeetingHotKey.swift Sources/main.swift -o "$APP/Contents/MacOS/NISMLDashboard" -framework AppKit -framework WebKit -framework UserNotifications -framework ServiceManagement -framework SwiftUI -framework AVFoundation -framework Carbon
@@ -26,12 +26,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>CFBundleIdentifier</key><string>kr.ac.ajou.nisml.dashboard.mac</string>
-<key>CFBundleName</key><string>NISML Dashboard</string>
-<key>CFBundleDisplayName</key><string>NISML Dashboard</string>
+<key>CFBundleName</key><string>NISML Hub</string>
+<key>CFBundleDisplayName</key><string>NISML Hub</string>
 <key>CFBundleExecutable</key><string>NISMLDashboard</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.7</string>
-<key>CFBundleVersion</key><string>15</string>
+<key>CFBundleShortVersionString</key><string>0.4.8</string>
+<key>CFBundleVersion</key><string>16</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSMicrophoneUsageDescription</key><string>연구미팅을 녹음하고 회의 종료 후 전사와 요약을 작성합니다.</string>

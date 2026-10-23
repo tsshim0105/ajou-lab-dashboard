@@ -70,7 +70,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     func makeMenu() {
         let main = NSMenu(); let appItem = NSMenuItem(); main.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "NISML Dashboard 종료", action: #selector(quit), keyEquivalent: "q").target = self
+        appMenu.addItem(withTitle: "NISML Hub 종료", action: #selector(quit), keyEquivalent: "q").target = self
         appItem.submenu = appMenu
         let fileItem = NSMenuItem(title: "파일", action: nil, keyEquivalent: "")
         let fileMenu = NSMenu(title: "파일")
@@ -84,7 +84,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         let image = NSImage(contentsOf: Bundle.main.url(forResource: "Logo", withExtension: "png")!)!
         image.size = NSSize(width: 20, height: 20)
         statusItem.button?.image = image
-        statusItem.button?.toolTip = "NISML Dashboard"
+        statusItem.button?.toolTip = "NISML Hub"
         let menu = NSMenu()
         func item(_ title: String, _ action: Selector) -> NSMenuItem { let i = NSMenuItem(title: title, action: action, keyEquivalent: ""); i.target = self; menu.addItem(i); return i }
         _ = item("대시보드 열기", #selector(showDashboard))
@@ -163,7 +163,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         web.navigationDelegate = self; web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 840), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
-        window.title = "NISML Dashboard"; window.minSize = NSSize(width: 720, height: 520)
+        window.title = "NISML Hub"; window.minSize = NSSize(width: 720, height: 520)
         window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         window.backgroundColor = .windowBackgroundColor
         window.isReleasedWhenClosed = false; window.delegate = self
@@ -178,7 +178,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
             iconMenu("slider.horizontal.3", label: "설정", menu: makeSettingsMenu())
         ])
         actions.orientation = .horizontal; actions.spacing = 6
-        addressLine.stringValue = "NISML Dashboard"
+        addressLine.stringValue = "NISML Hub"
         addressLine.font = .systemFont(ofSize: 13, weight: .semibold)
         addressLine.textColor = .labelColor; addressLine.alignment = .center
         addressLine.lineBreakMode = .byTruncatingMiddle
@@ -404,7 +404,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if webView === web {
-            addressLine.stringValue = web.url.map { Lab.isSite($0) ? "NISML Dashboard" : ($0.host ?? "NISML Dashboard") } ?? "NISML Dashboard"
+            addressLine.stringValue = web.url.map { Lab.isSite($0) ? "NISML Hub" : ($0.host ?? "NISML Hub") } ?? "NISML Hub"
             Task { await poll() }
         }
     }
@@ -420,7 +420,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         let host = url.host ?? ""
         let authHosts = ["auth.openai.com", "auth0.openai.com", "chatgpt.com", "accounts.google.com", "appleid.apple.com", "login.microsoftonline.com"]
         if Lab.isSite(url) || authHosts.contains(host) || host == "nisml.tsshim.chatgpt.site" {
-            if webView === web && navigationAction.targetFrame?.isMainFrame == true { addressLine.stringValue = Lab.isSite(url) ? "NISML Dashboard" : host }
+            if webView === web && navigationAction.targetFrame?.isMainFrame == true { addressLine.stringValue = Lab.isSite(url) ? "NISML Hub" : host }
             decisionHandler(.allow)
         } else if navigationAction.targetFrame?.isMainFrame == true || navigationAction.targetFrame == nil {
             NSWorkspace.shared.open(url); decisionHandler(.cancel)
@@ -433,7 +433,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         w.title = "NISML · 로그인"; w.contentView = popup; w.isReleasedWhenClosed = false; w.center(); w.makeKeyAndOrderFront(nil); popups.append(w); return popup
     }
     func webViewDidClose(_ webView: WKWebView) { popups.first(where: { $0.contentView === webView })?.close(); Task { await poll() } }
-    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) { alert("NISML Dashboard", message); completionHandler() }
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) { alert("NISML Hub", message); completionHandler() }
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) { let a = NSAlert(); a.messageText = message; a.addButton(withTitle: "확인"); a.addButton(withTitle: "취소"); completionHandler(a.runModal() == .alertFirstButtonReturn) }
     func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) { let p = NSOpenPanel(); p.allowsMultipleSelection = parameters.allowsMultipleSelection; p.canChooseDirectories = parameters.allowsDirectories; completionHandler(p.runModal() == .OK ? p.urls : nil) }
 }

@@ -140,7 +140,7 @@ final class FloatingPanel: NSPanel {
     func fail(_ text:String)->NSError { NSError(domain:"NISMLRecording",code:1,userInfo:[NSLocalizedDescriptionKey:text]) }
     func start(_ id:String) async throws {
         guard recorder == nil else { throw fail("이미 녹음 중입니다.") }
-        guard await AVCaptureDevice.requestAccess(for:.audio) else { throw fail("시스템 설정에서 NISML Dashboard의 마이크 권한을 허용해주세요.") }
+        guard await AVCaptureDevice.requestAccess(for:.audio) else { throw fail("시스템 설정에서 NISML Hub의 마이크 권한을 허용해주세요.") }
         try FileManager.default.createDirectory(at:audioDirectory,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
         let folder=try partsDirectory(id)
         guard !FileManager.default.fileExists(atPath:folder.path) else { throw fail("이 회의의 녹음 파일이 이미 있습니다.") }
