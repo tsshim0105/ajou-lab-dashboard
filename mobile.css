@@ -1038,3 +1038,6 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 .has-globe .startup-progress{position:absolute;top:calc(50% + min(145px,18.125vw));margin:0}
 .has-globe>p{position:absolute;top:calc(50% + min(164px,20.5vw));margin:0}
 @keyframes hub-final-reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* Mobile page panning stays available; two-finger page magnification is disabled. */
+@media(max-width:760px){html,body{touch-action:pan-x pan-y}}

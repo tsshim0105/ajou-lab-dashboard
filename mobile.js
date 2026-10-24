@@ -46,11 +46,13 @@ function openMobileMore(){
   try{await a.finished;}finally{a.cancel();reset();if(pullIndicator)pullIndicator.hidden=true;animating=false;}
  };
  document.addEventListener('touchstart',e=>{
-  if(!mobile()||animating||busy||e.target.closest('.rr-topic-list')||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
+  if(mobile()&&e.touches.length>1){if(e.cancelable)e.preventDefault();finish(true);return;}
+  if(!mobile()||animating||busy||e.touches.length!==1||document.querySelector('dialog[open]')||(e.target.closest('.notification-center')||(tab!=='researchRooms'&&!e.target.closest('.group-schedule,.game-night-editor')&&e.target.closest('input,textarea,select,[contenteditable]'))))return;
   const t=e.touches[0];
-  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,pull:0,canPull:!pullBlocked()&&atTop(e.target),scroller:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
- },{passive:true,capture:true});
+  gesture={x:t.clientX,y:t.clientY,dx:0,axis:null,time:performance.now(),tab,pull:0,canPull:!pullBlocked()&&atTop(e.target),scroller:tab==='researchRooms'?null:e.target.closest('.table-wrap,.meeting-sheet-wrap,#tabs')};
+ },{passive:false,capture:true});
  document.addEventListener('touchmove',e=>{
+  if(mobile()&&e.touches.length>1){if(e.cancelable)e.preventDefault();finish(true);return;}
   if(!gesture)return;if(e.touches.length!==1){finish(true);return;}
   const t=e.touches[0],dx=t.clientX-gesture.x,dy=t.clientY-gesture.y;
   if(!gesture.axis&&Math.max(Math.abs(dx),Math.abs(dy))>10)gesture.axis=Math.abs(dx)>Math.abs(dy)*1.3?'x':'y';
@@ -63,7 +65,7 @@ function openMobileMore(){
   if(gesture.axis!=='x')return;
   const scroller=gesture.scroller;
   if(scroller&&scroller.scrollWidth>scroller.clientWidth+2&&((dx>0&&scroller.scrollLeft>1)||(dx<0&&scroller.scrollLeft+scroller.clientWidth<scroller.scrollWidth-1))){gesture=null;reset();return;}
-  if(e.target.closest('.group-schedule,.game-night-editor')&&document.activeElement?.matches('input,textarea,select'))document.activeElement.blur();
+  if((tab==='researchRooms'||e.target.closest('.group-schedule,.game-night-editor'))&&document.activeElement?.matches('input,textarea,select'))document.activeElement.blur();
   e.preventDefault();suppressClickUntil=performance.now()+500;
   const keys=[...document.querySelectorAll('#tabs [data-tab]')].map(b=>b.dataset.tab),index=keys.indexOf(tab),next=keys[index+(dx<0?1:-1)];
   gesture.dx=next?dx:dx*.2;panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
@@ -113,6 +115,8 @@ function openMobileMore(){
   panel.style.willChange='transform';panel.style.transform=`translateX(${gesture.dx}px)`;
   if(Math.abs(w.x)>=100){w.done=true;finish(!next);}
  },{passive:false});
+ // Safari exposes native pinch gestures separately from Touch Events.
+ for(const type of ['gesturestart','gesturechange'])document.addEventListener(type,e=>{if(mobile()&&e.cancelable)e.preventDefault();},{passive:false,capture:true});
  document.addEventListener('touchend',()=>finish(false),{passive:true,capture:true});document.addEventListener('touchcancel',()=>finish(true),{passive:true,capture:true});
  document.addEventListener('click',e=>{if(performance.now()<suppressClickUntil){e.preventDefault();e.stopImmediatePropagation();}},true);
 })();
