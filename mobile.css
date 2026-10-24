@@ -1135,3 +1135,8 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  [data-theme=dark] .paper-mobile-compact :is(dt,.paper-compact-meta,.paper-compact-journal){color:#aabed1}
  [data-theme=dark] .paper-compact-details summary{color:#9dc4ff}
 }
+
+@media(max-width:760px){
+ .paper-compact-actions{display:flex;align-items:center;gap:5px;margin-left:auto;flex-shrink:0}
+ .paper-compact-meta .paper-compact-actions :is(button,.paper-page-link){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:54px;height:30px;min-height:30px;margin:0;padding:3px 6px;font-size:12px;line-height:1.5;border-radius:5px;white-space:nowrap}
+}
