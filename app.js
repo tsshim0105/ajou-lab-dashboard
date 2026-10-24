@@ -337,8 +337,8 @@ function sortedFundItems(funds,now=new Date()){
  return funds.map((f,fi)=>({f,fi})).sort((a,b)=>rank(a.f)-rank(b.f)||(a.f.endDate||'9999').localeCompare(b.f.endDate||'9999')||a.fi-b.fi);
 }
 
-function nameMappingRow(a={korean:'',english:''}){return `<tr><td><input name="korean" aria-label="학생 국문명" value="${esc(a.korean)}" maxlength="100" style="width:100%;min-width:110px"></td><td><input name="english" aria-label="학생 영문명" value="${esc(a.english)}" maxlength="200" style="width:100%;min-width:180px"></td><td><button type="button" class="secondary" data-remove-name>삭제</button></td></tr>`;}
-function nameMappingForm(){if(!admin())return '';return `<section class="section-card"><h2>학생 국문·영문명 관리</h2><p class="muted">국문명과 논문에 기재된 영문명을 연결하면 국문명으로 논문을 검색할 수 있습니다. 영문 표기가 여러 개면 행을 추가하세요.</p><form id="nameMappingForm"><div class="table-wrap"><table class="data-table responsive-table"><thead><tr><th>국문명</th><th>영문명</th><th>관리</th></tr></thead><tbody id="nameMappingRows">${(authorAliases().length?authorAliases():[{}]).map(nameMappingRow).join('')}</tbody></table></div><div class="toolbar"><button type="button" class="secondary" id="addNameMapping">학생 추가</button><button type="submit" class="primary green">이름 연결 저장</button></div><p role="status" id="nameMappingStatus"></p></form></section>`;}
+function nameMappingRow(a={korean:'',english:''}){return `<tr><td><input name="korean" aria-label="학생 국문명" value="${esc(a.korean)}" maxlength="100" style="width:100%;min-width:0"></td><td><input name="english" aria-label="학생 영문명" value="${esc(a.english)}" maxlength="200" style="width:100%;min-width:0"></td><td><button type="button" class="secondary" data-remove-name>삭제</button></td></tr>`;}
+function nameMappingForm(){if(!admin())return '';return `<section class="section-card"><h2>학생 국문·영문명 관리</h2><p class="muted">국문명과 논문에 기재된 영문명을 연결하면 국문명으로 논문을 검색할 수 있습니다. 영문 표기가 여러 개면 행을 추가하세요.</p><form id="nameMappingForm"><div class="table-wrap"><table class="data-table name-mapping-table"><thead><tr><th>국문명</th><th>영문명</th><th>관리</th></tr></thead><tbody id="nameMappingRows">${(authorAliases().length?authorAliases():[{}]).map(nameMappingRow).join('')}</tbody></table></div><div class="toolbar"><button type="button" class="secondary" id="addNameMapping">학생 추가</button><button type="submit" class="primary green">이름 연결 저장</button></div><p role="status" id="nameMappingStatus"></p></form></section>`;}
 function bindNameMappings(){
  const form=$('nameMappingForm'),rows=$('nameMappingRows');
  rows.onclick=e=>{const button=e.target.closest('[data-remove-name]');if(button&&!busy)button.closest('tr').remove();};
@@ -446,7 +446,7 @@ function mobilePaperCard(r,i,facts,author){
 function enhanceView(){
  coauthorResizeObserver?.disconnect();
  const panel=$('panel');panel.querySelectorAll('button').forEach(b=>{if(/수정/.test(b.textContent)){b.classList.add('edit-action');b.style.background='';}if(/삭제/.test(b.textContent))b.classList.add('delete-action');if(/CSV/.test(b.textContent)){b.classList.add('download-action');b.textContent='↓ CSV 저장';}});
- const table=panel.querySelector('.data-table');if(!table)return;
+ const table=panel.querySelector('.data-table');if(!table||table.classList.contains('name-mapping-table'))return;
  const customizable=false,hasLayouts=['papers','conferences'].includes(tab),headers=[...table.querySelectorAll('thead th')].map(e=>e.textContent),titleIndex=tab==='papers'?headers.indexOf('논문 제목'):tab==='conferences'?headers.indexOf('발표자'):0;
  const saved=preferences[tab]||{},selected=(saved.selected?[...saved.selected,...(headers.includes('공동저자')&&!saved.order?.includes('공동저자')?['공동저자']:[])]:viewDefaults(headers)).filter(h=>headers.includes(h)),order=[...new Set([...(saved.order||headers).filter(h=>headers.includes(h)),...headers])];
  if(headers.includes('공동저자')&&!saved.order?.includes('공동저자')){order.splice(order.indexOf('공동저자'),1);order.splice(order.indexOf('교신저자')+1,0,'공동저자');}

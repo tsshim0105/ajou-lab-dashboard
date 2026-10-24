@@ -1193,3 +1193,19 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 }
 
 @media(min-width:761px){.student-home-overview .year-metrics{flex:none;flex-wrap:nowrap;align-items:stretch;width:100%;min-height:0}.student-home-overview .year-metric{flex:none}}
+
+/* Keep each student's two names and removal action on a single row. */
+#nameMappingForm .table-wrap{overflow:visible;max-height:none}
+#nameMappingForm .name-mapping-table{width:100%;min-width:0;table-layout:fixed}
+#nameMappingForm th:first-child{width:28%}
+#nameMappingForm th:last-child{width:76px}
+#nameMappingForm :is(th,td){padding:7px 8px;white-space:normal;vertical-align:middle}
+#nameMappingForm input{box-sizing:border-box;width:100%;min-width:0}
+#nameMappingForm [data-remove-name]{min-width:0;white-space:nowrap;padding:8px 12px}
+@media(max-width:760px){
+ #nameMappingForm th:first-child{width:29%}
+ #nameMappingForm th:last-child{width:56px}
+ #nameMappingForm :is(th,td){padding:6px 3px;font-size:13px}
+ #nameMappingForm input{padding:8px 6px;font-size:14px}
+ #nameMappingForm [data-remove-name]{padding:8px 9px;font-size:13px}
+}
