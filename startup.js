@@ -9,7 +9,7 @@
  const loaded=document.readyState==='complete'?Promise.resolve():new Promise(resolve=>addEventListener('load',resolve,{once:true}));
  const assets=Promise.allSettled([loaded,document.fonts?.ready||Promise.resolve(),logo.decode?logo.decode():Promise.resolve()]);
  // Play the approved globe reveal, then hold the shared header lockup.
- const minimumDisplayMs=reduced?2000:3650;
+ const minimumDisplayMs=reduced?2000:4650;
  // Vector canvas stays sharp at any pixel density; no looping GIF download.
  if(!reduced){
   const canvas=document.createElement('canvas');canvas.className='startup-globe';canvas.setAttribute('aria-hidden','true');splash.prepend(canvas);
@@ -23,8 +23,8 @@
     if(!canvas.isConnected||closing)return;
     if(document.hidden){last=null;requestAnimationFrame(render);return;}
     if(last!==null)elapsed+=Math.min(100,Math.max(0,now-last));last=now;
-    const t=elapsed/1000,close=ease((t-1.65)/.7),intro=ease(t/.45);
-    const reveal=ease((t-1.95)/.55);brand.style.opacity=String(reveal);brand.style.transform=`translateY(${5*(1-reveal)}px)`;
+    const t=elapsed/1000,close=ease((t-1.65)/1.2),intro=ease(t/.45);
+    const reveal=ease((t-2.45)/.55);brand.style.opacity=String(reveal);brand.style.transform=`translateY(${5*(1-reveal)}px)`;
     const width=Math.min(800,innerWidth),height=width*440/800,dpr=Math.min(devicePixelRatio||1,3);
     if(canvas.width!==Math.round(width*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
     ctx.setTransform(canvas.width/800,0,0,canvas.height/440,0,0);ctx.clearRect(0,0,800,440);
@@ -47,7 +47,7 @@
      else{rect(8,16,79,62,12);path([[27,78],[21,95],[47,78]]);path([[29,47],[44,47]]);path([[52,47],[65,47]]);ctx.fillStyle='#5c948b';ctx.beginPath();[[88,1],[92,13],[104,17],[92,21],[88,33],[84,21],[72,17],[84,13]].forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill();}
      ctx.restore();
     });
-    if(logo.complete&&logo.naturalWidth){ctx.globalAlpha=intro*(1-ease((t-1.95)/.4));ctx.drawImage(logo,354,174,92,92);ctx.globalAlpha=1;}
+    if(logo.complete&&logo.naturalWidth){ctx.globalAlpha=intro*(1-ease((t-2.45)/.4));ctx.drawImage(logo,354,174,92,92);ctx.globalAlpha=1;}
     if(elapsed<minimumDisplayMs)requestAnimationFrame(render);else{canvas.remove();dismiss();}
    }
    play=()=>requestAnimationFrame(render);

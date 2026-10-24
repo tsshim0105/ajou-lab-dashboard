@@ -18,7 +18,7 @@ test('waits for initial data and all assets; first frame begins at zero even aft
  s.sandbox.DashboardStartup.finish();await flush();assert.equal(s.raf.length,1);
  // A hidden window cannot consume the reveal; resuming keeps the current frame.
  s.document.hidden=true;s.raf.shift()(19000);s.document.hidden=false;s.raf.shift()(29000);assert.equal(s.brand.style.opacity,'0');
- for(let i=1;i<=38;i++){if(s.raf.length)s.raf.shift()(29000+i*100);}
+ for(let i=1;i<=48;i++){if(s.raf.length)s.raf.shift()(29000+i*100);}
  assert.equal(s.app.inert,false);assert(s.classes.has('startup-leaving'));
 });
 test('network failure releases the UI without waiting indefinitely',()=>{const s=setup();for(const [f,ms] of s.timers)if(ms===20000)f();assert.equal(s.app.inert,false);});
