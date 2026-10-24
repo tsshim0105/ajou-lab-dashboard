@@ -1011,3 +1011,20 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  #researchRoomRoot .rr-main,#researchRoomRoot #rrContent,#researchRoomRoot .mr-controls{width:100%;max-width:none;min-width:0;box-sizing:border-box}
  #researchRoomRoot .mr-summary-grid{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Classic Clean: one shared lockup scale for the header and startup screen. */
+:root{--hub-symbol:64px;--hub-lab:20px;--hub-word:36px;--hub-gap:12px;--hub-divider-gap:16px}
+.header-bar>.dashboard-brand,.startup-name.dashboard-brand{gap:var(--hub-gap);font-family:Arial,'Apple SD Gothic Neo',sans-serif}
+.header-bar .dashboard-logo,.startup-brand>img{width:var(--hub-symbol);height:var(--hub-symbol);object-fit:contain;flex:none}
+.header-bar .dashboard-lab-name,.startup-name .dashboard-lab-name{font-size:var(--hub-lab);line-height:1.2;letter-spacing:-.6px;white-space:nowrap}
+.header-bar .dashboard-lab-name span,.startup-name .dashboard-lab-name span{font-weight:700;color:#587a67}
+.header-bar .dashboard-wordmark,.startup-name .dashboard-wordmark{font-size:var(--hub-word);line-height:1.15;letter-spacing:-.7px;font-weight:700;color:#073b5b;border-left:1px solid #cdd7db;margin:0;padding:0 0 0 var(--hub-divider-gap)}
+.startup-brand{gap:0;max-width:calc(100vw - 24px)}
+.startup-reveal{width:auto;overflow:visible;animation:startup-words .7s ease .3s both}
+.startup-name.dashboard-brand{width:auto;padding:0 0 0 var(--hub-gap);animation:none}
+[data-theme=dark] .header-bar .dashboard-lab-name span,[data-theme=dark] .startup-name .dashboard-lab-name span{color:#aacdb8}
+[data-theme=dark] .header-bar .dashboard-wordmark,[data-theme=dark] .startup-name .dashboard-wordmark{color:#d7ebf7;border-color:#52616c}
+@media(max-width:760px){:root{--hub-symbol:44px;--hub-lab:14px;--hub-word:25px;--hub-gap:7px;--hub-divider-gap:9px}}
+@media(max-width:480px){:root{--hub-symbol:36px;--hub-lab:12px;--hub-word:22px;--hub-gap:5px;--hub-divider-gap:7px}}
+@media(max-width:380px){:root{--hub-symbol:30px;--hub-lab:11px;--hub-word:20px;--hub-gap:4px;--hub-divider-gap:6px}}
+@media(max-width:340px){:root{--hub-symbol:26px;--hub-lab:10px;--hub-word:18px;--hub-gap:3px;--hub-divider-gap:5px}}
