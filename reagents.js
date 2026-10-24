@@ -29,11 +29,16 @@ function renderReagents(){
  if(reagentLocation!=='all'&&!locations.includes(reagentLocation))reagentLocation='all';
  return `<div class="research-title"><h1>시약관리</h1><div class="research-title-actions">${canEditResearch()?'<button class="primary" id="addReagent">시약 추가</button><label class="secondary reagent-upload" role="button" tabindex="0">↑ 엑셀 가져오기<input id="reagentUpload" type="file" accept=".xlsx" hidden></label>':''}<button class="secondary download-action" id="csv">↓ CSV 저장</button></div></div><div class="toolbar reagent-filters"><label><span class="reagent-filter-label">보관위치</span> <select id="reagentLocation"><option value="all">전체</option>${locations.map(l=>`<option value="${esc(l)}" ${l===reagentLocation?'selected':''}>${esc(l)}</option>`).join('')}</select></label><label style="flex:1"><span class="reagent-filter-label">검색</span> <input id="reagentQuery" type="search" value="${esc(reagentQuery)}" placeholder="시약명·보관위치·비고 검색"></label><button class="secondary" id="reagentReset">초기화</button></div><p id="reagentStatus" role="status"></p><p id="reagentCount" class="muted" aria-live="polite"></p><div id="reagentList"></div>`;
 }
+function reagentInventoryCard(r){
+ const amount=[String(r.capacity??'').trim(),String(r.unit??'').trim()].filter(Boolean).join(' '),quantity=String(r.quantity??'').trim();
+ return `<article class="reagent-inventory-card"><div class="reagent-inventory-heading"><div class="reagent-inventory-name">${reagentNameLinks(r)}</div>${canEditResearch()?`<button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button>`:''}</div><dl class="reagent-stock-line"><div><dt>용량</dt><dd>${esc(amount)||'—'}</dd></div><div><dt>입고 수량</dt><dd>${esc(quantity)||'—'}${/^\d+(?:\.\d+)?$/.test(quantity)?'개':''}</dd></div></dl><dl class="reagent-storage-line"><div><dt>보관 위치</dt><dd>${esc(r.location||'—')}</dd></div><div><dt>비고</dt><dd>${esc(r.note||'—')}</dd></div></dl></article>`;
+}
+
 function drawReagents(){
  const all=data.reagents||[],rows=ReagentData.filter(all,reagentQuery,reagentLocation);
  exportRows=[[...ReagentData.headers,'구매 링크'],...rows.map(r=>[...ReagentData.fields.map(k=>r[k]),(r.links||[]).join('\n')])];
  $('reagentCount').textContent=`${rows.length}개 항목 / 전체 ${all.length}개`;
- $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>k==='name'?`<div class="reagent-name-heading"><div>${reagentNameLinks(r)}</div>${canEditResearch()?`<button class="secondary edit-action reagent-mobile-edit" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button>`:''}</div>`:esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
+ $('reagentList').innerHTML=rows.length?`<div class="reagent-card-list">${rows.map(reagentInventoryCard).join('')}</div>`:'<div class="empty">선택한 조건에 해당하는 자료가 없습니다.</div>';
  $('reagentList').querySelectorAll('[data-reagent-edit]').forEach(b=>b.onclick=()=>editReagent(b.dataset.reagentEdit));
 }
 function bindReagents(){

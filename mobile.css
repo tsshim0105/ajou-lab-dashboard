@@ -1148,3 +1148,18 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  #reagentList .reagent-mobile-edit{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin:0 0 0 auto;width:54px;height:30px;min-height:30px;padding:3px 6px;font-size:12px;line-height:1.5;border-radius:5px}
  #reagentList td:has(>.reagent-actions){display:none}
 }
+
+/* Shared desktop/mobile reagent inventory: amount + unit, quantity, then storage + notes. */
+.reagent-card-list{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.reagent-inventory-card{padding:12px 14px;border:1px solid var(--edge,#d4dfe9);border-radius:12px;background:var(--surface,#fff);min-width:0}
+.reagent-inventory-heading{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+.reagent-inventory-name{flex:1;min-width:0;font-size:15px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
+.reagent-inventory-heading button{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:54px;height:30px;min-height:30px;margin:0;padding:3px 6px;font-size:12px;border-radius:5px}
+.reagent-stock-line,.reagent-storage-line{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 20px;margin:0;font-size:13px;line-height:1.5}
+.reagent-stock-line{margin-bottom:7px}
+.reagent-stock-line>div,.reagent-storage-line>div{display:flex;align-items:baseline;gap:8px;min-width:0}
+.reagent-inventory-card dt{color:var(--muted,#658095);font-size:12px;white-space:nowrap;flex-shrink:0}
+.reagent-inventory-card dd{margin:0;overflow-wrap:anywhere;min-width:0}
+.reagent-stock-line dd{font-weight:600}
+.reagent-storage-line{padding-top:7px;border-top:1px solid var(--edge,#d4dfe9)}
+@media(max-width:760px){.reagent-inventory-card{padding:11px 12px}.reagent-stock-line,.reagent-storage-line{gap:6px 12px;font-size:12px}.reagent-inventory-card dt{font-size:11px}.reagent-stock-line>div,.reagent-storage-line>div{gap:5px}.reagent-inventory-name{font-size:14px}}
