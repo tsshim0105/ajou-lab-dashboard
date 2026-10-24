@@ -33,7 +33,7 @@ function drawReagents(){
  const all=data.reagents||[],rows=ReagentData.filter(all,reagentQuery,reagentLocation);
  exportRows=[[...ReagentData.headers,'구매 링크'],...rows.map(r=>[...ReagentData.fields.map(k=>r[k]),(r.links||[]).join('\n')])];
  $('reagentCount').textContent=`${rows.length}개 항목 / 전체 ${all.length}개`;
- $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>k==='name'?reagentNameLinks(r):esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
+ $('reagentList').innerHTML=table([...ReagentData.headers,...(canEditResearch()?['관리']:[])],rows.map(r=>[...ReagentData.fields.map(k=>k==='name'?`<div class="reagent-name-heading"><div>${reagentNameLinks(r)}</div>${canEditResearch()?`<button class="secondary edit-action reagent-mobile-edit" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button>`:''}</div>`:esc(r[k]||'—')),...(canEditResearch()?[`<div class="reagent-actions"><button class="secondary edit-action" data-reagent-edit="${esc(r.id)}" aria-label="${esc(r.name)} 수정">수정</button></div>`]:[])]),['title','nowrap','nowrap','nowrap','nowrap','wide-cell','nowrap']);
  $('reagentList').querySelectorAll('[data-reagent-edit]').forEach(b=>b.onclick=()=>editReagent(b.dataset.reagentEdit));
 }
 function bindReagents(){

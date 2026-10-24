@@ -1140,3 +1140,11 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  .paper-compact-actions{display:flex;align-items:center;gap:5px;margin-left:auto;flex-shrink:0}
  .paper-compact-meta .paper-compact-actions :is(button,.paper-page-link){display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:54px;height:30px;min-height:30px;margin:0;padding:3px 6px;font-size:12px;line-height:1.5;border-radius:5px;white-space:nowrap}
 }
+
+.reagent-mobile-edit{display:none}
+@media(max-width:760px){
+ #reagentList .reagent-name-heading{display:flex;align-items:flex-start;gap:8px;width:100%;min-width:0}
+ #reagentList .reagent-name-heading>div{flex:1;min-width:0;overflow-wrap:anywhere}
+ #reagentList .reagent-mobile-edit{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin:0 0 0 auto;width:54px;height:30px;min-height:30px;padding:3px 6px;font-size:12px;line-height:1.5;border-radius:5px}
+ #reagentList td:has(>.reagent-actions){display:none}
+}
