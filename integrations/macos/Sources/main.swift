@@ -87,11 +87,11 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         statusItem.button?.toolTip = "NISML Hub"
         let menu = NSMenu()
         func item(_ title: String, _ action: Selector) -> NSMenuItem { let i = NSMenuItem(title: title, action: action, keyEquivalent: ""); i.target = self; menu.addItem(i); return i }
-        _ = item("대시보드 열기", #selector(showDashboard))
+        _ = item("Hub 열기", #selector(showDashboard))
         // Primary actions and the independent recent-notification history.
         menu.removeAllItems()
         _ = item("홈페이지 열기", #selector(openHomepage))
-        _ = item("대시보드 열기", #selector(showDashboard))
+        _ = item("Hub 열기", #selector(showDashboard))
         _ = item("최근 알림 보기", #selector(showRecentNotifications))
         _ = item("녹음 일시정지 / 재개  ⌃⌥⌘R", #selector(toggleMeetingRecording))
         updateItems.append(item("업데이트 확인", #selector(checkForUpdates)))
@@ -100,9 +100,9 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         statusItem.menu = menu
         let dashboardMenu = NSMenu()
         addCommand(dashboardMenu, "홈페이지 열기", #selector(openHomepage))
-        addCommand(dashboardMenu, "대시보드 열기", #selector(showDashboard))
+        addCommand(dashboardMenu, "Hub 열기", #selector(showDashboard))
         addCommand(dashboardMenu, "새로고침", #selector(reload), key: "r")
-        addCommand(dashboardMenu, "브라우저에서 대시보드 열기", #selector(openBrowser))
+        addCommand(dashboardMenu, "브라우저에서 Hub 열기", #selector(openBrowser))
         let alerts = makeAlertsMenu()
         let settings = makeSettingsMenu()
         for (name, submenu) in [("대시보드", dashboardMenu), ("알림", alerts), ("설정", settings)] {
@@ -127,7 +127,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         let item = addCommand(menu, "Mac 로그인 시 자동 실행", #selector(toggleLogin))
         item.state = SMAppService.mainApp.status == .enabled ? .on : .off
         loginItems.append(item)
-        addCommand(menu, "브라우저에서 대시보드 열기", #selector(openBrowser))
+        addCommand(menu, "브라우저에서 Hub 열기", #selector(openBrowser))
         updateItems.append(addCommand(menu, "업데이트 확인", #selector(checkForUpdates)))
         return menu
     }
