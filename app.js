@@ -57,8 +57,11 @@ function render(){const pageFooter=document.querySelector('.foot');if(pageFooter
  if(tab==='researchRooms'){panel.innerHTML='<div id="researchRoomRoot"></div>';mountResearchRooms();placePageFooter();return;}
  if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';syncSectionClock();placePageFooter();return;}
  if(tab==='home'){
+  const personalOverview=user.role==='student'&&!studentPreview;
+  if(personalOverview)html+='<div class="student-home-overview">';
   html+=studentMeetingCards();
   html+=yearAndGameNight();
+  if(personalOverview)html+='</div>';
   const ys=[...new Set([...p,...c].map(r=>r.year))].sort((a,b)=>b-a),counts=ys.map(y=>({year:y,p:p.filter(r=>r.year===y).length,c:c.filter(r=>r.year===y).length})),max=Math.max(1,...counts.flatMap(r=>[r.p,r.c]));
   html+='<section class="section-card recent-meetings" id="recentMeetings"><h2>최근 나의 연구미팅</h2><p class="muted">회의요약을 불러오는 중입니다.</p></section>';
   html+=`<div class="grid research-year-charts"><section class="section-card" aria-label="연도별 논문 그래프"><h2>연도별 논문</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.p,max)).join(''):'<p class="muted">등록된 논문이 없습니다.</p>'}</section><section class="section-card" aria-label="연도별 학회 발표 그래프"><h2>연도별 학회 발표</h2>${counts.length?counts.map(r=>bar(r.year+'년',r.c,max,true)).join(''):'<p class="muted">등록된 학회 발표가 없습니다.</p>'}</section></div>`;
