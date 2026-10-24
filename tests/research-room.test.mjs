@@ -173,3 +173,25 @@ test('new topic validates viewers before inserting and defaults to private',asyn
  }
  await f.call('topic',topic());assert.equal((await f.call('thread?topic=topic-0001',null,'student@example.test')).status,403);
 });
+
+test('lead researchers persist on creation, require viewing access, and are stripped from student metadata',async()=>{
+ const f=fixture(),email='student@example.test';
+ assert.equal((await f.call('topic',{...topic(),primaryResearchers:[email]})).status,400);
+ assert.equal((await f.call('topic',{...topic(),viewers:[email],primaryResearchers:[email]})).status,200);
+ const rooms=await (await f.call('rooms',null,email)).json();assert.equal(rooms.topics[0].primaryResearchers,undefined);assert.equal(rooms.topics[0].viewers,undefined);assert.equal(rooms.topics[0].viewerBadges[0].isLead,true);
+ const bootstrap=await (await f.call('bootstrap',null,email)).json();assert.equal(bootstrap.threads['topic-0001'].topic.primaryResearchers,undefined);
+ assert.equal((await f.call('topic',{...topic(),create:false,version:0,viewers:[]})).status,200);
+ const owner=await (await f.call('rooms')).json();assert.deepEqual(owner.topics[0].primaryResearchers,[]);
+});
+test('recent summaries select latest Korean meeting day, lead topics only and reviewed nonempty content',async()=>{
+ const f=fixture(),email='student@example.test';
+ for(const id of ['topic-0001','topic-0002','topic-0003'])await f.call('topic',{...topic(id),viewers:[email],primaryResearchers:id==='topic-0003'?[]:[email]});
+ const insert=(id,created,summary)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created,summary}));
+ const reviewed={status:'reviewed',content:'## 연구진행상황\n- 확인된 내용'};
+ insert('record-0001','2026-10-23T16:00:00Z',{'topic-0001':reviewed});
+ insert('record-0002','2026-10-24T01:00:00Z',{'topic-0002':reviewed});
+ insert('record-0003','2026-10-25T01:00:00Z',{'topic-0003':reviewed,'topic-0001':{...reviewed,status:'draft'},'topic-0002':{...reviewed,content:''}});
+ let result=await (await f.call('latest-meetings',null,email)).json();assert.equal(result.day,'2026-10-24');assert.equal(result.meetings.length,2);assert.ok(result.meetings.every(r=>!r.topic.viewers&&!r.topic.primaryResearchers));
+ await f.call('topic',{...topic(),create:false,version:0,viewers:[]});result=await (await f.call('latest-meetings',null,email)).json();assert.deepEqual(result.meetings.map(r=>r.topic.id),['topic-0002']);
+ await f.call('delete-topic',{id:'topic-0002',version:0});assert.deepEqual((await (await f.call('latest-meetings',null,email)).json()).meetings,[]);
+});
