@@ -2,21 +2,29 @@
 (()=>{
  const splash=document.getElementById('startupSplash'),app=document.querySelector('main.app');
  if(!splash)return;
- const started=performance.now(),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const brand=splash.querySelector('.startup-brand'),logo=splash.querySelector('.startup-brand>img');
+ let play,closing=false,requested=false;app.inert=true;
+ function dismiss(){if(closing)return;closing=true;clearTimeout(failsafe);app.inert=false;splash.classList.add('startup-leaving');setTimeout(()=>splash.remove(),reduced?0:360);}
+ const loaded=document.readyState==='complete'?Promise.resolve():new Promise(resolve=>addEventListener('load',resolve,{once:true}));
+ const assets=Promise.allSettled([loaded,document.fonts?.ready||Promise.resolve(),logo.decode?logo.decode():Promise.resolve()]);
  // Play the approved globe reveal, then hold the shared header lockup.
  const minimumDisplayMs=reduced?2000:3650;
  // Vector canvas stays sharp at any pixel density; no looping GIF download.
  if(!reduced){
   const canvas=document.createElement('canvas');canvas.className='startup-globe';canvas.setAttribute('aria-hidden','true');splash.prepend(canvas);
-  const ctx=canvas.getContext('2d'),logo=splash.querySelector('.startup-brand>img');
+  const ctx=canvas.getContext('2d');
   if(ctx){
    splash.classList.add('has-globe');
    const ease=v=>{v=Math.max(0,Math.min(1,v));return v*v*(3-2*v);};
    const mix=(a,b,t)=>a+(b-a)*t;
-   let frame;
+   let last=null,elapsed=0;
    function render(now){
-    if(!canvas.isConnected)return;
-    const t=(now-started)/1000,close=ease((t-1.65)/.7),intro=ease(t/.45);
+    if(!canvas.isConnected||closing)return;
+    if(document.hidden){last=null;requestAnimationFrame(render);return;}
+    if(last!==null)elapsed+=Math.min(100,Math.max(0,now-last));last=now;
+    const t=elapsed/1000,close=ease((t-1.65)/.7),intro=ease(t/.45);
+    const reveal=ease((t-1.95)/.55);brand.style.opacity=String(reveal);brand.style.transform=`translateY(${5*(1-reveal)}px)`;
     const width=Math.min(800,innerWidth),height=width*440/800,dpr=Math.min(devicePixelRatio||1,3);
     if(canvas.width!==Math.round(width*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);}
     ctx.setTransform(canvas.width/800,0,0,canvas.height/440,0,0);ctx.clearRect(0,0,800,440);
@@ -40,17 +48,24 @@
      ctx.restore();
     });
     if(logo.complete&&logo.naturalWidth){ctx.globalAlpha=intro*(1-ease((t-1.95)/.4));ctx.drawImage(logo,354,174,92,92);ctx.globalAlpha=1;}
-    if(t<2.5)frame=requestAnimationFrame(render);else canvas.remove();
+    if(elapsed<minimumDisplayMs)requestAnimationFrame(render);else{canvas.remove();dismiss();}
    }
-   frame=requestAnimationFrame(render);
+   play=()=>requestAnimationFrame(render);
   }
  }
- let closing=false;app.inert=true;
- function finish(){
-  if(closing)return;closing=true;clearTimeout(failsafe);
-  setTimeout(()=>{app.inert=false;splash.classList.add('startup-leaving');setTimeout(()=>splash.remove(),reduced?0:360);},Math.max(0,minimumDisplayMs-(performance.now()-started)));
+ // The dashboard calls finish only after its initial data has rendered.
+ async function finish(){
+  if(requested||closing)return;requested=true;
+  await assets;
+  if(document.hidden)await new Promise(resolve=>{const visible=()=>{if(!document.hidden){document.removeEventListener('visibilitychange',visible);resolve();}};document.addEventListener('visibilitychange',visible);});
+  if(closing)return;
+  clearTimeout(failsafe);
+  requestAnimationFrame(()=>{
+   if(closing)return;splash.classList.add('startup-playing');
+   if(play)play();else{brand.style.opacity='1';setTimeout(dismiss,200);}
+  });
  }
- // Never trap the interface after an unexpected connection or script failure.
- const failsafe=setTimeout(finish,15000);
+ // A failed network/script must never leave the app trapped behind the splash.
+ const failsafe=setTimeout(dismiss,20000);
  globalThis.DashboardStartup={finish};
 })();

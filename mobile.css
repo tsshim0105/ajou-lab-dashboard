@@ -1031,7 +1031,9 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 
 /* Approved round network globe, unfolding labels, then the existing Hub lockup. */
 .startup-globe{position:absolute;left:50%;top:50%;width:min(800px,100vw);aspect-ratio:800/440;transform:translate(-50%,-50%);pointer-events:none}
-.has-globe .startup-brand{animation:hub-final-reveal .55s ease 1.95s both}
+.startup-splash .startup-brand{opacity:0;animation:none}
+.startup-splash .startup-brand>img,.startup-splash .startup-reveal,.startup-splash .startup-name{animation:none}
+.startup-splash:not(.startup-playing) .startup-progress,.startup-splash:not(.startup-playing)>p{animation:none;opacity:0}
 .has-globe .startup-brand>img,.has-globe .startup-reveal,.has-globe .startup-name{animation:none}
 .has-globe .startup-progress{position:absolute;top:calc(50% + min(145px,18.125vw));margin:0}
 .has-globe>p{position:absolute;top:calc(50% + min(164px,20.5vw));margin:0}
