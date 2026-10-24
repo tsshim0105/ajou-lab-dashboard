@@ -1108,3 +1108,30 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  .conference-log-body dl{gap:4px}
  [data-theme=dark] .conference-mobile-location{color:#aabed1}
 }
+
+/* Mobile archive, option 3: compact cards with native accessible disclosure. */
+@media(max-width:760px){
+ html[data-active-tab="papers"] .paper-archive-list{gap:10px}
+ .paper-mobile-compact{padding:12px;border:1px solid #dadcec;border-radius:12px;background:linear-gradient(115deg,#f0edf8,#f5f6fb);color:#20394d;min-width:0}
+ .paper-mobile-compact.lab-paper{background:linear-gradient(115deg,#e5f2eb,#f0f6f3);border-color:#c6dfd1}
+ .paper-compact-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:#58738c;margin-bottom:6px}
+ .paper-compact-meta button{margin-left:auto;min-height:30px;padding:3px 8px;font-size:12px}
+ .paper-mobile-compact h2{font-size:14px;line-height:1.45;margin:0 0 5px;overflow-wrap:anywhere}
+ .paper-compact-journal{font-size:12px;line-height:1.5;margin:0 0 6px;color:#58738c;overflow-wrap:anywhere}
+ .paper-compact-journal span{font-size:11px}
+ .paper-compact-authors,.paper-compact-details dl{display:grid;gap:3px;margin:0;font-size:12px;line-height:1.5}
+ .paper-compact-authors>div,.paper-compact-details dl>div{display:grid;grid-template-columns:55px minmax(0,1fr);gap:6px}
+ .paper-compact-details dl>div{grid-template-columns:82px minmax(0,1fr)}
+ .paper-mobile-compact dt{color:#658095}.paper-mobile-compact dd{margin:0;overflow-wrap:anywhere}
+ .paper-compact-details{margin-top:8px;border-top:1px solid #cfdae580;padding-top:2px}
+ .paper-compact-details summary{cursor:pointer;font-size:12px;color:#1765c7;min-height:32px;display:flex;align-items:center;gap:7px;list-style:none}
+ .paper-compact-details summary::-webkit-details-marker{display:none}
+ .paper-compact-details summary:after{content:'⌄';font-size:16px}.paper-compact-details[open] summary:after{content:'⌃'}
+ .paper-compact-details .when-open,.paper-compact-details[open] .when-closed{display:none}.paper-compact-details[open] .when-open{display:inline}
+ .paper-compact-details summary:focus-visible{outline:2px solid #1765c7;outline-offset:2px;border-radius:4px}
+ .paper-compact-details .paper-page-link{margin-top:7px;font-size:12px}
+ [data-theme=dark] .paper-mobile-compact{background:linear-gradient(115deg,#302b42,#26394a);border-color:#52516b;color:#e4edf7}
+ [data-theme=dark] .paper-mobile-compact.lab-paper{background:linear-gradient(115deg,#214237,#26394a);border-color:#527e68}
+ [data-theme=dark] .paper-mobile-compact :is(dt,.paper-compact-meta,.paper-compact-journal){color:#aabed1}
+ [data-theme=dark] .paper-compact-details summary{color:#9dc4ff}
+}
