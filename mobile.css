@@ -1095,3 +1095,16 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  #researchRoomRoot .mr-controls>.mr-usage{grid-column:2;grid-row:4;justify-self:end;text-align:right;font-size:10px;line-height:1.4;margin:8px 0 0;max-width:155px;overflow-wrap:anywhere}
  #researchRoomRoot .mr-message:empty{display:none}
 }
+
+/* Mobile presentation cards: date, venue and edit share the compact left column. */
+.conference-mobile-location,.conference-mobile-edit{display:none!important}
+@media(max-width:760px){
+ .conference-log-card{grid-template-columns:88px minmax(0,1fr);padding:11px 12px;gap:10px}
+ .conference-log-date{min-width:0;padding:0 9px 0 0;gap:4px}
+ .conference-mobile-location{display:block!important;margin-top:3px;font-size:13px;font-weight:600;line-height:1.4;overflow-wrap:anywhere;color:#58738c}
+ .conference-log-date>.conference-mobile-edit{display:inline-flex!important;align-items:center;justify-content:center;align-self:flex-start;margin-top:5px;min-height:32px;padding:4px 9px;font-size:12px;line-height:1.4}
+ .conference-log-card>.edit-action,.conference-log-body dl>.conference-desktop-location{display:none}
+ .conference-log-name{margin:3px 0 6px}
+ .conference-log-body dl{gap:4px}
+ [data-theme=dark] .conference-mobile-location{color:#aabed1}
+}
