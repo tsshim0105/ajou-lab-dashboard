@@ -1079,3 +1079,19 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  .header-bar .dashboard-wordmark{font-size:17px;padding-left:4px}
  .header-bar .user-info .icon-control,.header-bar .user-info #notificationToggle{width:24px;min-width:24px}
 }
+
+/* Right-aligned mobile actions, shared research baseline, compact recorder usage. */
+@media(max-width:760px){
+ .research-title-actions>:first-child,.section-filter-buttons>:first-child{margin-left:auto}
+ .group-schedule>.planner-heading>button{margin-left:auto}
+ #panel:has(#researchRoomRoot){padding-top:16px}
+ #researchRoomRoot>.research-title{height:44px;min-height:44px;padding:0 0 8px;margin:0 0 12px;align-items:center}
+ #researchRoomRoot>.research-title h1{font-size:18px;line-height:1.4;margin:0;padding:0}
+ #researchRoomRoot.rr-chat-open .rr-topic-heading{grid-template-rows:34px auto;align-items:center}
+ #researchRoomRoot .rr-topic-heading>.rr-back,#researchRoomRoot .rr-topic-heading>.rr-overflow>summary{height:34px;min-height:34px}
+ #researchRoomRoot .mr-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center}
+ #researchRoomRoot .mr-controls>:is(.mr-eyebrow,.mr-clock,.mr-buttons,.mr-message){grid-column:1/-1}
+ #researchRoomRoot .mr-controls>.mr-connection:not(.mr-usage){grid-column:1;grid-row:4;min-width:0;font-size:10px;line-height:1.4;margin:8px 0 0}
+ #researchRoomRoot .mr-controls>.mr-usage{grid-column:2;grid-row:4;justify-self:end;text-align:right;font-size:10px;line-height:1.4;margin:8px 0 0;max-width:155px;overflow-wrap:anywhere}
+ #researchRoomRoot .mr-message:empty{display:none}
+}
