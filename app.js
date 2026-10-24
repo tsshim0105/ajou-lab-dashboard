@@ -57,7 +57,7 @@ function render(){const pageFooter=document.querySelector('.foot');if(pageFooter
  if(tab==='researchRooms'){panel.innerHTML='<div id="researchRoomRoot"></div>';mountResearchRooms();placePageFooter();return;}
  if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';syncSectionClock();placePageFooter();return;}
  if(tab==='home'){
-  html+=groupMeetingCards();
+  html+=studentMeetingCards();
   html+=yearAndGameNight();
   const ys=[...new Set([...p,...c].map(r=>r.year))].sort((a,b)=>b-a),counts=ys.map(y=>({year:y,p:p.filter(r=>r.year===y).length,c:c.filter(r=>r.year===y).length})),max=Math.max(1,...counts.flatMap(r=>[r.p,r.c]));
   html+='<section class="section-card recent-meetings" id="recentMeetings"><h2>최근 나의 연구미팅</h2><p class="muted">회의요약을 불러오는 중입니다.</p></section>';
@@ -488,6 +488,17 @@ function groupMeetingCountdown(date,now=new Date()){
  const day=value('year')+'-'+value('month')+'-'+value('day');
  const days=Math.round((Date.parse(date+'T00:00:00Z')-Date.parse(day+'T00:00:00Z'))/86400000);
  return days===0?'오늘':'D−'+days;
+}
+function personalGroupMeetings(name,now=new Date()){
+ const normalized=String(name||'').normalize('NFKC').replace(/\s+/g,'');
+ if(!normalized)return {paper:null,seminar:null};
+ const own=upcomingGroupMeetings(now).filter(r=>String(r[2]||'').split(/[·,，、;\n/&]+/).some(n=>n.normalize('NFKC').replace(/\s+/g,'')===normalized));
+ return {paper:own.find(r=>String(r[1]).replace(/\s+/g,'')==='논문발표')||null,seminar:own.find(r=>String(r[1]).replace(/\s+/g,'')==='랩세미나')||null};
+}
+function studentMeetingCards(now=new Date()){
+ const shared=groupMeetingCards(now);if(user.role!=='student'||studentPreview)return shared;
+ const next=personalGroupMeetings(user.name,now);
+ return '<div class="student-meeting-row">'+shared+'<section class="personal-meeting-pair" aria-label="나의 발표 일정">'+[['paper','나의 논문 발표'],['seminar','나의 랩세미나']].map(([key,title])=>{const r=next[key];return '<article class="personal-meeting-card"><h3>'+title+'</h3>'+(r?'<div class="personal-meeting-date-row"><time datetime="'+esc(r[0])+'" title="'+esc(r[0])+'">'+esc(r[0].slice(5).replace('-','.'))+'</time><span class="personal-meeting-countdown">'+groupMeetingCountdown(r[0],now)+'</span></div>':'<p class="personal-meeting-empty">예정 없음</p>')+'</article>';}).join('')+'</section></div>';
 }
 function groupMeetingCards(now=new Date()){
  const upcoming=upcomingGroupMeetings(now);
