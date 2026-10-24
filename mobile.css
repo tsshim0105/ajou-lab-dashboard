@@ -1028,3 +1028,11 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 @media(max-width:480px){:root{--hub-symbol:36px;--hub-lab:12px;--hub-word:22px;--hub-gap:5px;--hub-divider-gap:7px}}
 @media(max-width:380px){:root{--hub-symbol:30px;--hub-lab:11px;--hub-word:20px;--hub-gap:4px;--hub-divider-gap:6px}}
 @media(max-width:340px){:root{--hub-symbol:26px;--hub-lab:10px;--hub-word:18px;--hub-gap:3px;--hub-divider-gap:5px}}
+
+/* Approved round network globe, unfolding labels, then the existing Hub lockup. */
+.startup-globe{position:absolute;left:50%;top:50%;width:min(800px,100vw);aspect-ratio:800/440;transform:translate(-50%,-50%);pointer-events:none}
+.has-globe .startup-brand{animation:hub-final-reveal .55s ease 1.95s both}
+.has-globe .startup-brand>img,.has-globe .startup-reveal,.has-globe .startup-name{animation:none}
+.has-globe .startup-progress{position:absolute;top:calc(50% + min(145px,18.125vw));margin:0}
+.has-globe>p{position:absolute;top:calc(50% + min(164px,20.5vw));margin:0}
+@keyframes hub-final-reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
