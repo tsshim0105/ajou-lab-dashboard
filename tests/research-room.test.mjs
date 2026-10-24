@@ -195,3 +195,12 @@ test('recent summaries select latest Korean meeting day, lead topics only and re
  await f.call('topic',{...topic(),create:false,version:0,viewers:[]});result=await (await f.call('latest-meetings',null,email)).json();assert.deepEqual(result.meetings.map(r=>r.topic.id),['topic-0002']);
  await f.call('delete-topic',{id:'topic-0002',version:0});assert.deepEqual((await (await f.call('latest-meetings',null,email)).json()).meetings,[]);
 });
+
+test('professor preview scopes research reads to the selected student and refuses writes',async()=>{
+ const f=fixture();await f.call('topic',{...topic('shared-topic'),viewers:['student@example.test']});await f.call('topic',topic('private-topic'));
+ const q='previewStudent=student%40example.test';const rooms=await(await f.call('rooms?'+q)).json();assert.deepEqual(rooms.topics.map(t=>t.id),['shared-topic']);assert.equal(rooms.canEdit,false);
+ assert.equal((await f.call('thread?topic=private-topic&'+q)).status,403);
+ assert.equal((await f.call('topic?'+q,{...topic('blocked-topic')})).status,403);
+ assert.equal((await f.call('rooms?'+q,null,'student@example.test')).status,403);
+ const owner=await(await f.call('rooms')).json();assert.equal(owner.topics.length,2);
+});

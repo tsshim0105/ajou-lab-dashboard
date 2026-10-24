@@ -4,7 +4,9 @@ let notifications=[];
 let notificationRefreshPending=false;
 let preferences={},viewDetail=false,viewLayout="sheet",prefQueue=Promise.resolve(),writePending=false;
 let data=LabData.empty(),user={role:'student'},version=0,students=[],homepageAdmins=[],studentNames={},labLeadAuthor='',labMemberAuthors=[],tab='home',meetingGroup='all',fundTab='internal',term='2026-2 인건비(안)',busy=false,exportRows=[];
-let studentPreview=false;
+let studentPreview=false,studentPreviewEmail='',studentPreviewSnapshot=null,studentPreviewSequence=0;
+function previewURL(path){return studentPreview&&studentPreviewEmail&&!path.includes('previewStudent=')?path+(path.includes('?')?'&':'?')+'previewStudent='+encodeURIComponent(studentPreviewEmail):path;}
+function studentPreviewOptions(){return '<option value="">학생 선택</option>'+students.map(email=>'<option value="'+esc(email)+'" '+(email===studentPreviewEmail?'selected':'')+'>'+esc(studentNames[email]||email)+'</option>').join('');}
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
@@ -57,7 +59,7 @@ function render(){const pageFooter=document.querySelector('.foot');if(pageFooter
  if(tab==='researchRooms'){panel.innerHTML='<div id="researchRoomRoot"></div>';mountResearchRooms();placePageFooter();return;}
  if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';syncSectionClock();placePageFooter();return;}
  if(tab==='home'){
-  const personalOverview=user.role==='student'&&!studentPreview;
+  const personalOverview=user.role==='student'||!!studentPreviewEmail;
   if(personalOverview)html+='<div class="student-home-overview">';
   html+=studentMeetingCards();
   html+=yearAndGameNight();
@@ -93,9 +95,9 @@ function render(){const pageFooter=document.querySelector('.foot');if(pageFooter
   const headers=['이름','과정 / 장학','기준 월급','핵심연구A','기관계정','SRC','월 합계','학기 금액','확인'];const rows=rs.map(r=>[r.name,r.degree+' / '+r.scholarship,money(r.base),money(r.core),money(r.institution),money(r.src),money(r.monthly),money(r.semester),r.monthly*6!==r.semester?'월×6 불일치':r.name==='xxx'?'미정 인원':r.note]);exportRows=[headers,...rows];html+=toolbar(rows.length)+table(headers,rows.map(r=>r.map(esc)),['nowrap','nowrap','money','money','money','money','money','money','title']);
   html+='<details><summary>2026 과정별 지급 기준</summary>'+table(['과정','기본 월 인건비','BK 지원금','BK 포함 월 수령액','등록금 고려 월액'],data.standards.map(r=>[esc(r.degree),money(r.base),money(r.bk),money(r.total),money(r.afterTuition)]),['','money','money','money','money'])+'</details>';
  }else{
-  html+=`${admin()?`<section class="section-card"><h2>학생 화면 미리보기</h2><p class="muted">학생에게 보이는 연구 탭과 시약 목록과 조회 화면을 확인합니다.</p><button class="primary" id="previewStudent">학생 화면 미리보기</button></section>`:''}`+nameMappingForm()+homepageAdminSettings()+`<div class="grid">${admin()?`<div class="stack"><div class="section-card"><h2>학생 접근 계정</h2><p class="muted">학생은 네 개 연구 탭을 이용하고 논문·학회 발표를 추가·수정할 수 있습니다.</p>${studentAccountList()}<label for="students">학생 이메일 · 한 줄에 한 명</label><textarea id="students" rows="5" style="width:100%;margin:10px 0" placeholder="student@ajou.ac.kr">${esc(students.join('\n'))}</textarea><button id="saveStudents" class="primary" ${offline?'disabled':''}>접근 목록 저장</button><p class="muted">${offline?'검토용 파일에서는 계정 설정을 저장할 수 없습니다.':'Sites에서 사이트 공유 권한도 별도로 부여해야 합니다.'}</p><p class="status" id="accountStatus" role="status"></p></div></div>`:''}</div>`+desktopDownloads();
+  html+=`${admin()?`<section class="section-card"><h2>학생 화면 미리보기</h2><p class="muted">학생을 선택하면 해당 학생의 발표 일정과 공개된 연구미팅을 확인할 수 있습니다. 미리보기에서는 변경사항을 저장하지 않습니다.</p><label>학생 선택 <select id="previewStudentSelect">${studentPreviewOptions()}</select></label> <button class="primary" id="previewStudent" ${students.length?'':'disabled'}>학생 화면 미리보기</button></section>`:''}`+nameMappingForm()+homepageAdminSettings()+`<div class="grid">${admin()?`<div class="stack"><div class="section-card"><h2>학생 접근 계정</h2><p class="muted">학생은 네 개 연구 탭을 이용하고 논문·학회 발표를 추가·수정할 수 있습니다.</p>${studentAccountList()}<label for="students">학생 이메일 · 한 줄에 한 명</label><textarea id="students" rows="5" style="width:100%;margin:10px 0" placeholder="student@ajou.ac.kr">${esc(students.join('\n'))}</textarea><button id="saveStudents" class="primary" ${offline?'disabled':''}>접근 목록 저장</button><p class="muted">${offline?'검토용 파일에서는 계정 설정을 저장할 수 없습니다.':'Sites에서 사이트 공유 권한도 별도로 부여해야 합니다.'}</p><p class="status" id="accountStatus" role="status"></p></div></div>`:''}</div>`+desktopDownloads();
  }
- panel.innerHTML=(studentPreview?`<div class="note" role="status" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>학생 화면 미리보기 · 저장 미적용</strong><button class="primary" id="exitStudentPreview">관리자 화면으로 돌아가기</button></div>`:'')+html;
+ panel.innerHTML=(studentPreview?`<div class="note" role="status" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><strong>학생 화면 미리보기 · 읽기 전용</strong><label>학생 <select id="previewStudentSelect">${studentPreviewOptions()}</select></label><button class="primary" id="exitStudentPreview">관리자 화면으로 돌아가기</button></div>`:'')+html;
  syncSectionClock();
  if(tab==='home')void rrMountRecentMeetings();
  if(tab==='reagents')bindReagents();
@@ -106,7 +108,8 @@ function render(){const pageFooter=document.querySelector('.foot');if(pageFooter
  if(filterFocus){filterFocus.focus({preventScroll:true});if(filterSelection)filterFocus.setSelectionRange(...filterSelection);}
  placePageFooter();
  if(document.getElementById('desktopDownloads'))loadDesktopDownloads();
- if($('previewStudent'))$('previewStudent').onclick=()=>setStudentPreview(true);
+ if($('previewStudent'))$('previewStudent').onclick=()=>setStudentPreview(true,$('previewStudentSelect').value);
+ if($('previewStudentSelect'))$('previewStudentSelect').onchange=e=>{if(e.target.value)setStudentPreview(true,e.target.value);};
  if($('exitStudentPreview'))$('exitStudentPreview').onclick=()=>setStudentPreview(false);
  if($('saveHomepageAdmins'))$('saveHomepageAdmins').onclick=saveHomepageAdmins;
  if($('nameMappingForm'))bindNameMappings();
@@ -161,7 +164,7 @@ async function performPut(path,input){
   }
   if(res.status!==409||!canMerge)throw Error(result.error||'저장하지 못했습니다. 입력 내용을 유지한 채 다시 시도해주세요.');
   if(attempt===3)throw Error('자료 저장이 잠시 밀리고 있습니다. 입력 내용은 유지되어 있으니 저장을 다시 눌러주세요.');
-  const fresh=await fetch('/api/data',{cache:'no-store'}),snapshot=await fresh.json();
+  const fresh=await fetch(previewURL('/api/data'),{cache:'no-store'}),snapshot=await fresh.json();
   if(!fresh.ok)throw Error(snapshot.error||'최신 자료를 확인하지 못했습니다. 입력 내용은 유지되어 있습니다.');
   payload={...input,data:mergeSavedData(baseline,desired,snapshot.data)};saveVersion=snapshot.version;
  }
@@ -172,7 +175,7 @@ async function saveStudents(){const b=$('saveStudents');b.disabled=true;try{cons
 $('year').onchange=render;$('query').oninput=render;$('reset').onclick=()=>{$('year').value='all';$('query').value='';render();};
 function theme(mode){document.documentElement.dataset.theme=mode;const label=mode==='dark'?'라이트모드로 전환':'다크모드로 전환';$('theme').innerHTML='<span aria-hidden="true">'+(mode==='dark'?'☀':'☾')+'</span>';$('theme').setAttribute('aria-label',label);$('theme').title=label;try{localStorage.setItem('ajou-lab-theme',mode);}catch{}}
 try{theme(localStorage.getItem('ajou-lab-theme')||'light');}catch{theme('light');}$('theme').onclick=()=>{theme(document.documentElement.dataset.theme==='dark'?'light':'dark');preferences.theme=document.documentElement.dataset.theme;savePreferences();};
-(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch('/api/data',{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();closeNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();if(!offline)void rrPrefetch();openPushTarget(location.href,{initial:true});}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
+(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch(previewURL('/api/data'),{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();closeNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();if(!offline)void rrPrefetch();openPushTarget(location.href,{initial:true});}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
 
 function field(name,label,value='',type='text',extra=''){return `<label style="display:grid;gap:6px">${esc(label)}<input name="${name}" type="${type}" value="${esc(value)}" ${extra} style="width:100%;box-sizing:border-box;padding:10px"></label>`;}
 function editor(title,fields,save,research=false,remove=null,options={}){
@@ -372,7 +375,7 @@ async function openResearchNotification(n){
  }
  if(!['papers','conferences','meetingInfo','groupMeetings'].includes(n.type))return;
  if(!offline&&n.type!=='meetingInfo'){
-  try{const res=await fetch('/api/data',{cache:'no-store'});if(!res.ok)throw Error();const result=await res.json();data=result.data;version=result.version;years();}
+  try{const res=await fetch(previewURL('/api/data'),{cache:'no-store'});if(!res.ok)throw Error();const result=await res.json();data=result.data;version=result.version;years();}
   catch{$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');$('notificationList').innerHTML='<p role="alert">자료를 불러오지 못했습니다. 알림을 다시 열어 시도해주세요.</p>';return;}
  }
  const p=notificationPrefs();saveNotificationPrefs({hidden:p.hidden||[],read:[...new Set([...(p.read||[]),n.id])].slice(-400)});
@@ -384,13 +387,25 @@ $('notificationClose').onclick=()=>{closeNotifications();$('notificationToggle')
 $('notificationClear').onclick=()=>{const p=notificationPrefs();saveNotificationPrefs({read:p.read||[],hidden:[...new Set([...(p.hidden||[]),...notifications.map(n=>n.id)])].slice(-400)});renderNotifications();};
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-anchor'))closeNotifications();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
-async function refreshNotifications(){if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch('/api/notifications',{cache:'no-store'});if(!res.ok)return;notifications=(await res.json()).notifications||[];renderNotifications();if(typeof rrPaintUnread==='function')rrPaintUnread();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
+async function refreshNotifications(){const previewScope=studentPreviewEmail;if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch(previewURL('/api/notifications'),{cache:'no-store'});if(!res.ok)return;const result=await res.json();if(previewScope!==studentPreviewEmail)return;notifications=result.notifications||[];renderNotifications();if(typeof rrPaintUnread==='function')rrPaintUnread();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
 setInterval(refreshNotifications,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNotifications();});
 
 function studentAccountList(){return students.length?students.map(email=>`<div class="source" style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0;overflow-wrap:anywhere"><strong>${esc(studentNames[email]||'학생')}</strong><div class="muted">${esc(email)}</div></div><button class="secondary" data-remove-student="${esc(email)}" ${offline?'disabled':''} aria-label="${esc(studentNames[email]||email)} 계정 삭제">삭제</button></div>`).join(''):'<p class="muted">등록된 학생 계정이 없습니다.</p>';}
 async function removeStudent(email){if(busy||!admin()||offline)return;if(!confirm((studentNames[email]||email)+' 계정의 대시보드 접근권한을 삭제할까요?'))return;busy=true;try{const next=students.filter(s=>s!==email);await put('/api/students',{students:next});students=next;render();$('accountStatus').textContent='계정을 삭제했습니다. 해당 계정은 대시보드에 접근할 수 없습니다.';}catch(e){$('accountStatus').textContent=e.message;}finally{busy=false;}}
 
-function setStudentPreview(enabled){if(user.role!=='admin'||busy)return;studentPreview=enabled;tab=enabled?'home':'settings';$('year').value='all';$('query').value='';closeNotifications();render();window.scrollTo({top:0});}
+async function setStudentPreview(enabled,email=''){
+ if(user.role!=='admin'||busy)return;
+ if(enabled&&!students.includes(email)){alert('미리 볼 학생을 선택해주세요.');return;}
+ if(enabled&&(meetingRecorder.active||meetingRecorder.processing||meetingRecorder.stopping||meetingRecorder.dirty||meetingRecorder.pendingAudio.length||mrQueue.busy||mrQueue.pending)){alert('녹음·전사 작업이 완료된 후 학생 미리보기를 사용해주세요.');return;}
+ const sequence=++studentPreviewSequence;
+ try{
+  let result;if(enabled){const response=await fetch('/api/data?previewStudent='+encodeURIComponent(email),{cache:'no-store'});result=await response.json();if(!response.ok)throw Error(result.error||'학생 화면을 불러오지 못했습니다.');}
+  if(sequence!==studentPreviewSequence)return;
+  if(enabled){studentPreviewSnapshot??={data,notifications,preferences};data=result.data;notifications=result.notifications||[];preferences=result.preferences||{};studentPreviewEmail=email;}
+  else{if(studentPreviewSnapshot)({data,notifications,preferences}=studentPreviewSnapshot);studentPreviewSnapshot=null;studentPreviewEmail='';}
+  studentPreview=enabled;rrEnsureScope();researchRoomState.mobileChatOpen=false;tab=enabled?'home':'settings';years();$('year').value='all';$('query').value='';closeNotifications();renderNotifications();render();window.scrollTo({top:0});if(enabled)void rrPrefetch();
+ }catch(e){if(sequence===studentPreviewSequence)alert(e.message);}
+}
 
 const studentResearchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
 function researchChanges(before,after){const changes=[];for(const type of ['papers','conferences']){for(const old of before[type])if(!after[type].some(r=>r.id===old.id))throw Error('학생은 연구 기록을 삭제할 수 없습니다.');for(const r of after[type]){const old=before[type].find(p=>p.id===r.id);if(old&&JSON.stringify(old)===JSON.stringify(r))continue;const values=Object.fromEntries(studentResearchFields[type].filter(k=>r[k]!==undefined).map(k=>[k,r[k]]));changes.push({type,id:r.id,action:old?'edit':'add',values});}}return changes;}
@@ -499,8 +514,8 @@ function personalGroupMeetings(name,now=new Date()){
  return {paper:own.find(r=>String(r[1]).replace(/\s+/g,'')==='논문발표')||null,seminar:own.find(r=>String(r[1]).replace(/\s+/g,'')==='랩세미나')||null};
 }
 function studentMeetingCards(now=new Date()){
- const shared=groupMeetingCards(now);if(user.role!=='student'||studentPreview)return shared;
- const next=personalGroupMeetings(user.name,now);
+ const shared=groupMeetingCards(now);if(user.role!=='student'&&!studentPreviewEmail)return shared;
+ const next=personalGroupMeetings(studentPreviewEmail?studentNames[studentPreviewEmail]:user.name,now);
  return '<div class="student-meeting-row">'+shared+'<section class="personal-meeting-pair" aria-label="나의 발표 일정">'+[['paper','나의 논문 발표'],['seminar','나의 랩세미나']].map(([key,title])=>{const r=next[key];return '<article class="personal-meeting-card"><h3>'+title+'</h3>'+(r?'<div class="personal-meeting-date-row"><time datetime="'+esc(r[0])+'" title="'+esc(r[0])+'">'+esc(r[0].slice(5).replace('-','.'))+'</time><span class="personal-meeting-countdown">'+groupMeetingCountdown(r[0],now)+'</span></div>':'<p class="personal-meeting-empty">예정 없음</p>')+'</article>';}).join('')+'</section></div>';
 }
 function groupMeetingCards(now=new Date()){
@@ -586,14 +601,15 @@ matchMedia('(max-width:760px)').addEventListener('change',()=>{if(tab==='papers'
 async function refreshDashboardFromPull(){
  if(offline)throw Error('오프라인에서는 새로고침할 수 없습니다.');
  await prefQueue;
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ const previewScope=studentPreviewEmail,controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
  try{
-  const response=await fetch('/api/data',{cache:'no-store',signal:controller.signal});
+  const response=await fetch(previewURL('/api/data'),{cache:'no-store',signal:controller.signal});
   if(!response.ok)throw Error(response.status===401?'다시 로그인해 주세요.':'연결을 확인하고 다시 당겨 주세요.');
   const result=await response.json();
   if(!result.data||!result.user)throw Error('데이터를 불러오지 못했습니다.');
   const selectedYear=$('year').value;
-  ({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];
+  if(previewScope!==studentPreviewEmail)return;
+  if(studentPreview){data=result.data;}else{({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];}
   notifications=result.notifications||[];labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];
   years();if([...$('year').options].some(o=>o.value===selectedYear))$('year').value=selectedYear;
   renderNotifications();render();$('panel').scrollTop=0;

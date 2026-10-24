@@ -170,10 +170,10 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
  const reply=(body,status=200,type)=>new Response(req.method==='HEAD'?null:typeof body==='string'?body:JSON.stringify(body),{status,headers:{...headers,...(type?{'Content-Type':type}:{})}});
  try{
   if(url.pathname==='/notification-icon.png'&&['GET','HEAD'].includes(req.method))return new Response(req.method==='HEAD'?null:Uint8Array.from(atob(notificationIcon),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png','Cache-Control':'public, max-age=3600'}});
-  const email=req.headers.get('oai-authenticated-user-email')?.trim().toLowerCase(),id=req.headers.get('oai-authenticated-user-id');
+  let email=req.headers.get('oai-authenticated-user-email')?.trim().toLowerCase(),id=req.headers.get('oai-authenticated-user-id');
   if(!id||!email)return reply({error:'승인된 계정으로 로그인해주세요.'},401);
   if(!env.ADMIN_EMAIL)return reply({error:'관리자 계정 설정이 필요합니다.'},503);
-  const admin=email===env.ADMIN_EMAIL.trim().toLowerCase();
+  let admin=email===env.ADMIN_EMAIL.trim().toLowerCase();
   if(!env.DB)return reply({error:'공동 저장소가 연결되지 않았습니다.'},503);
   await env.DB.prepare('CREATE TABLE IF NOT EXISTS lab_state (id INTEGER PRIMARY KEY, version INTEGER NOT NULL, payload TEXT NOT NULL)').run();
   const existing=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();
@@ -198,6 +198,11 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(!admin&&!state.students.includes(email))return reply({error:'연구실 접근 권한이 없습니다.'},403);
   const read=['GET','HEAD'].includes(req.method),origin=req.headers.get('Origin');
   if((origin&&origin!==url.origin)||(!read&&(origin!==url.origin||req.headers.get('X-Lab-Request')!=='1'||req.headers.get('Content-Type')!=='application/json')))return reply({error:'허용되지 않는 요청입니다.'},403);
+  if(url.searchParams.has('previewStudent')){
+   const selected=url.searchParams.get('previewStudent');
+   if(!admin||!read||!state.students.includes(selected)||!(['/api/data','/api/notifications'].includes(url.pathname)||url.pathname.startsWith('/api/ai/')))return reply({error:'교수님만 등록된 학생의 읽기 전용 화면을 확인할 수 있습니다.'},403);
+   email=selected;id='student-preview:'+selected;admin=false;
+  }
   if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email,members:state.students.map(email=>({email,name:state.studentNames?.[email]||email}))});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
