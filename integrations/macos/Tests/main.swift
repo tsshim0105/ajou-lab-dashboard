@@ -33,3 +33,18 @@ check(Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/dashboard")!
 check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/dashboard-other")!),"reject similar path for recorder bridge")
 check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site.attacker.example/dashboard")!),"reject spoofed native bridge origin")
 check(!Lab.isDashboard(URL(string:"https://nisml.tsshim.chatgpt.site/")!),"homepage cannot read meeting recordings")
+check(Lab.isNewer("0.4.10",than:"0.4.3"),"numeric update version comparison")
+check(!Lab.isNewer("0.4.3",than:"0.4.3"),"same version never downloads")
+check(!Lab.isNewer("0.4.2",than:"0.4.3"),"no downgrade")
+check(!Lab.isNewer("oops",than:"0.4.3"),"invalid version rejected")
+check(Lab.isInstaller(URL(string:"https://nisml.tsshim.chatgpt.site/downloads/mac")!),"installer endpoint goes to browser")
+check(Lab.isInstaller(URL(string:"https://nisml.ajou.ac.kr/app-releases/NISML-Dashboard-0.4.3-arm64.dmg")!),"direct installer goes to browser")
+check(!Lab.isInstaller(URL(string:"https://nisml.ajou.ac.kr/dashboard/api/private.dmg")!),"private files stay in authenticated app")
+check(!Lab.isInstaller(URL(string:"https://evil.test/downloads/mac")!),"update origins restricted")
+let release=MacRelease(version:"0.4.3",file:"/app-releases/NISML-Dashboard-0.4.3-arm64.dmg",size:3,sha256:"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+check(release.downloadURL != nil && release.matches(Data("abc".utf8)),"release URL size and hash verified")
+check(!release.matches(Data("xyz".utf8)),"corrupt file rejected")
+check(MacRelease(version:"0.4.3",file:"https://evil.test/file.dmg",size:3,sha256:release.sha256).downloadURL == nil,"manifest cannot redirect update externally")
+
+for value in ["https://doi.org/10.1000/example", "https://www.sigmaaldrich.com/KR/ko/product/example", "https://www.4science.net/product/example"] { check(Lab.opensExternally(URL(string:value)!),"external research link: " + value) }
+for value in ["https://nisml.ajou.ac.kr/dashboard/", "https://auth.openai.com/authorize", "https://accounts.google.com/signin", "javascript:alert(1)", "file:///tmp/example", "https://user:password@example.com/"] { check(!Lab.opensExternally(URL(string:value)!),"keep internal/auth or reject unsafe: " + value) }

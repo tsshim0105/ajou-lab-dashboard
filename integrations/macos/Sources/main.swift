@@ -410,7 +410,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { if (error as NSError).code != NSURLErrorCancelled { setStatus("페이지 연결 실패 · 새로고침을 눌러주세요") } }
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        if let url=navigationAction.request.url,Lab.isInstaller(url) {
+        if let url=navigationAction.request.url,Lab.opensExternally(url), navigationAction.targetFrame?.isMainFrame != false {
             NSWorkspace.shared.open(url);decisionHandler(.cancel);return
         }
         if webView === web && navigationAction.targetFrame?.isMainFrame == true && meeting.protectsSession { decisionHandler(.cancel); setStatus("녹음 저장 후 페이지를 이동할 수 있습니다"); return }
@@ -418,8 +418,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         if url.absoluteString == "about:blank" { decisionHandler(.allow); return }
         guard url.scheme == "https" else { decisionHandler(.cancel); return }
         let host = url.host ?? ""
-        let authHosts = ["auth.openai.com", "auth0.openai.com", "chatgpt.com", "accounts.google.com", "appleid.apple.com", "login.microsoftonline.com"]
-        if Lab.isSite(url) || authHosts.contains(host) || host == "nisml.tsshim.chatgpt.site" {
+        if Lab.isSite(url) || Lab.isAuthentication(url) {
             if webView === web && navigationAction.targetFrame?.isMainFrame == true { addressLine.stringValue = Lab.isSite(url) ? "NISML Hub" : host }
             decisionHandler(.allow)
         } else if navigationAction.targetFrame?.isMainFrame == true || navigationAction.targetFrame == nil {
@@ -427,7 +426,9 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         } else { decisionHandler(.allow) }
     }
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let url=navigationAction.request.url,Lab.isInstaller(url) { NSWorkspace.shared.open(url);return nil }
+        guard let url=navigationAction.request.url else { return nil }
+        if Lab.opensExternally(url) { NSWorkspace.shared.open(url); return nil }
+        guard url.absoluteString == "about:blank" || Lab.isSite(url) || Lab.isAuthentication(url) else { return nil }
         let popup = WKWebView(frame: .zero, configuration: configuration); popup.navigationDelegate = self; popup.uiDelegate = self
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 740), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
         w.title = "NISML · 로그인"; w.contentView = popup; w.isReleasedWhenClosed = false; w.center(); w.makeKeyAndOrderFront(nil); popups.append(w); return popup

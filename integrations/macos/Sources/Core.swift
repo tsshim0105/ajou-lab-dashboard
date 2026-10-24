@@ -7,6 +7,13 @@ enum Lab {
     }
     static let home = URL(string: "https://nisml.tsshim.chatgpt.site/dashboard/")!
     static func isSite(_ url: URL) -> Bool { url.scheme == "https" && [home.host, "nisml.ajou.ac.kr"].contains(url.host) && (url.port == nil || url.port == 443) }
+    static func isAuthentication(_ url: URL) -> Bool {
+        url.scheme == "https" && (url.port == nil || url.port == 443) && ["auth.openai.com", "auth0.openai.com", "chatgpt.com", "accounts.google.com", "appleid.apple.com", "login.microsoftonline.com"].contains(url.host ?? "")
+    }
+    static func opensExternally(_ url: URL) -> Bool {
+        guard ["https", "http"].contains(url.scheme ?? ""), url.host != nil, url.user == nil, url.password == nil else { return false }
+        return isInstaller(url) || (!isSite(url) && !isAuthentication(url))
+    }
     static func isInstaller(_ url: URL) -> Bool {
         guard isSite(url) else { return false }
         return ["/downloads/mac", "/downloads/pc", "/downloads/android"].contains(url.path) || (url.path.hasPrefix("/app-releases/") && ["dmg", "pkg", "exe", "msi", "apk"].contains(url.pathExtension.lowercased()))
