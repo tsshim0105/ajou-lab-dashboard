@@ -145,6 +145,6 @@ function syncSectionClock(){
  if(!panel?.querySelector||!clock)return;
  let heading=tab==='home'?null:panel.querySelector('h1,h2');
  if(!heading){heading=document.createElement('div');heading.className='mobile-section-title';heading.textContent=menu.find(([key])=>key===tab)?.[1]||'';panel.prepend(heading);}
- heading.classList.add('has-section-clock');
- const time=document.createElement('time');time.className='section-clock';time.textContent=clock.textContent;time.dateTime=clock.dateTime;time.setAttribute('aria-label','한국 시간');heading.append(time);
+ // Date/time lives once in the shared header, never inside a section title.
+ panel.querySelectorAll('.section-clock').forEach(el=>el.remove());
 }
