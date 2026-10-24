@@ -153,3 +153,23 @@ test('topic cover is owner-managed, versioned, and readable only by topic viewer
  const batch=await (await f.call('bootstrap',null,'student@example.test')).json();assert.ok(batch.rooms.topics[0].cover.revision);assert.ok(!JSON.stringify(batch).includes('base64'));
  assert.equal((await f.call('topic-cover',{topic:'topic-0001',version:2,image:null})).status,200);assert.equal(files.size,0);assert.equal((await f.call('topic-cover?topic=topic-0001')).status,404);
 });
+
+
+test('new topic persists chosen viewers immediately and duplicate creation cannot replace access',async()=>{
+ const f=fixture();
+ assert.equal((await f.call('topic',{...topic(),viewers:[' STUDENT@example.test ','student@example.test']})).status,200);
+ const owner=await (await f.call('thread?topic=topic-0001')).json();assert.deepEqual(owner.topic.viewers,['student@example.test']);
+ const student=await (await f.call('rooms',null,'student@example.test')).json();assert.equal(student.topics.length,1);
+ assert.equal((await f.call('thread?topic=topic-0001',null,'student@example.test')).status,200);
+ assert.equal((await f.call('memo',{topic:'topic-0001',content:'no'},'student@example.test')).status,403);
+ await f.call('topic',{...topic(),viewers:[]});
+ assert.equal((await f.call('thread?topic=topic-0001',null,'student@example.test')).status,200);
+});
+test('new topic validates viewers before inserting and defaults to private',async()=>{
+ const f=fixture();
+ for(const viewers of [['outsider@example.test'],'student@example.test',Array(101).fill('student@example.test')]){
+  assert.equal((await f.call('topic',{...topic(),viewers})).status,400);
+  assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM research_records WHERE id='topic:topic-0001'").get().n,0);
+ }
+ await f.call('topic',topic());assert.equal((await f.call('thread?topic=topic-0001',null,'student@example.test')).status,403);
+});
