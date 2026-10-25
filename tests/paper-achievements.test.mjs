@@ -47,3 +47,19 @@ test('year-only legacy records remain unassigned until a semester is confirmed',
  const d=fresh().data,a={year:2024,semester:2,authors:6,sci:'SCI',role:'lead',percentile:20,category:'',jcrYear:null,include:true,note:''};d.papers.push({id:'term-paper',year:2024,title:'Term paper',achievement:a});assert.doesNotThrow(()=>validateData(d));
  a.semester=3;assert.throws(()=>validateData(d));
 });
+
+test('screenshot base points score without inventing an exact IF percentile',()=>{
+ assert.equal(calc({percentile:null,base:600}).university,150);
+ const v=calc({percentile:null,base:450,engineeringRecorded:150});assert.equal(v.university,112.5);assert.equal(v.engineering,150);assert.equal(v.engineeringCalculated,120);assert.match(v.engineeringBasis,/차이 확인/);
+});
+test('publication issue date controls academic term; online date is not substituted',()=>{
+ const a=ctx.paTerm({year:2024,onlineDate:'2024-07-30',issueDate:'2024-10-24'});assert.equal(a.year,2024);assert.equal(a.semester,2);
+ assert.equal(ctx.paTerm({year:2025,issueDate:'2025-02-12'}).year,2024);
+ assert.equal(ctx.paTerm({year:2024,issueDate:'2024-07-05'}).semester,1);
+ assert.equal(ctx.paTerm({year:2025,onlineDate:'2025-01-01'}).semester,null);
+});
+test('batch import matches by DOI, preserves bibliography, and rejects unmatched or duplicate records',()=>{
+ const papers=[{title:'Paper',doi:'10.example/test',issueDate:'2024-10-24',authorCount:9}],record={doi:'10.example/test',authors:8,role:'lead',base:450,note:'User spreadsheet'};
+ const plan=ctx.paPrepareImport([record],papers);assert.equal(plan.length,1);assert.equal(plan[0].achievement.authors,8);assert.equal(plan[0].achievement.semester,2);assert.equal(papers[0].authorCount,9);
+ assert.throws(()=>ctx.paPrepareImport([record,record],papers));assert.throws(()=>ctx.paPrepareImport([{...record,doi:'missing'}],papers));assert.throws(()=>ctx.paPrepareImport([record],[{...papers[0],issueDate:'2024-07-05'}]));
+});
