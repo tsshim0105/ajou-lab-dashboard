@@ -351,3 +351,12 @@ test('owner student preview is read-only and uses the selected student permissio
  assert.equal((await worker.fetch(req(OWNER,'/api/ai/topic?previewStudent=student%40example.test','POST',{}),env)).status,403);
  const owner=await(await worker.fetch(req(OWNER),env)).json();assert.equal(owner.user.role,'admin');assert.ok(owner.data.funds.length);
 });
+
+test('personal research counts match whole Korean and mapped English names, count each record once and respect year',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../app.js',import.meta.url),'utf8');
+ const data={papers:[{year:2026,firstAuthor:'손은지',coauthors:'손은지'},{year:2026,authorList:[{name:'Eun-Ji Son',korean:'손은지'}]},{year:2026,firstAuthor:'손은지영'},{year:2025,firstAuthor:'손은지'},{year:2026,firstAuthor:'Other',authorList:[{name:'Eun Ji Son'}],paperEditedFields:['firstAuthor']}],conferences:[{year:2026,presenter:'박진혁 · 손은지'},{year:2026,presenter:'Other',coauthors:'Eun Ji Son; Other'},{year:2026,presenter:'손은지영'},{year:2025,presenter:'손은지'}]};
+ const ctx=vm.createContext({data,authorAliases:()=>[{korean:'손은지',english:'Eun Ji Son'}],paperFirst:r=>r.firstAuthor||'',paperCorresponding:r=>r.correspondingAuthor||'',paperCoauthors:r=>r.coauthors||''});
+ vm.runInContext(source.slice(source.indexOf('function personalResearchCounts('),source.indexOf('function yearAndGameNight(')),ctx);
+ assert.deepEqual(JSON.parse(JSON.stringify(ctx.personalResearchCounts(2026,'손은지'))),{papers:2,conferences:2});
+ assert.deepEqual(JSON.parse(JSON.stringify(ctx.personalResearchCounts(2026,''))),{papers:0,conferences:0});
+});

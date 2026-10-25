@@ -558,9 +558,26 @@ async function loadDesktopDownloads(){
  }catch{if(section.isConnected){for(const label of ['Mac','PC','Android'])section.querySelector('#download'+label+'Pending').textContent=label+'용 · 확인 불가';section.querySelector('#downloadNotice').textContent='다운로드 정보를 불러오지 못했습니다. 잠시 후 다시 접속해주세요.';}}
 }
 
+function personalResearchCounts(year,name){
+ const key=value=>String(value||'').normalize('NFKC').toLowerCase().replace(/[\s.\-‐‑–—*†‡\d]/g,'');
+ const aliases=new Set([name,...authorAliases().filter(a=>key(a.korean)===key(name)).map(a=>a.english)].map(key).filter(Boolean));
+ const contains=value=>String(value||'').split(/[,;，、·/&\n()\[\]]|\s+and\s+/i).some(part=>aliases.has(key(part)));
+ const participates=(r,type)=>{
+  if(type==='conferences')return [r.presenter,r.coauthors].some(contains);
+  // Match the displayed, edited author fields, retaining Korean-only manual entries.
+  const values=[paperFirst(r),paperCorresponding(r),paperCoauthors(r)];
+  for(const field of ['firstAuthor','correspondingAuthor','coauthors']){
+   if(r.paperEditedFields?.includes(field)||!r.authorList?.length)values.push(r[field]);
+  }
+  if(!r.paperEditedFields?.some(f=>['firstAuthor','correspondingAuthor','coauthors'].includes(f)))values.push(...(r.authorList||[]).flatMap(a=>[a.name,a.korean]));
+  return values.some(contains);
+ };
+ return Object.fromEntries(['papers','conferences'].map(type=>[type,name?data[type].filter(r=>Number(r.year)===year&&participates(r,type)).length:0]));
+}
 function yearAndGameNight(){
  const year=Number(calendarDay('Asia/Seoul',new Date()).slice(0,4)),papers=data.papers.filter(r=>Number(r.year)===year).length,conferences=data.conferences.filter(r=>Number(r.year)===year).length,g=nextGameNight();
- return `<div class="year-game-row"><section class="year-aurora" aria-label="올해 연구 실적"><h2>${year}년 연구 활동</h2><div class="year-metrics"><div class="year-metric"><span>등록 논문</span><b>${papers}</b><small>건</small></div><div class="year-metric"><span>학회 발표</span><b>${conferences}</b><small>건</small></div></div></section><section class="game-galaxy" aria-label="NISML Game Night"><h2 class="game-overview-heading"><span class="game-overview-title">NISML Game Night</span><span class="game-season-label">${esc(gameSeasonLabel(g.month||calendarDay('Asia/Seoul',new Date()).slice(0,7)))}</span></h2><div class="game-facts"><div><small>날짜</small><strong>${esc(g.date?g.date.replaceAll('-','.'):(g.month?g.month.replace('-','.')+' · 날짜 미정':'일정 미정'))}</strong></div><div><small>게임 종류</small><strong>${esc(g.game||'추후 안내')}</strong></div></div><div class="game-stars" aria-hidden="true">${[[5,15],[27,8],[50,16],[72,10],[94,20],[89,78],[61,88],[32,92],[6,80]].map(([x,y],i)=>`<span style="left:${x}%;top:${y}%;animation-delay:-${i*.4}s">✦</span>`).join('')}</div></section></div>`;
+ const personal=user.role==='student'||!!studentPreviewEmail,mine=personal?personalResearchCounts(year,studentPreviewEmail?studentNames[studentPreviewEmail]:user.name):null;
+ return `<div class="year-game-row"><section class="year-aurora" aria-label="올해 연구 실적"><h2>${year}년 연구 활동${personal?' (나의 활동)':''}</h2><div class="year-metrics"><div class="year-metric"><span>등록 논문</span><b>${papers}${personal?` <em class="activity-own">(${mine.papers})</em>`:''}</b><small>건</small></div><div class="year-metric"><span>학회 발표</span><b>${conferences}${personal?` <em class="activity-own">(${mine.conferences})</em>`:''}</b><small>건</small></div></div></section><section class="game-galaxy" aria-label="NISML Game Night"><h2 class="game-overview-heading"><span class="game-overview-title">NISML Game Night</span><span class="game-season-label">${esc(gameSeasonLabel(g.month||calendarDay('Asia/Seoul',new Date()).slice(0,7)))}</span></h2><div class="game-facts"><div><small>날짜</small><strong>${esc(g.date?g.date.replaceAll('-','.'):(g.month?g.month.replace('-','.')+' · 날짜 미정':'일정 미정'))}</strong></div><div><small>게임 종류</small><strong>${esc(g.game||'추후 안내')}</strong></div></div><div class="game-stars" aria-hidden="true">${[[5,15],[27,8],[50,16],[72,10],[94,20],[89,78],[61,88],[32,92],[6,80]].map(([x,y],i)=>`<span style="left:${x}%;top:${y}%;animation-delay:-${i*.4}s">✦</span>`).join('')}</div></section></div>`;
 }
 let gameNightDraft=null,gameSelectedSeason='';
 function gameSeasonKey(month){return month.slice(0,4)+'-'+(Number(month.slice(5,7))<=6?'SS':'FW');}

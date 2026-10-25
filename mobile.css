@@ -1209,3 +1209,9 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
  #nameMappingForm input{padding:8px 6px;font-size:14px}
  #nameMappingForm [data-remove-name]{padding:8px 9px;font-size:13px}
 }
+
+/* Personal participation follows the total, with the approved inline title. */
+.year-metric>b{white-space:nowrap}
+.year-metric .activity-own{font-style:normal;font-size:.78em;font-weight:650;color:#376b88}
+[data-theme=dark] .year-metric .activity-own{color:#a5d4ee}
+.student-home-overview .year-metric>b{letter-spacing:-.5px}
