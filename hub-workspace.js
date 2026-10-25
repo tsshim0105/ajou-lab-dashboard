@@ -1,48 +1,83 @@
+/* Grid coordinates are independent of DOM order; moving a widget never reloads its content. */
+const HubWidgetGrid={
+ overlaps:(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y,
+ place(items,id,rect){
+  const result=items.map(x=>({...x})),moving=result.find(x=>x.id===id);
+  if(!moving)return result;
+  Object.assign(moving,rect);const placed=[moving];
+  for(const item of result.filter(x=>x!==moving).sort((a,b)=>a.y-b.y||a.x-b.x)){
+   let hits;while((hits=placed.filter(x=>this.overlaps(item,x))).length)item.y=Math.max(...hits.map(x=>x.y+x.h));
+   placed.push(item);
+  }return result;
+ }
+};
 /* Professor workspace: preserve the live research panel and recorder when rearranging. */
 (()=>{
- const keys=['home','research','achievements','funds'],titles=['대시보드','연구회의록','업적평가','연구비'];
+ const keys=['home','research','achievements','funds','groupMeetings','papers','conferences','reagents','meetingInfo','payroll'],titles=['대시보드','연구회의록','업적평가','연구비','그룹미팅/게임나잇','논문 출판','학회 발표','시약관리','학술대회 정보','인건비'];
  const embedded=window.parent!==window&&keys.includes(new URLSearchParams(location.search).get('hubUnit'));
  const unit=embedded?new URLSearchParams(location.search).get('hubUnit'):null;
- let active=false,root=null,marker=null,editing=false,fullscreenPending=false;
- const defaults=()=>keys.map((id,i)=>({id,w:i===0?7:i===1?5:6,h:560,closed:false}));
+ let active=false,root=null,marker=null,editing=false,fullscreenPending=false,cancelGesture=null;
+ const defaults=()=>{const h=Math.max(4,Math.round((innerHeight-110)/144));return keys.slice(0,4).map((id,i)=>({id,x:i%2?6:0,y:i<2?0:h,w:6,h}));};
  let layout=defaults();
- const storageKey=()=> 'nisml-hub-layout-v1:'+String(user.email||'');
- function read(){try{const saved=JSON.parse(localStorage.getItem(storageKey()));if(Array.isArray(saved)&&saved.length===4&&new Set(saved.map(x=>x.id)).size===4&&saved.every(x=>keys.includes(x.id)))layout=saved.map(x=>({id:x.id,w:Math.max(4,Math.min(12,Math.round(Number(x.w)||6))),h:Math.max(260,Math.min(1600,Number(x.h)||620)),closed:!!x.closed}));}catch{}}
- function save(){try{localStorage.setItem(storageKey(),JSON.stringify(layout));}catch{root.querySelector('[data-status]').textContent='배치 저장을 사용할 수 없습니다.';}}
+ const storageKey=()=> 'nisml-hub-layout-v2:'+String(user.email||'');
+ function read(){layout=defaults();try{const saved=JSON.parse(localStorage.getItem(storageKey()));if(Array.isArray(saved)&&saved.length>=1&&saved.length<=keys.length&&new Set(saved.map(x=>x.id)).size===saved.length&&saved.every(x=>keys.includes(x.id)&&['x','y','w','h'].every(k=>Number.isInteger(x[k]))&&x.x>=0&&x.y>=0&&x.y<10000&&x.w>=3&&x.w<=12&&x.x+x.w<=12&&x.h>=3&&x.h<=24)&&!saved.some((x,i)=>saved.slice(i+1).some(y=>HubWidgetGrid.overlaps(x,y))))layout=saved;}catch{}}
+ function save(){try{localStorage.setItem(storageKey(),JSON.stringify(layout));}catch{if(root)root.querySelector('[data-status]').textContent='배치 저장을 사용할 수 없습니다.';}}
  const originalRender=render;
  render=function(){
   if(embedded){if(!admin()){originalRender();document.body.replaceChildren(Object.assign(document.createElement('p'),{textContent:'교수님 전용 화면입니다.'}));return;}tab=unit==='achievements'?'papers':unit;originalRender();if(unit==='achievements'){const p=$('panel');p.innerHTML='<div data-pa-body></div>';p.close=()=>{};paRender(p);}return;}
   if(active&&!admin())close();
-  if(active&&tab!=='researchRooms'){const target=tab;close();tab=target;}
-  originalRender();button();if(fullscreenPending&&!active&&admin())queueMicrotask(open);
+  if(active&&tab!=='researchRooms'&&layout.some(x=>x.id==='research')){const target=tab;close();tab=target;}
+  originalRender();button();settings();if(fullscreenPending&&!active&&admin())queueMicrotask(open);
  };
  function button(){let b=$('hubWorkspaceOpen');if(!admin()){b?.remove();return;}if(!b){b=document.createElement('button');b.id='hubWorkspaceOpen';b.className='secondary';b.textContent='통합 화면';b.onclick=()=>open();document.querySelector('.desktop-controls')?.prepend(b);}}
  if(embedded){
-  document.documentElement.classList.add('hub-embedded');
+  document.documentElement.classList.add('hub-embedded');document.documentElement.dataset.hubUnit=unit;
   document.addEventListener('click',e=>{const b=e.target.closest('[data-recent-topic]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();parent.postMessage({type:'hub-topic',topic:b.dataset.recentTopic,recording:b.dataset.recording},location.origin);},true);
   if(user.email)render();
   return;
  }
- function apply(){for(const x of layout){const el=root.querySelector('[data-unit="'+x.id+'"]');el.style.gridColumn='span '+x.w;el.style.height=x.closed?'48px':x.h+'px';el.classList.toggle('collapsed',x.closed);el.querySelector('[data-fold]').setAttribute('aria-expanded',String(!x.closed));el.querySelector('[data-fold]').textContent=x.closed?'펼치기':'접기';el.style.order=layout.indexOf(x);el.querySelector('select').value=String(x.w);}root.classList.toggle('editing',editing);}
+ function settings(){
+  if(!admin()||tab!=='settings'||$('hubWorkspaceSettings'))return;
+  const card=document.createElement('section');card.id='hubWorkspaceSettings';card.className='section-card';card.innerHTML='<h2>전체화면 모드</h2><p>함께 볼 메뉴를 선택하고 각 블록의 위치와 크기를 직접 배치합니다. 대시보드 내부 구성은 그대로 유지됩니다.</p><button class="primary" data-config>메뉴 조합 설정</button> <button class="secondary" data-launch>전체화면 모드 열기</button><p class="muted">교수님 전용 · 메뉴 선택과 배치는 이 브라우저에 저장됩니다.</p>';$('panel').prepend(card);card.querySelector('[data-config]').onclick=configure;card.querySelector('[data-launch]').onclick=open;
+ }
+ function configure(){
+  if(!admin())return;if(!active)read();const d=document.createElement('dialog');d.className='hub-config';d.setAttribute('aria-label','전체화면 메뉴 조합');d.innerHTML='<form><h2>전체화면 메뉴 조합</h2><p>함께 볼 메뉴를 선택하세요. 각 블록은 배치 편집에서 이동하거나 크기를 바꿀 수 있습니다.</p><div class="hub-config-options">'+keys.map((id,i)=>'<label><input type="checkbox" name="unit" value="'+id+'" '+(layout.some(x=>x.id===id)?'checked':'')+'> '+titles[i]+'</label>').join('')+'</div><p role="status"></p><footer><button type="button" class="secondary" data-cancel>취소</button><button class="primary" type="submit">저장하고 열기</button></footer></form>';document.body.append(d);d.showModal();d.querySelector('[data-cancel]').onclick=()=>d.close();d.onclose=()=>d.remove();d.querySelector('form').onsubmit=e=>{e.preventDefault();const selected=[...d.querySelectorAll('input:checked')].map(x=>x.value);if(!selected.length){d.querySelector('[role=status]').textContent='한 개 이상의 메뉴를 선택해주세요.';return;}if(active)close();const previous=layout;let bottom=Math.max(0,...previous.filter(x=>selected.includes(x.id)).map(x=>x.y+x.h));layout=selected.map(id=>{const old=previous.find(x=>x.id===id);if(old)return old;const item={id,x:0,y:bottom,w:6,h:4};bottom+=4;return item;});save();d.close();open();};
+ }
+ function apply(){if(!root)return;for(const x of layout){const el=root.querySelector('[data-unit="'+x.id+'"]');el.style.left=(x.x/12*100)+'%';el.style.top=(x.y*72)+'px';el.style.width='calc('+x.w/12*100+'% - 12px)';el.style.height=(x.h*72-12)+'px';}root.querySelector('.hub-unit-grid').style.height=(Math.max(...layout.map(x=>x.y+x.h))+(editing?6:0))*72+'px';root.classList.toggle('editing',editing);root.querySelector('[data-edit]').textContent=editing?'편집 완료':'배치 편집';}
+ function bindWidget(section,id){
+  const head=section.querySelector('.hub-unit-head'),handle=section.querySelector('.hub-resize');
+  const item=()=>layout.find(x=>x.id===id);
+  function constrain(r){r.w=Math.max(3,Math.min(12,r.w));r.h=Math.max(3,Math.min(24,r.h));r.x=Math.max(0,Math.min(12-r.w,r.x));r.y=Math.max(0,Math.min(9999,r.y));return r;}
+  function start(e,resize){
+   if(!editing||e.button!==0)return;e.preventDefault();const target=e.currentTarget;target.setPointerCapture(e.pointerId);
+   const origin={...item()},before=layout.map(x=>({...x})),sx=e.clientX,sy=e.clientY,scroll=root.scrollTop,step=root.querySelector('.hub-unit-grid').clientWidth/12;
+   let current={...origin},lastY=e.clientY,raf;
+   section.classList.add('moving');root.classList.add('resizing');
+   function update(x,y){const dx=Math.round((x-sx)/step),dy=Math.round((y-sy+root.scrollTop-scroll)/72);current=constrain({...origin,...(resize?{w:origin.w+dx,h:origin.h+dy}:{x:origin.x+dx,y:origin.y+dy})});layout=HubWidgetGrid.place(before,id,current);apply();}
+   let lastX=e.clientX;
+   function tick(){const box=root.getBoundingClientRect();if(lastY>box.bottom-48)root.scrollTop+=12;else if(lastY<box.top+100)root.scrollTop-=12;update(lastX,lastY);raf=requestAnimationFrame(tick);}
+   const move=m=>{lastX=m.clientX;lastY=m.clientY;update(lastX,lastY);};
+   const finish=cancel=>{cancelGesture=null;cancelAnimationFrame(raf);target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',up);target.removeEventListener('pointercancel',abort);target.removeEventListener('lostpointercapture',abort);document.removeEventListener('keydown',escape);if(cancel)layout=before;section.classList.remove('moving');root?.classList.remove('resizing');apply();if(!cancel)save();if(target.hasPointerCapture(e.pointerId))target.releasePointerCapture(e.pointerId);};
+   const up=()=>finish(false),abort=()=>finish(true),escape=k=>{if(k.key==='Escape'){k.preventDefault();finish(true);}};
+   cancelGesture=abort;target.addEventListener('pointermove',move);target.addEventListener('pointerup',up);target.addEventListener('pointercancel',abort);target.addEventListener('lostpointercapture',abort);document.addEventListener('keydown',escape);raf=requestAnimationFrame(tick);
+  }
+  head.onpointerdown=e=>start(e,false);handle.onpointerdown=e=>start(e,true);
+  for(const [target,resize] of [[head,false],[handle,true]])target.onkeydown=e=>{if(!editing||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();const dx=e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0,dy=e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0,r={...item()};if(resize){r.w+=dx;r.h+=dy;}else{r.x+=dx;r.y+=dy;}layout=HubWidgetGrid.place(layout,id,constrain(r));apply();save();};
+ }
  function open(){if(active||!admin()||innerWidth<900)return;read();active=true;
-  root=document.createElement('section');root.className='hub-workspace';root.setAttribute('aria-label','교수님 통합 작업 화면');root.innerHTML='<header class="hub-workspace-head"><strong>NISML Hub <small>통합 화면</small></strong><span data-status>배치는 이 기기에 자동 저장됩니다.</span><button class="secondary" data-edit>배치 편집</button><button class="secondary" data-reset>기본 배치</button><button class="secondary" data-full>전체화면</button><button class="secondary" data-close>일반 화면</button></header><div class="hub-unit-grid"></div>';
+  root=document.createElement('section');root.className='hub-workspace';root.setAttribute('aria-label','교수님 통합 작업 화면');root.innerHTML='<header class="hub-workspace-head"><strong>NISML Hub <small>통합 화면</small></strong><span data-status>제목을 끌어 이동 · 모서리로 크기 조절 · 자동 저장</span><button class="secondary" data-config>메뉴 조합</button><button class="secondary" data-edit>배치 편집</button><button class="secondary" data-reset>기본 배치</button><button class="secondary" data-full>전체화면</button><button class="secondary" data-close>일반 화면</button></header><div class="hub-unit-grid"></div>';
   document.body.append(root);document.body.classList.add('hub-workspace-active');
-  keys.forEach((id,i)=>{const section=document.createElement('section');section.className='hub-unit';section.dataset.unit=id;section.innerHTML='<header class="hub-unit-head"><strong>'+titles[i]+'</strong><div class="hub-edit-tools"><button class="secondary" data-left aria-label="앞으로 이동">←</button><button class="secondary" data-right aria-label="뒤로 이동">→</button><select aria-label="'+titles[i]+' 너비">'+Array.from({length:9},(_,i)=>[i+4,(i+4)+'/12']).map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></div><button class="secondary" data-fold aria-expanded="true">접기</button></header><div class="hub-unit-body"></div><button class="hub-resize" aria-label="'+titles[i]+' 크기 조절">◢</button>';
+  layout.forEach(({id})=>{const i=keys.indexOf(id);const section=document.createElement('section');section.className='hub-unit';section.dataset.unit=id;section.innerHTML='<header class="hub-unit-head" tabindex="0" role="button" aria-label="'+titles[i]+' 위치 이동"><span class="hub-grip" aria-hidden="true">⠿</span><strong>'+titles[i]+'</strong></header><div class="hub-unit-body"></div><button class="hub-resize" aria-label="'+titles[i]+' 크기 조절">◢</button>' ;
    root.querySelector('.hub-unit-grid').append(section);const body=section.querySelector('.hub-unit-body');
    if(id==='research'){const panel=$('panel');marker=document.createComment('research panel home');panel.before(marker);body.append(panel);}else{const frame=document.createElement('iframe');const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('hubUnit',id);frame.src=url.href;frame.title=titles[i];body.append(frame);}
-   const item=()=>layout.find(x=>x.id===id);section.querySelector('select').value=item().w;
-   section.querySelector('select').onchange=e=>{item().w=Number(e.target.value);apply();save();};
-   section.querySelector('[data-fold]').onclick=()=>{item().closed=!item().closed;apply();save();};
-   for(const [s,n] of [['left',-1],['right',1]])section.querySelector('[data-'+s+']').onclick=()=>{const a=layout.indexOf(item()),b=a+n;if(b>=0&&b<4){[layout[a],layout[b]]=[layout[b],layout[a]];apply();save();}};
-   const head=section.querySelector('.hub-unit-head');head.draggable=true;head.ondragstart=e=>{if(!editing||e.target.closest('button,select')){e.preventDefault();return;}e.dataTransfer.setData('text/plain',id);};section.ondragover=e=>{if(editing)e.preventDefault();};section.ondrop=e=>{e.preventDefault();const from=e.dataTransfer.getData('text/plain');if(!editing||!keys.includes(from)||from===id)return;const old=layout.find(x=>x.id===from);layout=layout.filter(x=>x.id!==from);layout.splice(layout.findIndex(x=>x.id===id),0,old);apply();save();};
-   const handle=section.querySelector('.hub-resize');handle.onpointerdown=e=>{if(!editing)return;e.preventDefault();handle.setPointerCapture(e.pointerId);const sx=e.clientX,sy=e.clientY,sw=item().w,sh=item().h,grid=root.querySelector('.hub-unit-grid').clientWidth;root.classList.add('resizing');handle.onpointermove=m=>{item().w=Math.max(4,Math.min(12,Math.round(sw+(m.clientX-sx)/grid*12)));item().h=Math.max(260,Math.min(1600,sh+m.clientY-sy));section.style.gridColumn='span '+item().w;section.style.height=item().h+'px';};const end=()=>{handle.onpointermove=null;root.classList.remove('resizing');save();};handle.onpointerup=end;handle.onpointercancel=end;};
+   bindWidget(section,id);
   });
-  root.querySelector('[data-edit]').onclick=e=>{editing=!editing;e.target.textContent=editing?'편집 완료':'배치 편집';apply();};root.querySelector('[data-reset]').onclick=()=>{layout=defaults();apply();save();};root.querySelector('[data-close]').onclick=close;root.querySelector('[data-full]').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{root.querySelector('[data-status]').textContent='앱의 초록색 전체화면 버튼을 이용해 주세요.';}};
-  if(tab!=='researchRooms'){tab='researchRooms';originalRender();}apply();
+  root.querySelector('[data-config]').onclick=configure;root.querySelector('[data-edit]').onclick=e=>{editing=!editing;e.target.textContent=editing?'편집 완료':'배치 편집';apply();};root.querySelector('[data-reset]').onclick=()=>{const h=Math.max(4,Math.round((innerHeight-110)/144));layout=layout.map((x,i)=>({...x,x:i%2?6:0,y:Math.floor(i/2)*h,w:6,h}));apply();save();};root.querySelector('[data-close]').onclick=close;root.querySelector('[data-full]').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{root.querySelector('[data-status]').textContent='앱의 초록색 전체화면 버튼을 이용해 주세요.';}};
+  if(layout.some(x=>x.id==='research')&&tab!=='researchRooms'){tab='researchRooms';originalRender();}apply();
  }
- function close(){if(!active)return;const panel=$('panel');marker.replaceWith(panel);root.remove();root=null;active=false;document.body.classList.remove('hub-workspace-active');/* Keep the research DOM and recording session alive. */tab='researchRooms';nav();}
- window.addEventListener('message',async e=>{if(!active||e.origin!==location.origin||![...root.querySelectorAll('iframe')].some(f=>f.contentWindow===e.source)||e.data?.type!=='hub-topic')return;await openResearchNotification({id:'workspace',type:'researchRooms',topic:e.data.topic,recording:e.data.recording});const item=layout.find(x=>x.id==='research');item.closed=false;apply();root.querySelector('[data-unit="research"]').scrollIntoView({behavior:'smooth',block:'start'});});
+ function close(){if(!active)return;cancelGesture?.();const panel=$('panel');if(marker?.isConnected)marker.replaceWith(panel);marker=null;root.remove();root=null;active=false;fullscreenPending=false;document.body.classList.remove('hub-workspace-active');/* Keep the research DOM and recording session alive. */nav();}
+ window.addEventListener('message',async e=>{if(!active||e.origin!==location.origin||![...root.querySelectorAll('iframe')].some(f=>f.contentWindow===e.source)||e.data?.type!=='hub-topic')return;if(!layout.some(x=>x.id==='research'))close();await openResearchNotification({id:'workspace',type:'researchRooms',topic:e.data.topic,recording:e.data.recording});apply();root?.querySelector('[data-unit="research"]')?.scrollIntoView({behavior:'smooth',block:'start'});});
  document.addEventListener('fullscreenchange',()=>{if(document.fullscreenElement)open();else close();});
  window.addEventListener('nisml-fullscreen',e=>{fullscreenPending=!!e.detail?.active;if(fullscreenPending)open();else close();});
- button();
+ button();settings();
 })();
