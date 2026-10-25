@@ -1215,3 +1215,5 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 .year-metric .activity-own{font-style:normal;font-size:.78em;font-weight:650;color:#376b88}
 [data-theme=dark] .year-metric .activity-own{color:#a5d4ee}
 .student-home-overview .year-metric>b{letter-spacing:-.5px}
+
+.year-aurora h2{word-break:keep-all}.year-aurora .activity-title-own{font:inherit;white-space:nowrap}
