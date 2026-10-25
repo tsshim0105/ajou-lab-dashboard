@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
-import {fresh,visible,validateData,applyResearchChanges,applySharedData} from '../server/worker.mjs';
+import {fresh,visible,validateData,applyResearchChanges,applySharedData,syncArchiveAchievements,mergePaperCatalog} from '../server/worker.mjs';
 const ctx=vm.createContext({});vm.runInContext(readFileSync(new URL('../paper-achievements.js',import.meta.url),'utf8'),ctx);const calc=a=>ctx.paCalculate({authors:6,sci:'SCI',role:'lead',percentile:20,include:true,...a});
 test('university percentile tiers and author shares match supplied examples',()=>{
  assert.equal(calc({authors:7,percentile:1}).university,1000*1.5/7);
@@ -62,4 +62,23 @@ test('batch import matches by DOI, preserves bibliography, and rejects unmatched
  const papers=[{title:'Paper',doi:'10.example/test',issueDate:'2024-10-24',authorCount:9}],record={doi:'10.example/test',authors:8,role:'lead',base:450,note:'User spreadsheet'};
  const plan=ctx.paPrepareImport([record],papers);assert.equal(plan.length,1);assert.equal(plan[0].achievement.authors,8);assert.equal(plan[0].achievement.semester,2);assert.equal(papers[0].authorCount,9);
  assert.throws(()=>ctx.paPrepareImport([record,record],papers));assert.throws(()=>ctx.paPrepareImport([{...record,doi:'missing'}],papers));assert.throws(()=>ctx.paPrepareImport([record],[{...papers[0],issueDate:'2024-07-05'}]));
+});
+
+test('archive edits invalidate affected imported overrides without losing IF or unrelated history',()=>{
+ const d=fresh().data;d.papers=[{id:'p',title:'Paper',journal:'Journal',year:2026,issueDate:'2026-08',authorCount:6,firstAuthor:'A',correspondingAuthor:'Tae Soup Shim',achievement:{year:2026,semester:1,authors:6,sci:'SCI',role:'lead',base:450,percentile:null,engineeringRecorded:150,category:'Materials',jcrYear:2025,include:true,note:'Excel'}}];
+ const edit=values=>applyResearchChanges(d,[{type:'papers',id:'p',action:'edit',values}]).papers[0];
+ assert.deepEqual(edit({title:'New title'}).achievement,d.papers[0].achievement);
+ const count=edit({authorCount:8});assert.equal(count.achievement.authors,undefined);assert.equal(count.achievement.engineeringRecorded,undefined);assert.equal(count.achievement.base,450);
+ const role=edit({correspondingAuthor:'Another Author'});assert.equal(role.achievement.role,undefined);assert.equal(role.achievement.engineeringRecorded,undefined);
+ const date=edit({issueDate:'2029-09'});assert.equal(date.achievement.semester,undefined);assert.equal(ctx.paTerm(date).year,2029);assert.equal(ctx.paTerm(date).semester,2);
+ const sci=edit({sci:'KCI'});assert.equal(sci.achievement.sci,undefined);
+ const journal=edit({journal:'New journal'});assert.equal(journal.achievement.base,null);assert.equal(journal.achievement.percentile,null);
+ const owner=structuredClone(d);owner.papers[0].authorCount=7;assert.equal(syncArchiveAchievements(d,owner).papers[0].achievement.authors,undefined);
+ const shared=visible(d,false);shared.papers[0].authorCount=9;assert.equal(applySharedData(d,shared).papers[0].achievement.authors,undefined);
+});
+test('new archive papers are automatically scored from bibliographic values',()=>{
+ Object.assign(ctx,{labLeadAuthor:'Tae Soup Shim',paperAuthorCount:r=>r.authorCount??null,paperSci:r=>r.sci||'',paperFirst:r=>r.firstAuthor||'',paperCorresponding:r=>r.correspondingAuthor||'',paperCoauthors:r=>r.coauthors||''});
+ const p={id:'new',title:'New paper',year:2029,issueDate:'2029-09',authorCount:4,sci:'SCI',correspondingAuthor:'Tae Soup Shim'};
+ const a=ctx.paInput(p);assert.equal(ctx.paPeriodIndex(a.year,a.semester),1);assert.equal(a.authors,4);assert.equal(a.role,'lead');assert.equal(ctx.paCalculate(a).engineering,180);assert.equal(ctx.paCalculate(a).university,null);
+ assert.equal(ctx.paCalculate(ctx.paInput({...p,achievement:{percentile:10}})).university,225);
 });
