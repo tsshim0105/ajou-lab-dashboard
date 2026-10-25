@@ -46,7 +46,7 @@ export function validateReagentLinks(links){
 }
 
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
+export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,achievement,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
 export function validateGroupMeetings(rows){
  if(!Array.isArray(rows)||rows.length>1000)throw Error('일정은 1,000개까지 저장할 수 있습니다.');
  const ids=new Set();return rows.map(r=>{
@@ -88,6 +88,11 @@ export function validateData(d){
  const dateOK=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;
  const partialDateOK=s=>{if(typeof s!=='string'||!/^\d{4}(-\d{2}(-\d{2})?)?$/.test(s)||s.slice(0,4)<'1900'||s.slice(0,4)>'2200')return false;return dateOK(s.length===4?s+'-01-01':s.length===7?s+'-01':s);};
  for(const p of d.papers){
+  if(p.achievement!==undefined){
+   const a=p.achievement;
+   if(!a||typeof a!=='object'||Array.isArray(a)||Object.keys(a).some(k=>!['year','authors','sci','role','percentile','category','jcrYear','include','note'].includes(k))||!Number.isInteger(a.year)||a.year<1900||a.year>2200||!Number.isInteger(a.authors)||a.authors<1||a.authors>100000||!['','SCI','other'].includes(a.sci)||!['','lead','co'].includes(a.role)||(a.authors===1&&a.role==='co')||(a.percentile!==null&&(!Number.isFinite(a.percentile)||a.percentile<0||a.percentile>100))||(a.jcrYear!==null&&(!Number.isInteger(a.jcrYear)||a.jcrYear<1900||a.jcrYear>2200))||typeof a.include!=='boolean'||typeof a.category!=='string'||a.category.length>500||typeof a.note!=='string'||a.note.length>2000)throw Error('논문 업적 정보를 확인해주세요.');
+  }
+
   if(p.sci!==undefined&&!['','Y','N','SCI','KCI','해당사항없음'].includes(p.sci))throw Error('SCI 여부를 확인해주세요.');
   if(p.authorCount!==undefined&&p.authorCount!==null&&(!Number.isInteger(p.authorCount)||p.authorCount<1||p.authorCount>100000))throw Error('총저자수는 1 이상의 정수여야 합니다.');
   for(const k of ['correspondingAuthor','coauthors','volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');

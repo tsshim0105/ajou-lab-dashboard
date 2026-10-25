@@ -360,3 +360,13 @@ test('personal research counts match whole Korean and mapped English names, coun
  assert.deepEqual(JSON.parse(JSON.stringify(ctx.personalResearchCounts(2026,'손은지'))),{papers:2,conferences:2});
  assert.deepEqual(JSON.parse(JSON.stringify(ctx.personalResearchCounts(2026,''))),{papers:0,conferences:0});
 });
+
+test('professor achievement settings persist and never appear in student data',async()=>{
+ const {worker,env}=fixture();const owner=await(await worker.fetch(req(OWNER),env)).json();
+ const achievement={year:2026,authors:6,sci:'SCI',role:'lead',percentile:20,category:'Polymer Science',jcrYear:2025,include:true,note:'Verified'};
+ owner.data.papers[0].achievement=achievement;
+ assert.equal((await worker.fetch(req(OWNER,'/api/data','PUT',{version:owner.version,data:owner.data}),env)).status,200);
+ const saved=await(await worker.fetch(req(OWNER),env)).json();assert.deepEqual(saved.data.papers[0].achievement,achievement);
+ const student=await(await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.data.papers[0].achievement,undefined);
+ assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:saved.version,data:owner.data}),env)).status,403);
+});
