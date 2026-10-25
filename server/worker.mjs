@@ -90,7 +90,7 @@ export function validateData(d){
  for(const p of d.papers){
   if(p.achievement!==undefined){
    const a=p.achievement;
-   if(!a||typeof a!=='object'||Array.isArray(a)||Object.keys(a).some(k=>!['year','authors','sci','role','percentile','category','jcrYear','include','note'].includes(k))||!Number.isInteger(a.year)||a.year<1900||a.year>2200||!Number.isInteger(a.authors)||a.authors<1||a.authors>100000||!['','SCI','other'].includes(a.sci)||!['','lead','co'].includes(a.role)||(a.authors===1&&a.role==='co')||(a.percentile!==null&&(!Number.isFinite(a.percentile)||a.percentile<0||a.percentile>100))||(a.jcrYear!==null&&(!Number.isInteger(a.jcrYear)||a.jcrYear<1900||a.jcrYear>2200))||typeof a.include!=='boolean'||typeof a.category!=='string'||a.category.length>500||typeof a.note!=='string'||a.note.length>2000)throw Error('논문 업적 정보를 확인해주세요.');
+   if(!a||typeof a!=='object'||Array.isArray(a)||Object.keys(a).some(k=>!['year','semester','authors','sci','role','percentile','category','jcrYear','include','note'].includes(k))||!Number.isInteger(a.year)||a.year<1900||a.year>2200||(a.semester!==undefined&&a.semester!==null&&![1,2].includes(a.semester))||!Number.isInteger(a.authors)||a.authors<1||a.authors>100000||!['','SCI','other'].includes(a.sci)||!['','lead','co'].includes(a.role)||(a.authors===1&&a.role==='co')||(a.percentile!==null&&(!Number.isFinite(a.percentile)||a.percentile<0||a.percentile>100))||(a.jcrYear!==null&&(!Number.isInteger(a.jcrYear)||a.jcrYear<1900||a.jcrYear>2200))||typeof a.include!=='boolean'||typeof a.category!=='string'||a.category.length>500||typeof a.note!=='string'||a.note.length>2000)throw Error('논문 업적 정보를 확인해주세요.');
   }
 
   if(p.sci!==undefined&&!['','Y','N','SCI','KCI','해당사항없음'].includes(p.sci))throw Error('SCI 여부를 확인해주세요.');

@@ -30,3 +30,20 @@ test('achievement metadata is professor-only, validated and preserved by student
  const shared=visible(d,false);shared.papers[0].achievement={note:'forged'};assert.deepEqual(applySharedData(d,shared).papers[0].achievement,a);
  for(const patch of [{percentile:101},{authors:0},{role:'bad'},{year:0},{include:'true'},{jcrYear:3000},{authors:1,role:'co'}]){const bad=structuredClone(d);Object.assign(bad.papers[0].achievement,patch);assert.throws(()=>validateData(bad));}
 });
+
+test('professor periods begin at 2024-2 and contain exactly ten consecutive semesters',()=>{
+ assert.equal(ctx.paPeriodIndex(2024,1),-1);assert.equal(ctx.paPeriodIndex(2023,2),-1);
+ assert.equal(ctx.paPeriodIndex(2024,2),0);assert.equal(ctx.paPeriodIndex(2029,1),0);
+ assert.equal(ctx.paPeriodIndex(2029,2),1);assert.equal(ctx.paPeriodIndex(2034,1),1);
+ assert.equal(ctx.paPeriodIndex(2034,2),2);assert.equal(ctx.paPeriodIndex(2039,1),2);
+ assert.equal(ctx.paPeriodIndex(2026,null),null);
+ for(let i=0;i<4;i++){const p=ctx.paPeriod(i);assert.equal(p.terms.length,10);assert.equal(p.terms[0].key,p.start);assert.equal(p.terms.at(-1).key,p.end);for(const t of p.terms)assert.equal(ctx.paPeriodIndex(t.year,t.semester),i);}
+ assert.equal(ctx.paPeriod(0).label,'교수A');assert.equal(ctx.paPeriod(1).label,'교수B');assert.equal(ctx.paPeriod(2).label,'교수C');
+});
+test('year-only legacy records remain unassigned until a semester is confirmed',()=>{
+ assert.equal(ctx.paTerm({year:2026}).semester,null);
+ assert.equal(ctx.paTerm({year:2026,achievement:{year:2025,semester:2}}).year,2025);
+ assert.equal(ctx.paTerm({year:2026,achievement:{year:2025,semester:2}}).semester,2);
+ const d=fresh().data,a={year:2024,semester:2,authors:6,sci:'SCI',role:'lead',percentile:20,category:'',jcrYear:null,include:true,note:''};d.papers.push({id:'term-paper',year:2024,title:'Term paper',achievement:a});assert.doesNotThrow(()=>validateData(d));
+ a.semester=3;assert.throws(()=>validateData(d));
+});
