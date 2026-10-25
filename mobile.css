@@ -1250,3 +1250,31 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 
 /* Edge-to-edge fullscreen board, controls overlay instead of reserving a top row. */
 .hub-workspace{padding:0}.hub-workspace .hub-unit-grid{margin:0}.hub-workspace .hub-unit{border-radius:0;box-shadow:none;border-width:0 1px 1px 0}.hub-workspace .hub-unit-head{height:36px;min-height:36px;padding:0 10px}.hub-workspace-head{display:none;position:fixed;top:42px;right:8px;left:auto;padding:10px;flex-wrap:wrap;max-width:520px;border:1px solid #cbdce5;border-radius:12px;box-shadow:0 8px 28px #18384b22;z-index:10}.menu-open .hub-workspace-head{display:flex}.hub-workspace-head>strong,.hub-workspace-head>[data-status]{display:none}.hub-board-menu{position:fixed;top:3px;right:5px;z-index:11;width:32px;height:30px;padding:0!important;opacity:.85}.hub-board-menu:hover,.hub-board-menu:focus{opacity:1}.hub-unit[data-unit=research] .hub-unit-body{container-type:inline-size}.hub-meeting-overview{padding:0;background:var(--surface,#fff)}.hub-meeting-topic{border-bottom:1px solid var(--edge,#d5e3ea)}.hub-meeting-topic>header{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;padding:12px 14px;background:linear-gradient(110deg,#e7f2ef,#f1eef8)}.hub-meeting-topic>header h2,.hub-meeting-topic>header small{position:relative;z-index:1;margin:0}.hub-meeting-topic>header h2{font-size:17px;color:#203b4c}.hub-meeting-topic>header .rr-topic-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.3}.hub-meeting-record{padding:12px 14px;border-bottom:1px solid #dde6ee}.hub-meeting-date{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted,#60788b);margin-bottom:8px}.hub-meeting-overview .mr-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.hub-meeting-overview .mr-summary-grid section{padding:10px;border-radius:8px;background:var(--soft,#f0f5f7);min-width:0}.hub-meeting-overview h4{margin:0 0 6px;font-size:13px}.hub-meeting-overview ul{margin:0;padding-left:18px;font-size:13px;line-height:1.65;overflow-wrap:anywhere}.hub-meeting-empty{padding:10px 14px;margin:0;font-size:13px}@container(max-width:500px){.hub-meeting-overview .mr-summary-grid{grid-template-columns:1fr}}
+
+/* Compact achievement indicators and adjacent vertical period selector. */
+.pa-overview{display:grid;grid-template-columns:minmax(0,1fr) 164px;gap:10px;align-items:start;margin:12px 0}
+.pa-overview .pa-years{display:flex;flex-direction:column;gap:4px;padding:0;max-height:128px;overflow:auto}
+.pa-overview .pa-years button{padding:5px 9px;gap:1px;min-height:0;font-size:12px}
+.pa-overview .pa-years button small{font-size:10px}
+.pa-overview .pa-totals{gap:8px;min-width:0}
+.pa-overview .pa-totals section{padding:10px 12px;gap:4px;border-radius:12px;min-width:0}
+.pa-overview .pa-totals span{font-size:12px;line-height:1.4}
+.pa-overview .pa-totals strong{font-size:26px;line-height:1.2}
+.pa-overview .pa-totals small{font-size:11px;line-height:1.4}
+@media(max-width:480px){.pa-overview{grid-template-columns:minmax(0,1fr) 110px;gap:6px}.pa-overview .pa-totals{grid-template-columns:1fr}.pa-overview .pa-years{max-height:220px}}
+/* Fixed widget bounds with independent scrolling; research topics in two columns. */
+.hub-unit-body{flex:1 1 0;min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain}
+.hub-unit iframe{min-height:0;flex:1 1 0}
+html.hub-embedded{height:100%;overflow:auto;overscroll-behavior:contain}
+.hub-embedded body{height:auto!important;min-height:100%;max-height:none!important;overflow:visible!important}
+.hub-embedded main.app{height:auto!important;max-height:none!important;min-height:0!important}
+.hub-meeting-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;align-items:start}
+.hub-meeting-topic{min-width:0;overflow-wrap:anywhere;border-right:1px solid var(--edge,#d5e3ea)}
+.hub-meeting-topic>header{padding:10px;gap:6px}.hub-meeting-topic>header h2{font-size:15px}
+.hub-meeting-overview .mr-summary-grid{grid-template-columns:1fr}
+.hub-meeting-overview>.muted{grid-column:1/-1}
+
+/* Embedded modules already have a title in their outer bar. */
+.hub-embedded #panel>h1,.hub-embedded #panel>.mobile-section-title,.hub-embedded #panel>.research-title h1,.hub-embedded #panel>.research-title .paper-title-note{display:none!important}
+.hub-embedded #panel>.research-title{border:0!important;padding:0!important;margin:0 0 8px!important;min-height:0!important;justify-content:flex-end}
+.hub-embedded #panel>.research-title .research-title-label{display:none!important}
