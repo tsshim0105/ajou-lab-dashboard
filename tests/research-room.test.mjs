@@ -204,3 +204,18 @@ test('professor preview scopes research reads to the selected student and refuse
  assert.equal((await f.call('rooms?'+q,null,'student@example.test')).status,403);
  const owner=await(await f.call('rooms')).json();assert.equal(owner.topics.length,2);
 });
+
+test('professor pending meetings retain every unapproved summary across dates and exclude approved or empty content',async()=>{
+ const f=fixture();await f.call('topic',topic());
+ const insert=(id,created,item,status)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created,status,summary:{'topic-0001':item}}));
+ const draft={status:'draft',content:'## 연구진행상황\n- 검토할 내용'};
+ insert('pending-old','2026-10-20T01:00:00Z',draft);
+ insert('pending-new','2026-10-25T01:00:00Z',draft);
+ insert('reviewed','2026-10-25T02:00:00Z',{...draft,status:'reviewed'});
+ insert('recheck','2026-10-24T01:00:00Z',{...draft,status:'reviewed',rolesChanged:true});
+ insert('empty','2026-10-25T03:00:00Z',{...draft,content:' '});
+ insert('cancelled','2026-10-25T04:00:00Z',draft,'cancelled');
+ const result=await (await f.call('latest-meetings')).json();
+ assert.equal(result.pending,true);assert.equal(result.day,null);
+ assert.deepEqual(result.meetings.map(x=>x.recording),['pending-new','recheck','pending-old']);
+});

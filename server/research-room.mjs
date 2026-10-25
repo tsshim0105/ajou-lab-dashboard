@@ -32,11 +32,12 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  if(req.method==='GET'){
   if(action==='latest-meetings'){
    const rows=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'topic:%'").all();
-   const topics=rows.results.map(r=>JSON.parse(r.payload)).filter(t=>!t.deleted&&!t.archived&&canRead(t)&&(actor.admin||(t.primaryResearchers||[]).includes(actor.email)));
+   const topics=rows.results.map(r=>JSON.parse(r.payload)).filter(t=>!t.deleted&&(actor.admin||!t.archived)&&canRead(t)&&(actor.admin||(t.primaryResearchers||[]).includes(actor.email)));
    const records=await db.prepare("SELECT json_extract(payload,'$.id') AS id,json_extract(payload,'$.created') AS created,json_extract(payload,'$.summary') AS summary FROM research_records WHERE id LIKE 'recording:%' AND COALESCE(json_extract(payload,'$.status'),'') != 'cancelled'").all();
    const entries=[];
-   for(const row of records.results){if(!Number.isFinite(Date.parse(row.created)))continue;const summary=JSON.parse(row.summary||'{}');for(const t of topics){const item=summary[t.id];if(!item?.content?.trim()||(!actor.admin&&(item.status!=='reviewed'||item.rolesChanged)))continue;entries.push({topic:{id:t.id,title:t.title,cover:t.cover},recording:row.id,created:row.created,content:item.content,status:item.status,rolesChanged:!!item.rolesChanged,day:new Date(Date.parse(row.created)+9*3600000).toISOString().slice(0,10)});}}
+   for(const row of records.results){if(!Number.isFinite(Date.parse(row.created)))continue;const summary=JSON.parse(row.summary||'{}');for(const t of topics){const item=summary[t.id];if(!item?.content?.trim()||(actor.admin?(item.status==='reviewed'&&!item.rolesChanged):(item.status!=='reviewed'||item.rolesChanged)))continue;entries.push({topic:{id:t.id,title:t.title,cover:t.cover,...(actor.admin?{archived:!!t.archived}:{})},recording:row.id,created:row.created,content:item.content,status:item.status,rolesChanged:!!item.rolesChanged,day:new Date(Date.parse(row.created)+9*3600000).toISOString().slice(0,10)});}}
    entries.sort((a,b)=>b.created.localeCompare(a.created)||a.topic.id.localeCompare(b.topic.id));const day=entries[0]?.day||null,seen=new Set();
+   if(actor.admin)return reply({day:null,pending:true,meetings:entries});
    return reply({day,meetings:entries.filter(e=>{if(e.day!==day||seen.has(e.topic.id))return false;seen.add(e.topic.id);return true;})});
   }
   if(action==='bootstrap'){

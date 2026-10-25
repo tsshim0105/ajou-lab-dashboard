@@ -1217,3 +1217,17 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 .student-home-overview .year-metric>b{letter-spacing:-.5px}
 
 .year-aurora h2{word-break:keep-all}.year-aurora .activity-title-own{font:inherit;white-space:nowrap}
+
+/* Desktop name management: two students per row, each with an intact input/action group. */
+@media(min-width:761px){
+ #nameMappingForm .name-mapping-table{display:block}
+ #nameMappingForm .name-mapping-table thead{display:none}
+ #nameMappingRows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 22px}
+ #nameMappingRows tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) auto;gap:8px;align-items:end;min-width:0;padding:8px 0;border-bottom:1px solid var(--edge,#dce4ee)}
+ #nameMappingRows td{display:flex;flex-direction:column;gap:4px;min-width:0;padding:0;border:0}
+ #nameMappingRows td:first-child::before{content:"국문명"}
+ #nameMappingRows td:nth-child(2)::before{content:"영문명"}
+ #nameMappingRows td::before{font-size:12px;color:var(--muted-text,#64748b)}
+ #nameMappingRows input,#nameMappingRows [data-remove-name]{height:38px;box-sizing:border-box}
+ [data-theme=dark] #nameMappingRows td::before{color:#b9c7db}
+}
