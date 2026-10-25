@@ -402,9 +402,16 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         alert("대시보드 연결 복구", "화면 연결이 중단되었습니다. 녹음 원본은 이 Mac에 보관됩니다. 다시 로그인한 뒤 회의 녹음 시작을 누르면 중단된 기록을 먼저 복구합니다.")
         web.reload()
     }
+    func publishFullscreenState() {
+        let active = window.styleMask.contains(.fullScreen) ? "true" : "false"
+        web.evaluateJavaScript("window.dispatchEvent(new CustomEvent('nisml-fullscreen',{detail:{active:\(active)}}));", completionHandler: nil)
+    }
+    func windowDidEnterFullScreen(_ notification: Notification) { publishFullscreenState() }
+    func windowDidExitFullScreen(_ notification: Notification) { publishFullscreenState() }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if webView === web {
             addressLine.stringValue = web.url.map { Lab.isSite($0) ? "NISML Hub" : ($0.host ?? "NISML Hub") } ?? "NISML Hub"
+            publishFullscreenState()
             Task { await poll() }
         }
     }
