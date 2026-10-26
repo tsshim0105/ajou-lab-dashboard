@@ -1347,3 +1347,13 @@ body.hub-workspace-active{overflow:hidden!important}
 .hub-card-board .hub-achievement-overview .pa-promotion{margin:0}
 .hub-card-board .hub-achievement-overview .hub-score strong{font-size:28px}
 .hub-card-board .hub-achievement-overview .hub-score-caption span{font-size:12px}
+
+/* Edit and view use exactly the same card content box. */
+.hub-card-board .hub-unit-body{inset:0!important;padding:2px!important}
+.hub-card-board .hub-card-remove{display:none;z-index:3;background:#fff;border-radius:50%;box-shadow:0 1px 5px #183c5426}
+.hub-card-board.board-editing .hub-card-remove{display:block}
+.hub-card-board .hub-resize{z-index:3}
+.hub-card-board .hub-unit-body>:only-child{margin-bottom:0!important}
+.hub-card-board .hub-measure .hub-unit-body{position:static!important;height:auto!important;overflow:visible!important}
+.hub-card-board .hub-measure .hub-unit-body>*{min-height:0!important}
+.hub-card-board .hub-measure .hub-card-remove,.hub-card-board .hub-measure .hub-resize{display:none!important}

@@ -381,3 +381,10 @@ test('board layouts are persisted under authenticated accounts and reject invali
  for(const invalid of [[{...board[0],x:10}], [board[0],{...board[0],id:'other'}], [{...board[0],h:-1}],null])assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoard:invalid}),env)).status,400);
  assert.equal((await worker.fetch(req(null,'/api/preferences','PUT',{hubBoard:board}),env)).status,401);
 });
+test('fine vertical board positions and a stable grid persist across sessions',async()=>{
+ const {worker,env}=fixture(),hubBoard=[{id:'meeting-now',x:0,y:.05,w:6,h:1.8}];
+ assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoard,hubBoardRows:12}),env)).status,200);
+ const p=(await (await worker.fetch(req(OWNER),env)).json()).preferences;
+ assert.deepEqual(p.hubBoard,hubBoard);assert.equal(p.hubBoardRows,12);
+ assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoardRows:0}),env)).status,400);
+});
