@@ -6,7 +6,7 @@ export JAVA_HOME="$ROOT/tooling/jdk/Contents/Home"
 export ANDROID_HOME="$ROOT/tooling/sdk"
 export GRADLE_USER_HOME="$ROOT/tooling/gradle-cache"
 export PATH="$JAVA_HOME/bin:$ROOT/tooling/gradle-8.13/bin:$PATH"
-VERSION=0.1.3
+VERSION=0.1.4
 FINAL="$ROOT/release/NISML-Hub-$VERSION.apk"
 [ ! -e "$FINAL" ] || { echo 'Release exists; increment versionName, versionCode and VERSION.' >&2; exit 1; }
 gradle --no-daemon :app:assembleRelease :app:lintRelease
