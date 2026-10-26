@@ -1,14 +1,5 @@
 /* Grid coordinates are independent of DOM order; moving a widget never reloads its content. */
 const HubWidgetGrid={
- compact(items,cell,heights){
-  const placed=[];
-  for(const r of [...items].sort((a,b)=>a.y-b.y||a.x-b.x)){
-   const above=placed.filter(p=>p.x<r.x+r.w&&p.x+p.w>r.x&&p.y+p.h<=r.y);
-   const originalBottom=Math.max(0,...above.map(p=>p.y+p.h));
-   const top=Math.max(0,...above.map(p=>p.top+p.height))+(r.y-originalBottom)*cell;
-   placed.push({...r,top,height:Math.min(r.h*cell,heights[r.id]??r.h*cell)});
-  }return placed;
- },
  overlaps:(a,b)=>a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y,
  place(items,id,rect){
   const result=items.map(x=>({...x})),moving=result.find(x=>x.id===id);
@@ -60,7 +51,7 @@ const HubWidgetGrid={
  function save(){try{localStorage.setItem(storageKey(),JSON.stringify(layout));preferences.hubBoard=layout.map(r=>({...r}));savePreferences();status('계정 배치 저장 중');prefQueue.then(()=>status(document.getElementById('preferenceStatus')?'계정 저장 상태를 확인해주세요.':'계정 배치 저장됨'));}catch{status('배치를 저장하지 못했습니다. 브라우저 저장 공간을 확인해주세요.');}}
  function status(text){if(root)root.querySelector('[data-status]').textContent=text;}
  async function loadResearch(){if(!admin())return;try{const [rooms,history]=await Promise.all([researchFetch('rooms'),researchFetch('recording-list')]);if(!admin())return;research={rooms,history};researchError='';}catch(e){researchError='회의요약 조회 실패 · 새로고침으로 다시 시도해주세요.';}if(root&&!gesture){buildCatalog();draw();}}
- function apply(){if(!root)return;if(!gesture)cell=root.clientHeight/Math.max(12,...layout.map(r=>r.y+r.h));for(const r of layout){const el=[...root.querySelectorAll('.hub-unit')].find(el=>el.dataset.unit===r.id);if(!el)continue;el.style.left=r.x/12*100+'%';el.style.top=r.y*cell+'px';el.style.width=r.w/12*100+'%';el.style.height=r.h*cell+'px';}if(!editing&&!gesture){const heights={};for(const r of layout){const el=[...root.querySelectorAll('.hub-unit')].find(e=>e.dataset.unit===r.id),body=el?.querySelector('.hub-unit-body');if(!body)continue;const box=body.getBoundingClientRect();heights[r.id]=Math.max(40,...[...body.children].map(c=>c.getBoundingClientRect().bottom-box.top+body.scrollTop))+4;}for(const r of HubWidgetGrid.compact(layout,cell,heights)){const el=[...root.querySelectorAll('.hub-unit')].find(e=>e.dataset.unit===r.id);if(el){el.style.top=r.top+'px';el.style.height=r.height+'px';}}}root.querySelector('.hub-unit-grid').style.height='100%';root.querySelector('[data-undo]').disabled=!undo;}
+ function apply(){if(!root)return;if(!gesture)cell=root.clientHeight/Math.max(12,...layout.map(r=>r.y+r.h));for(const r of layout){const el=[...root.querySelectorAll('.hub-unit')].find(el=>el.dataset.unit===r.id);if(!el)continue;el.style.left=r.x/12*100+'%';el.style.top=r.y*cell+'px';el.style.width=r.w/12*100+'%';el.style.height=r.h*cell+'px';}root.querySelector('.hub-unit-grid').style.height='100%';root.querySelector('[data-undo]').disabled=!undo;}
  function draw(){if(!root||!admin())return;const grid=root.querySelector('.hub-unit-grid');for(const el of [...grid.children])if(!layout.some(x=>x.id===el.dataset.unit))el.remove();for(const item of layout){let el=[...grid.children].find(e=>e.dataset.unit===item.id);const entry=catalog.get(item.id)||{title:'자료 확인 중',html:'<p class="muted">자료가 삭제되었거나 아직 불러오지 못했습니다. 보드에서 제거 후 다시 추가할 수 있습니다.</p>'};if(!el){el=document.createElement('section');el.className='hub-unit';el.dataset.unit=item.id;el.innerHTML='<header class="hub-unit-head" tabindex="0" aria-label="카드 이동"><span class="hub-grip">⠿</span><strong></strong><button class="hub-card-remove" aria-label="보드에서 제거" title="보드에서만 제거">×</button></header><div class="hub-unit-body"></div><button class="hub-resize" aria-label="카드 크기 조절">◢</button>';grid.append(el);bindDrag(el,item.id);el.querySelector('.hub-card-remove').onclick=()=>{undo=layout.map(x=>({...x}));layout=layout.filter(x=>x.id!==item.id);draw();save();};}el.querySelector('strong').textContent=entry.title;const body=el.querySelector('.hub-unit-body');if(body.dataset.html!==entry.html){const scroll=body.scrollTop;body.innerHTML=entry.html;body.dataset.html=entry.html;body.scrollTop=scroll;}}
   apply();
  }
