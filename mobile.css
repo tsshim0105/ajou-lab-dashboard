@@ -1299,3 +1299,6 @@ html.hub-embedded #panel{min-height:0!important;flex:none!important;overflow:vis
 .pa-overview-main{min-width:0}.pa-overview-main .pa-promotion-panels{margin:8px 0 0}.pa-overview .pa-years{max-height:290px}.pa-promotion-panels .special{background:#fceeed;border-color:#e3b6b1}.pa-promotion.special progress::-webkit-progress-value{background:#c94949}.pa-promotion.special progress::-moz-progress-bar{background:#c94949}
 
 .pa-overview .pa-years{display:grid;grid-auto-rows:minmax(0,1fr);align-self:stretch;contain:size;min-height:0;max-height:none;overflow:auto}.pa-overview .pa-years button{align-content:center}
+
+/* Keep the achievement window stable when switching between periods. */
+.pa-dialog{box-sizing:border-box;height:90vh;height:90dvh;max-height:90vh;max-height:90dvh;scrollbar-gutter:stable}
