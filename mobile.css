@@ -1314,3 +1314,24 @@ html.hub-embedded #panel{min-height:0!important;flex:none!important;overflow:vis
 @container(max-width:500px){.hub-card-board .mr-summary-grid{grid-template-columns:1fr}.hub-card-board .conference-log-card{grid-template-columns:80px minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.hub-card-board .hub-unit{transition:none}}
 .hub-card-board .hub-resize{display:block;opacity:.65}.hub-card-board .hub-resize:hover,.hub-card-board .hub-resize:focus{opacity:1}
+
+/* Viewport-fitted direct cards and account-owned board library. */
+body.hub-workspace-active{overflow:hidden!important}
+.hub-workspace.hub-card-board{height:100dvh;overflow:hidden!important;padding:0!important}
+.hub-card-board .hub-unit-grid{height:100%;min-height:0!important;margin:0;width:100%}
+.hub-card-board:not(.board-editing) .hub-unit-head,.hub-card-board:not(.board-editing) .hub-resize{display:none!important}
+.hub-card-board:not(.board-editing) .hub-unit-body{inset:0!important}
+.hub-card-board .hub-unit{border:0!important;box-shadow:none;border-radius:0;background:transparent}
+.hub-card-board .hub-unit-body{padding:2px;overflow:auto;overscroll-behavior:contain;min-height:0}
+.hub-card-board .hub-unit-body>section,.hub-card-board .hub-unit-body>article{margin:0}
+.hub-card-board.board-editing .hub-unit{outline:1px dashed #86a8bf;outline-offset:-1px;cursor:grab;touch-action:none}
+.hub-card-board.board-editing .hub-unit-body{user-select:none}
+.hub-card-library{width:min(1120px,94vw)!important;max-width:1120px!important}
+.hub-card-library .hub-library-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-height:62vh}
+.hub-card-library .hub-library-list label{display:flex;flex-direction:column;align-items:stretch;position:relative;padding:8px;border:1px solid #d5e2ed;border-radius:12px;overflow:hidden;background:#f8fbfd}
+.hub-card-library .hub-library-list label>input{position:absolute;right:12px;top:12px;z-index:1}
+.hub-card-library .hub-mini-preview{height:110px;overflow:hidden;pointer-events:none;background:white;border-radius:8px}
+.hub-mini-preview>div{width:800px;height:400px;transform:scale(.27);transform-origin:top left;overflow:hidden;font-size:16px}
+.hub-mini-preview .mobile-paper-card{display:block!important}
+.hub-card-library label>span{font-weight:700;font-size:13px;margin-top:6px}
+@media(max-width:800px){.hub-card-library .hub-library-list{grid-template-columns:repeat(2,minmax(0,1fr))}}

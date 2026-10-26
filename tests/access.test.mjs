@@ -370,3 +370,14 @@ test('professor achievement settings persist and never appear in student data',a
  const student=await(await worker.fetch(req('student@example.test'),env)).json();assert.equal(student.data.papers[0].achievement,undefined);
  assert.equal((await worker.fetch(req('student@example.test','/api/data','PUT',{version:saved.version,data:owner.data}),env)).status,403);
 });
+test('board layouts are persisted under authenticated accounts and reject invalid rectangles',async()=>{
+ const {worker,env}=fixture(),board=[{id:'papers-list',x:0,y:0,w:6,h:4}];
+ assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoard:board,email:'student@example.test'}),env)).status,200);
+ assert.deepEqual((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubBoard,board);
+ assert.equal((await (await worker.fetch(req('student@example.test'),env)).json()).preferences.hubBoard,undefined);
+ const student=[{id:'reagents-list',x:6,y:0,w:6,h:5}];
+ assert.equal((await worker.fetch(req('student@example.test','/api/preferences','PUT',{hubBoard:student}),env)).status,200);
+ assert.deepEqual((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubBoard,board);
+ for(const invalid of [[{...board[0],x:10}], [board[0],{...board[0],id:'other'}], [{...board[0],h:-1}],null])assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoard:invalid}),env)).status,400);
+ assert.equal((await worker.fetch(req(null,'/api/preferences','PUT',{hubBoard:board}),env)).status,401);
+});
