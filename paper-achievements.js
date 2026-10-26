@@ -32,14 +32,15 @@ function openPaperAchievements(){
 // User-selected university score basis; supplied 2025-05-09 standard A, five-year totals.
 function paPromotion(rows){
  const included=rows.filter(x=>!x.result.excluded),total=included.reduce((v,x)=>v+(x.result.university??0),0);
- const qualified=included.filter(x=>x.input.role==='lead'&&x.input.sci==='SCI'&&Number.isFinite(x.input.percentile)&&x.input.percentile<=50&&x.input.percentile>=0);
+ const q2=a=>[300,360,450,600,1000].includes(a.base)?a.base>=360:Number.isFinite(a.percentile)?a.percentile>=0&&a.percentile<=50:null;
+ const qualified=included.filter(x=>x.input.role==='lead'&&x.input.sci==='SCI'&&q2(x.input)===true);
  const quality=qualified.reduce((v,x)=>v+(x.result.university??0),0);
- const unknown=included.filter(x=>x.input.role==='lead'&&x.input.sci==='SCI'&&!Number.isFinite(x.input.percentile)).length;
- return {total,quality,unknown,normalRemaining:Math.max(0,1250-total),specialRemaining:Math.max(0,2500-total),qualityRemaining:Math.max(0,1250-quality),state:total>=2500&&quality>=1250?'gold':total>=1250?'green':'pending'};
+ const unknown=included.filter(x=>x.input.role==='lead'&&x.input.sci==='SCI'&&q2(x.input)===null).length;
+ return {total,quality,qualifiedCount:qualified.length,unknown,normalRemaining:Math.max(0,1250-total),specialRemaining:Math.max(0,2500-total),qualityRemaining:Math.max(0,1250-quality),state:total>=2500&&quality>=1250?'gold':total>=1250?'green':'pending'};
 }
 function paPromotionMarkup(p){
  const left=n=>n>0?paNumber(n)+'점 남음':'점수 충족';
- return `<div class="pa-promotion"><div><span>성과승격 · 1,250점</span><b>${left(p.normalRemaining)}</b></div><progress max="1250" value="${Math.min(1250,p.total)}" aria-label="성과승격 점수 진행률"></progress><div><span>특별 성과 · 2,500점</span><b>${left(p.specialRemaining)}</b></div><progress max="2500" value="${Math.min(2500,p.total)}" aria-label="특별 성과승격 총점 진행률"></progress><div><span>Q2 이상 제1·교신 · 1,250점</span><b>${left(p.qualityRemaining)}</b></div><small>해당 논문 ${paNumber(p.quality)}점${p.unknown?' · Q2 확인 필요 '+p.unknown+'편':''}</small><small>${p.state==='gold'?'특별 성과 점수 요건 충족':p.state==='green'?'성과승격 점수 요건 충족':'성과승격 점수 집계 중'} · 최종 승격 심사와 별도</small></div>`;
+ return `<div class="pa-promotion"><div><span>성과승격 · 1,250점</span><b>${left(p.normalRemaining)}</b></div><progress max="1250" value="${Math.min(1250,p.total)}" aria-label="성과승격 점수 진행률"></progress><div><span>특별 성과 · 2,500점</span><b>${left(p.specialRemaining)}</b></div><progress max="2500" value="${Math.min(2500,p.total)}" aria-label="특별 성과승격 총점 진행률"></progress><div><span>Q2 이상 제1·교신 · 1,250점</span><b>${left(p.qualityRemaining)}</b></div><small>가중치 1.2 이상 ${p.qualifiedCount}편 · ${paNumber(p.quality)}점${p.unknown?' · Q2 확인 필요 '+p.unknown+'편':''}</small><small>${p.state==='gold'?'특별 성과 점수 요건 충족':p.state==='green'?'성과승격 점수 요건 충족':'성과승격 점수 집계 중'} · 최종 승격 심사와 별도</small></div>`;
 }
 function paRender(d,selected){
  if(!admin()){d.close();return;}const rows=paRows().filter(x=>x.input.year>=2024&&paPeriodIndex(x.input.year,x.input.semester)!==-1),max=Math.max(2,...rows.map(x=>paPeriodIndex(x.input.year,x.input.semester)??0)),periods=Array.from({length:max+1},(_,i)=>paPeriod(i)),pending=rows.filter(x=>paPeriodIndex(x.input.year,x.input.semester)===null),chosen=selected??0,period=chosen==='pending'?null:periods[chosen]||periods[0],periodRows=period?rows.filter(x=>paPeriodIndex(x.input.year,x.input.semester)===period.index):pending,list=periodRows,included=period?periodRows.filter(x=>!x.result.excluded):[],total=key=>included.reduce((s,x)=>s+(x.result[key]??0),0),missing=included.filter(x=>x.result.university===null).length,engMissing=included.filter(x=>x.result.engineering===null).length,caption=period?period.label+' · '+period.start+' ~ '+period.end:'학기 확인 필요';
