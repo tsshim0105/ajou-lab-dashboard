@@ -11,11 +11,26 @@ const HubWidgetGrid={
   }return result;
  }
 };
+/* Layout is local to this browser/app installation, never a server preference. */
+const HubDeviceLayout={
+ key:'nisml-hub-device-board-v1',
+ read(storage,legacyKey){
+  const current=storage.getItem(this.key);
+  if(current!==null)return JSON.parse(current);
+  const legacy=storage.getItem(legacyKey);
+  if(legacy===null)return null;
+  const layout=JSON.parse(legacy);
+  if(!Array.isArray(layout))return null;
+  const state={layout,rows:Math.max(12,...layout.map(r=>Number(r.y)+Number(r.h)))};
+  storage.setItem(this.key,JSON.stringify(state));return state;
+ },
+ save(storage,layout,rows){storage.setItem(this.key,JSON.stringify({layout,rows}));}
+};
 /* Professor workspace: independent cards, with no embedded pages or recorder ownership. */
 (()=>{
  let root=null,layout=[],catalog=new Map(),research=null,researchError='',timer=null,gesture=null,period=0,undo=null,editing=false;
  let pending=new URLSearchParams(location.search).get('hubWorkspace')==='1',opening=false;
- const originalRender=render,storageKey=()=> 'nisml-hub-cards-v3:'+String(user.email||'');
+ const originalRender=render,storageKey=()=>HubDeviceLayout.key;
  let cell=64,gridRows=12;
  const extract=(html,selector,index=0)=>{const t=document.createElement('template');t.innerHTML=html;return t.content.querySelectorAll(selector)[index]?.outerHTML||'<p class="muted">등록된 자료가 없습니다.</p>';};
  const recordKey=(r,i)=>String(r.id||r.doi||r.title||r.name||i);
@@ -47,8 +62,8 @@ const HubWidgetGrid={
   add('pending','승인 대기 연구미팅','대시보드',pendingHTML||'<p class="muted">'+(researchError?esc(researchError):research?'승인 대기 중인 회의요약이 없습니다.':'회의요약을 불러오는 중입니다.')+'</p>',12,5);
  }
  const defaults=()=>[{id:'meeting-now',x:0,y:0,w:6,h:3},{id:'meeting-next',x:6,y:0,w:6,h:3},{id:'activity',x:0,y:3,w:4,h:3},{id:'game',x:4,y:3,w:8,h:3},{id:'pending',x:0,y:6,w:12,h:5},{id:'annual-papers',x:0,y:11,w:6,h:6},{id:'annual-conferences',x:6,y:11,w:6,h:6}];
- function read(){layout=defaults();try{const list=preferences.hubBoard??JSON.parse(localStorage.getItem(storageKey()));if(Array.isArray(list)&&list.length<=500&&new Set(list.map(x=>x.id)).size===list.length&&list.every(x=>typeof x.id==='string'&&['x','w'].every(k=>Number.isInteger(x[k]))&&['y','h'].every(k=>Number.isFinite(x[k]))&&x.x>=0&&x.w>=2&&x.x+x.w<=12&&x.y>=0&&x.y<10000&&x.h>=.5&&x.h<=40)&&!list.some((x,i)=>list.slice(i+1).some(y=>HubWidgetGrid.overlaps(x,y))))layout=list;}catch{}const legacyScores=['university','engineering','promotion','special-promotion'],hasLegacyScores=layout.some(r=>legacyScores.includes(r.id));const seen=new Set();layout=layout.map(r=>({...r,id:legacyScores.includes(r.id)?'achievement-overview':r.id.startsWith('paper:')?'papers-list':r.id.startsWith('conference:')?'conferences-list':r.id.startsWith('reagent:')?'reagents-list':r.id.startsWith('event:domestic:')?'events:domestic':r.id.startsWith('event:international:')?'events:international':r.id})).filter(r=>{if(seen.has(r.id))return false;seen.add(r.id);return true;});if(hasLegacyScores){const r=layout.find(r=>r.id==='achievement-overview');if(r)layout=HubWidgetGrid.place(layout,r.id,{...r,x:Math.min(6,r.x),w:6,h:6});}gridRows=Math.max(12,Number(preferences.hubBoardRows)||0,...layout.map(r=>r.y+r.h));}
- function save(){try{localStorage.setItem(storageKey(),JSON.stringify(layout));preferences.hubBoard=layout.map(r=>({...r}));preferences.hubBoardRows=gridRows;savePreferences();status('계정 배치 저장 중');prefQueue.then(()=>status(document.getElementById('preferenceStatus')?'계정 저장 상태를 확인해주세요.':'계정 배치 저장됨'));}catch{status('배치를 저장하지 못했습니다. 브라우저 저장 공간을 확인해주세요.');}}
+ function read(){layout=defaults();let savedRows=0;try{const saved=HubDeviceLayout.read(localStorage,'nisml-hub-cards-v3:'+String(user.email||''));const list=saved?.layout;savedRows=Number(saved?.rows)||0;if(Array.isArray(list)&&list.length<=500&&new Set(list.map(x=>x.id)).size===list.length&&list.every(x=>typeof x.id==='string'&&['x','w'].every(k=>Number.isInteger(x[k]))&&['y','h'].every(k=>Number.isFinite(x[k]))&&x.x>=0&&x.w>=2&&x.x+x.w<=12&&x.y>=0&&x.y<10000&&x.h>=.5&&x.h<=40)&&!list.some((x,i)=>list.slice(i+1).some(y=>HubWidgetGrid.overlaps(x,y))))layout=list;}catch{}const legacyScores=['university','engineering','promotion','special-promotion'],hasLegacyScores=layout.some(r=>legacyScores.includes(r.id));const seen=new Set();layout=layout.map(r=>({...r,id:legacyScores.includes(r.id)?'achievement-overview':r.id.startsWith('paper:')?'papers-list':r.id.startsWith('conference:')?'conferences-list':r.id.startsWith('reagent:')?'reagents-list':r.id.startsWith('event:domestic:')?'events:domestic':r.id.startsWith('event:international:')?'events:international':r.id})).filter(r=>{if(seen.has(r.id))return false;seen.add(r.id);return true;});if(hasLegacyScores){const r=layout.find(r=>r.id==='achievement-overview');if(r)layout=HubWidgetGrid.place(layout,r.id,{...r,x:Math.min(6,r.x),w:6,h:6});}gridRows=Math.max(12,Number.isFinite(savedRows)?Math.min(10040,Math.max(0,savedRows)):0,...layout.map(r=>r.y+r.h));}
+ function save(){try{HubDeviceLayout.save(localStorage,layout,gridRows);status('이 기기에 배치 저장됨');}catch{status('배치를 저장하지 못했습니다. 브라우저 저장 공간을 확인해주세요.');}}
  function status(text){if(root)root.querySelector('[data-status]').textContent=text;}
  async function loadResearch(){if(!admin())return;try{const [rooms,history]=await Promise.all([researchFetch('rooms'),researchFetch('recording-list')]);if(!admin())return;research={rooms,history};researchError='';}catch(e){researchError='회의요약 조회 실패 · 새로고침으로 다시 시도해주세요.';}if(root&&!gesture){buildCatalog();draw();}}
  function apply(){if(!root)return;if(!gesture)cell=root.clientHeight/gridRows;for(const r of layout){const el=[...root.querySelectorAll('.hub-unit')].find(el=>el.dataset.unit===r.id);if(!el)continue;el.style.left=r.x/12*100+'%';el.style.top=r.y*cell+'px';el.style.width=r.w/12*100+'%';el.style.height=r.h*cell+'px';}root.querySelector('.hub-unit-grid').style.height='100%';root.querySelector('[data-undo]').disabled=!undo;}

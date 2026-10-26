@@ -10,3 +10,8 @@ test('free placement preserves blank cells and leaves other widgets unchanged',(
 test('dropping into an occupied cell resolves cascading overlaps without hiding widgets',()=>{const result=grid.place(initial,'a',{...initial[0],x:6});assert.equal(result.length,4);assert.equal(result[1].y,4);assert.equal(result[3].y,8);result.forEach((a,i)=>result.slice(i+1).forEach(b=>assert.equal(grid.overlaps(a,b),false)));});
 test('resizing only displaces intersecting widgets',()=>{const result=grid.place(initial,'a',{...initial[0],h:6});assert.equal(result[2].y,6);assert.equal(result[1].y,0);assert.equal(result[3].y,4);});
 
+
+const device=vm.runInNewContext(source.slice(0,source.indexOf('/* Professor workspace'))+';HubDeviceLayout');
+const storage=()=>{const values=new Map();return {getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v)};};
+test('device layouts remain independent and persist grid rows without account preferences',()=>{const a=storage(),b=storage();device.save(a,initial,18);device.save(b,[],12);assert.deepEqual(plain(device.read(a,'old:user')), {layout:initial,rows:18});assert.deepEqual(plain(device.read(b,'old:user')), {layout:[],rows:12});assert.equal(device.read(storage(),'old:user'),null);});
+test('only local legacy layout migrates once and account changes do not replace it',()=>{const a=storage();a.setItem('old:a',JSON.stringify(initial));assert.deepEqual(plain(device.read(a,'old:a')).layout,initial);a.setItem('old:b','[]');assert.deepEqual(plain(device.read(a,'old:b')).layout,initial);assert.equal(/preferences\.hubBoard|savePreferences\(/.test(source),false);});
