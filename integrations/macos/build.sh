@@ -5,9 +5,9 @@ mkdir -p build/ModuleCache build/NISML.iconset
 APP="$PWD/build/NISML Hub.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 for size in 16 32 128 256 512; do
-  sips -z "$size" "$size" Resources/Logo.png --out "build/NISML.iconset/icon_${size}x${size}.png" >/dev/null
+  sips -z "$size" "$size" Resources/AppIcon.png --out "build/NISML.iconset/icon_${size}x${size}.png" >/dev/null
   double=$((size * 2))
-  sips -z "$double" "$double" Resources/Logo.png --out "build/NISML.iconset/icon_${size}x${size}@2x.png" >/dev/null
+  sips -z "$double" "$double" Resources/AppIcon.png --out "build/NISML.iconset/icon_${size}x${size}@2x.png" >/dev/null
 done
 python3 - <<'PYICON'
 import struct
@@ -30,8 +30,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>NISML Hub</string>
 <key>CFBundleExecutable</key><string>NISMLDashboard</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.12</string>
-<key>CFBundleVersion</key><string>20</string>
+<key>CFBundleShortVersionString</key><string>0.4.13</string>
+<key>CFBundleVersion</key><string>21</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSMicrophoneUsageDescription</key><string>연구미팅을 녹음하고 회의 종료 후 전사와 요약을 작성합니다.</string>
