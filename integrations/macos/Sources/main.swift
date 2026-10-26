@@ -7,11 +7,14 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
 }
 
-@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate {
+@MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate, WKScriptMessageHandler {
     lazy var meeting = MeetingController(owner: self)
     let meetingHotKey = MeetingHotKey()
     var meetingHotKeyStatus: OSStatus = noErr
     var window: NSWindow!
+    var workspaceWindow: NSWindow?
+    var workspaceWeb: WKWebView?
+    var workspaceEntering = false
     var web: WKWebView!
     var statusItem: NSStatusItem!
     var statusLine = NSTextField(labelWithString: "로그인 후 알림을 연결합니다")
@@ -92,6 +95,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         menu.removeAllItems()
         _ = item("홈페이지 열기", #selector(openHomepage))
         _ = item("Hub 열기", #selector(showDashboard))
+        _ = item("통합 전체화면 열기", #selector(showWorkspace))
         _ = item("최근 알림 보기", #selector(showRecentNotifications))
         _ = item("녹음 일시정지 / 재개  ⌃⌥⌘R", #selector(toggleMeetingRecording))
         updateItems.append(item("업데이트 확인", #selector(checkForUpdates)))
@@ -103,6 +107,8 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         addCommand(dashboardMenu, "Hub 열기", #selector(showDashboard))
         addCommand(dashboardMenu, "새로고침", #selector(reload), key: "r")
         addCommand(dashboardMenu, "브라우저에서 Hub 열기", #selector(openBrowser))
+        let fullItem = addCommand(dashboardMenu, "통합 전체화면 열기", #selector(showWorkspace), key: "f")
+        fullItem.keyEquivalentModifierMask = [.control, .command]
         let alerts = makeAlertsMenu()
         let settings = makeSettingsMenu()
         for (name, submenu) in [("대시보드", dashboardMenu), ("알림", alerts), ("설정", settings)] {
@@ -157,12 +163,16 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     func makeWindow() {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
+        config.userContentController.add(self, name: "nismlWorkspace")
         config.userContentController.addScriptMessageHandler(meeting, contentWorld: .page, name: "nismlMeeting")
         // Keep normal WebKit identity; never disguise an embedded browser to bypass OAuth restrictions.
         web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self; web.uiDelegate = self
         web.allowsBackForwardNavigationGestures = true
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 840), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.collectionBehavior = [.fullScreenPrimary]
+        window.standardWindowButton(.zoomButton)?.target = self
+        window.standardWindowButton(.zoomButton)?.action = #selector(showWorkspace)
         window.title = "NISML Hub"; window.minSize = NSSize(width: 720, height: 520)
         window.titleVisibility = .hidden; window.titlebarAppearsTransparent = true
         window.backgroundColor = .windowBackgroundColor
@@ -292,6 +302,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     }
     @objc func logout() {
         guard !recordingProtected() else { return }
+        workspaceWeb?.stopLoading(); workspaceWindow?.close(); workspaceWeb = nil; workspaceWindow = nil; workspaceEntering = false
         generation += 1; paused = true; account = ""; recent = []
         center.removeAllDeliveredNotifications(); center.removeAllPendingNotificationRequests()
         web.stopLoading()
@@ -402,12 +413,53 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         alert("대시보드 연결 복구", "화면 연결이 중단되었습니다. 녹음 원본은 이 Mac에 보관됩니다. 다시 로그인한 뒤 회의 녹음 시작을 누르면 중단된 기록을 먼저 복구합니다.")
         web.reload()
     }
-    func publishFullscreenState() {
-        let active = window.styleMask.contains(.fullScreen) ? "true" : "false"
-        web.evaluateJavaScript("window.dispatchEvent(new CustomEvent('nisml-fullscreen',{detail:{active:\(active)}}));", completionHandler: nil)
+    // The ordinary dashboard owns recording; the workspace has its own window and Space.
+    @objc func showWorkspace() {
+        if workspaceWindow == nil {
+            let config = WKWebViewConfiguration()
+            config.websiteDataStore = .default()
+            config.userContentController.add(self, name: "nismlWorkspace")
+            let view = WKWebView(frame: .zero, configuration: config)
+            view.navigationDelegate = self; view.uiDelegate = self
+            let separate = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1440, height: 900), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            separate.title = "NISML Hub · 통합 화면"
+            separate.collectionBehavior = [.fullScreenPrimary]
+            separate.minSize = NSSize(width: 960, height: 600)
+            separate.isReleasedWhenClosed = false; separate.delegate = self
+            separate.contentView = view; separate.center()
+            workspaceWindow = separate; workspaceWeb = view
+            var url = URLComponents(url: Lab.home, resolvingAgainstBaseURL: false)!
+            url.queryItems = [URLQueryItem(name: "hubWorkspace", value: "1")]
+            view.load(URLRequest(url: url.url!))
+        }
+        guard let separate = workspaceWindow else { return }
+        if separate.isMiniaturized { separate.deminiaturize(nil) }
+        separate.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        if !separate.styleMask.contains(.fullScreen) && !workspaceEntering {
+            workspaceEntering = true; separate.toggleFullScreen(nil)
+        }
     }
-    func windowDidEnterFullScreen(_ notification: Notification) { publishFullscreenState() }
-    func windowDidExitFullScreen(_ notification: Notification) { publishFullscreenState() }
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == "nismlWorkspace", message.frameInfo.isMainFrame,
+              let url = message.frameInfo.request.url, Lab.isDashboard(url),
+              let action = message.body as? String else { return }
+        if message.webView === web && action == "open" { showWorkspace() }
+        else if message.webView === workspaceWeb && action == "main" { showDashboard() }
+        else if message.webView === workspaceWeb && action == "fullscreen" && !workspaceEntering {
+            workspaceWindow?.toggleFullScreen(nil)
+        }
+    }
+    func publishFullscreenState() {
+        // Native full screen on the primary window must not replace its normal dashboard.
+        web.evaluateJavaScript("window.dispatchEvent(new CustomEvent('nisml-fullscreen',{detail:{active:false}}));", completionHandler: nil)
+    }
+    func windowDidEnterFullScreen(_ notification: Notification) {
+        if notification.object as? NSWindow === workspaceWindow { workspaceEntering = false }
+    }
+    func windowDidExitFullScreen(_ notification: Notification) {
+        if notification.object as? NSWindow === workspaceWindow { workspaceEntering = false }
+    }
+    func windowDidFailToEnterFullScreen(_ window: NSWindow) { workspaceEntering = false }
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         if webView === web {
             addressLine.stringValue = web.url.map { Lab.isSite($0) ? "NISML Hub" : ($0.host ?? "NISML Hub") } ?? "NISML Hub"
