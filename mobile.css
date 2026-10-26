@@ -1335,3 +1335,15 @@ body.hub-workspace-active{overflow:hidden!important}
 .hub-mini-preview .mobile-paper-card{display:block!important}
 .hub-card-library label>span{font-weight:700;font-size:13px;margin-top:6px}
 @media(max-width:800px){.hub-card-library .hub-library-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Match the original score-card badge, inline with the number. */
+.hub-card-board .hub-score .pa-score-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hub-card-board .hub-score .pa-promotion-tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;line-height:1.4}
+.hub-card-board .hub-score{gap:6px}
+
+.hub-achievement-overview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.hub-achievement-overview .hub-score{min-width:0}
+.hub-score-caption{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:29px}
+.hub-card-board .hub-achievement-overview .pa-promotion{margin:0}
+.hub-card-board .hub-achievement-overview .hub-score strong{font-size:28px}
+.hub-card-board .hub-achievement-overview .hub-score-caption span{font-size:12px}
