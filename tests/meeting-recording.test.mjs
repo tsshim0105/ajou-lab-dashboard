@@ -1,6 +1,21 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {DatabaseSync} from 'node:sqlite';
 import {meetingRecordingRequest,meetingTopicAt,validateMeetingSnapshot} from '../server/meeting-recording.mjs';
 import {reserveResearchJob,settleResearchJob,RESEARCH_MODEL,researchRoomRequest} from '../server/research-room.mjs';
+import {meetingResearchBackground} from '../server/meeting-recording.mjs';
+
+test('research knowledge imports privately, validates all topics before writing, and isolates retrieval',async()=>{
+ const f=fixture(),topics=[{topic:'topic-0001',title:'A',entries:[{kind:'term',text:'PNIPAM 온도감응 고분자',sources:['pdf:1:p2']}]}];
+ assert.equal((await f.call('recording-knowledge-import',{topics},STUDENT)).status,403);
+ assert.equal((await f.call('recording-knowledge-import',{topics})).status,200);
+ assert.equal((await f.call('recording-knowledge?topic=topic-0001',null,STUDENT)).status,403);
+ assert.equal((await meetingResearchBackground(f.env.DB,'topic-0001','PNIPAM'))[0].sources[0],'pdf:1:p2');
+ assert.deepEqual(await meetingResearchBackground(f.env.DB,'topic-0002','PNIPAM'),[]);
+ assert.deepEqual(await meetingResearchBackground(f.env.DB,'unclassified','PNIPAM'),[]);
+ const version=f.sql.prepare("SELECT version FROM research_records WHERE id='knowledge:topic-0001'").get().version;
+ assert.equal((await f.call('recording-knowledge-import',{topics:[...topics,{topic:'missing-000',entries:[]}]})).status,400);
+ assert.equal(f.sql.prepare("SELECT version FROM research_records WHERE id='knowledge:topic-0001'").get().version,version);
+ assert.equal((await f.call('recording-knowledge-import',{topics:[{...topics[0],entries:[{text:'no source',sources:[]}]}]})).status,400);
+});
 const OWNER={admin:true,email:'owner@example.test'},STUDENT={admin:false,email:'student@example.test'};
 function fixture(){const sql=new DatabaseSync(':memory:');sql.exec(`CREATE TABLE research_records(id TEXT PRIMARY KEY,version INTEGER,payload TEXT);CREATE TABLE research_jobs(id TEXT PRIMARY KEY,topic TEXT,author TEXT,month TEXT,status TEXT,reserve INTEGER,cost INTEGER,usage TEXT,created TEXT);`);sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('topic:topic-0001',JSON.stringify({id:'topic-0001',title:'A'}));sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('topic:topic-0002',JSON.stringify({id:'topic-0002',title:'B'}));const DB={async batch(statements){sql.exec('BEGIN');try{const results=[];for(const statement of statements)results.push(await statement.run());sql.exec('COMMIT');return results;}catch(e){sql.exec('ROLLBACK');throw e;}},prepare(q){let v=[];return {bind(...a){v=a;return this},async first(){return sql.prepare(q).get(...v)||null},async all(){return {results:sql.prepare(q).all(...v)}},async run(){return {meta:{changes:sql.prepare(q).run(...v).changes}}}}}};const audio=new Map();const env={DB,BUCKET:{async put(k,b,o){audio.set(k,{bytes:b,httpMetadata:o.httpMetadata})},async get(k){const o=audio.get(k);return o?{...o,body:o.bytes,size:o.bytes.length,arrayBuffer:async()=>o.bytes.buffer}:null}}};const call=(action,b,actor=OWNER)=>meetingRecordingRequest(new Request('https://test.local/api/ai/'+action,{method:b?'POST':'GET',...(b?{body:JSON.stringify(b)}:{})}),env,actor,{reserveResearchJob,settleResearchJob,RESEARCH_MODEL});return {sql,env,call};}
 const id='meeting-0001',markers=[{at:0,topic:'topic-0001',title:'A'},{at:10,topic:'topic-0002',title:'B'},{at:20,topic:null,title:'미분류'},{at:30,topic:'topic-0001',title:'A'}];
