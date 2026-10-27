@@ -14,16 +14,9 @@ if macFullBleed {
 } else {
     plate.draw(in:NSRect(x:0,y:0,width:1024,height:1024))
 }
-if macFullBleed {
-    try out.representation(using:.png,properties:[:])!.write(to:dir.appendingPathComponent("aurora-full-background.png"))
-}
 let logo = NSImage(contentsOf:dir.appendingPathComponent("original-logo.png"))!
-let height:CGFloat=674, width=height*logo.size.width/logo.size.height
-logo.draw(in:NSRect(x:(1024-width)/2,y:255,width:width,height:height))
-let base = NSFont.systemFont(ofSize:128,weight:.bold)
-let font = NSFont(descriptor:base.fontDescriptor.withDesign(.rounded)!,size:128)!
-let text = NSAttributedString(string:"Hub", attributes:[.font:font,.foregroundColor:NSColor(srgbRed:0.025,green:0.065,blue:0.22,alpha:1)])
-text.draw(at:NSPoint(x:(1024-text.size().width)/2,y:118))
+let height:CGFloat=962.56, width=height*logo.size.width/logo.size.height
+logo.draw(in:NSRect(x:(1024-width)/2,y:(1024-height)/2,width:width,height:height))
 NSGraphicsContext.restoreGraphicsState()
 try out.representation(using:.png,properties:[:])!.write(to:dir.appendingPathComponent(macFullBleed ? "hub-icon-mac-1024.png" : "hub-icon-1024.png"))
 
@@ -32,8 +25,7 @@ if macFullBleed {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep:foreground)
     NSGraphicsContext.current!.imageInterpolation = .high
-    logo.draw(in:NSRect(x:(1024-width)/2,y:255,width:width,height:height))
-    text.draw(at:NSPoint(x:(1024-text.size().width)/2,y:118))
+    logo.draw(in:NSRect(x:(1024-width)/2,y:(1024-height)/2,width:width,height:height))
     NSGraphicsContext.restoreGraphicsState()
     try foreground.representation(using:.png,properties:[:])!.write(to:dir.appendingPathComponent("hub-foreground.png"))
 }

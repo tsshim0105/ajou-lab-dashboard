@@ -1,1 +1,1 @@
-<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="14%"><bitmap android:src="@drawable/hub_foreground" android:gravity="fill" /></inset>
+<inset xmlns:android="http://schemas.android.com/apk/res/android" android:inset="15%"><bitmap android:src="@drawable/hub_foreground" android:gravity="fill" /></inset>
