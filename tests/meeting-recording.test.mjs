@@ -219,3 +219,18 @@ test('summary date filter excludes empty and cancelled meetings per topic',()=>{
  const context=vm.createContext({console,Blob,setInterval(){},window:{addEventListener(){}},document:{}});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),context);
  for(const [record,key,expected] of [[{markers,segments:[]},'topic-0001',false],[{markers,segments:[snap.segments[0]]},'topic-0002',false],[{markers,segments:[snap.segments[0]]},'topic-0001',true],[{transcriptTopics:['topic-0001']},'topic-0001',true],[{summary:{'topic-0001':{content:'saved summary'}}},'topic-0001',true],[{status:'cancelled',transcriptTopics:['topic-0001']},'topic-0001',false]]){context.record=record;context.key=key;assert.equal(!!vm.runInContext('mrHasMeetingContent(record,key)',context),expected);}
 });
+
+import {meetingReviewedKnowledge} from '../server/meeting-recording.mjs';
+test('knowledge includes only prior approved same-topic minutes and responds to withdrawal',async()=>{
+ const f=fixture();const current={id:'current-0001',created:'2026-10-28T10:00:00Z'};
+ for(const [id,date,topic,status,rolesChanged] of [['prior-0001','2026-10-20','topic-0001','reviewed',false],['draft-0001','2026-10-21','topic-0001','draft',false],['other-0001','2026-10-22','topic-0002','reviewed',false],['roles-0001','2026-10-23','topic-0001','reviewed',true],['future-001','2026-10-29','topic-0001','reviewed',false]])f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created:date,status:'ended',summary:{[topic]:{status,rolesChanged,content:'620nm is historical',updated:date}}}));
+ let refs=await meetingReviewedKnowledge(f.env.DB,'topic-0001',current);assert.deepEqual(refs.map(x=>x.recordingId),['prior-0001']);assert.deepEqual(await meetingReviewedKnowledge(f.env.DB,'unclassified',current),[]);
+ f.sql.prepare("UPDATE research_records SET payload=json_set(payload,'$.summary.\"topic-0001\".status','draft') WHERE id='recording:prior-0001'").run();assert.deepEqual(await meetingReviewedKnowledge(f.env.DB,'topic-0001',current),[]);
+});
+test('review edits retain prior approved text in history without stale overwrite',async()=>{
+ const f=fixture();await create(f);await f.call('recording-save',snap);
+ await f.call('recording-summary-save',{id,version:1,topic:'topic-0001',content:'First approved',status:'reviewed'});
+ await f.call('recording-summary-save',{id,version:2,topic:'topic-0001',content:'Corrected',status:'reviewed'});
+ const s=await(await f.call('recording-detail?id='+id)).json();assert.equal(s.summaryHistory.at(-1).content,'First approved');assert.equal(s.summary['topic-0001'].content,'Corrected');
+ assert.equal((await f.call('recording-summary-save',{id,version:2,topic:'topic-0001',content:'Stale'})).status,409);
+});
