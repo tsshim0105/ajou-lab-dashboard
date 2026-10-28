@@ -191,8 +191,9 @@ function rrStudentMeetingView(root,t){
  const summaries=t.meetingSummaries||[];if(!summaries.length){root.innerHTML='<div class="empty">등록된 회의요약이 아직 없습니다.</div>';return;}
  let selected=researchRoomState.summarySelection?.[t.topic.id];if(!summaries.some(x=>x.id===selected))selected=summaries[0].id;
  const record=summaries.find(x=>x.id===selected),parts=mrSummarySections(record.content||'');
- root.innerHTML='<div class="mr-summary"><div class="mr-date-tabs">'+summaries.map(x=>'<button class="secondary '+(x.id===selected?'selected':'')+'" data-student-summary="'+esc(x.id)+'">'+esc(new Date(x.created).toLocaleDateString('ko-KR'))+'</button>').join('')+'</div><div class="mr-summary-heading"><h3>'+rrTime(record.created)+'</h3><span class="mr-review-state">'+(record.rolesChanged?'역할 변경 · 교수님 재검토 예정':'검토 확정')+'</span></div><div class="mr-summary-grid">'+parts.map((part,i)=>'<section><h4>'+mrSummaryTitles[i]+'</h4><ul>'+mrSummaryItems(part,i)+'</ul></section>').join('')+'</div></div>';
- root.querySelector('[data-edit-meeting-summary]').onclick=()=>{
+ root.innerHTML='<div class="mr-summary"><div class="mr-date-tabs">'+summaries.map(x=>'<button class="secondary '+(x.id===selected?'selected':'')+'" data-student-summary="'+esc(x.id)+'">'+esc(new Date(x.created).toLocaleDateString('ko-KR'))+'</button>').join('')+'</div><div class="mr-summary-heading"><h3>'+rrTime(record.created)+'</h3><span class="mr-review-state">'+(record.rolesChanged?'화자 구분 확인 필요':'등록 완료')+'</span><button type="button" class="secondary" data-edit-meeting-summary>수정</button></div><div class="mr-summary-grid">'+parts.map((part,i)=>'<section><h4>'+mrSummaryTitles[i]+'</h4><ul>'+mrSummaryItems(part,i)+'</ul></section>').join('')+'</div></div>';
+ const editButton=root.querySelector('[data-edit-meeting-summary]');
+ if(editButton)editButton.onclick=()=>{
   rrDialog('회의요약 수정',parts.map((part,i)=>'<label>'+esc(mrSummaryTitles[i])+'<textarea name="section'+i+'" maxlength="40000" rows="6">'+esc(part)+'</textarea></label>').join(''),async values=>{
    const content=mrSummaryContent([0,1,2,3].map(i=>values['section'+i]||''));
    const result=await researchFetch('meeting-summary-save',{id:record.id,topic:t.topic.id,revision:record.revision||0,content});
