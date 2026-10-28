@@ -115,7 +115,7 @@ test('student sees only confirmed summaries for a shared topic and no transcript
  for(const [id,status] of [['meeting-0001','reviewed'],['meeting-0002','draft']])f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created:'2026-10-23T00:00:00Z',segments:[{text:'private transcript'}],summary:{'topic-0001':{content:'shared '+status,status},'topic-0002':{content:'private other topic',status:'reviewed'}}}));
  assert.equal((await f.call('thread?topic=topic-0001',null,'student@example.test')).status,403);
  await f.call('topic',{...topic(),create:false,version:0,viewers:['student@example.test']});
- const r=await f.call('thread?topic=topic-0001',null,'student@example.test'),text=await r.text(),t=JSON.parse(text);assert.equal(t.meetingSummaries.length,1);assert.equal(t.meetingSummaries[0].content,'shared reviewed');assert.ok(!text.includes('private transcript'));assert.ok(!text.includes('private other topic'));assert.ok(!text.includes('shared draft'));assert.equal((await f.call('recording-detail?id=meeting-0001',null,'student@example.test')).status,403);
+ const r=await f.call('thread?topic=topic-0001',null,'student@example.test'),text=await r.text(),t=JSON.parse(text);assert.equal(t.meetingSummaries.length,2);assert.equal(t.meetingSummaries[0].content,'shared reviewed');assert.ok(!text.includes('private transcript'));assert.ok(!text.includes('private other topic'));assert.ok(text.includes('shared draft'));assert.equal((await f.call('recording-detail?id=meeting-0001',null,'student@example.test')).status,403);
 });
 
 test('bootstrap includes all authorized text threads, no binaries or raw transcript, and respects summary review',async()=>{
@@ -132,9 +132,9 @@ test('bootstrap includes all authorized text threads, no binaries or raw transcr
  const admin=await (await f.call('bootstrap')).json();assert.equal(Object.keys(admin.threads).length,2);
  const direct=await (await f.call('thread?topic=topic-0001')).json();assert.deepEqual(admin.threads['topic-0001'],direct);
  const student=await (await f.call('bootstrap',null,'student@example.test')).json();assert.deepEqual(Object.keys(student.threads),['topic-0001']);
- assert.equal(student.threads['topic-0001'].memo.content,'Shared memo');assert.equal(student.threads['topic-0001'].meetingSummaries.length,1);
+ assert.equal(student.threads['topic-0001'].memo.content,'Shared memo');assert.equal(student.threads['topic-0001'].meetingSummaries.length,2);
  assert.equal(student.rooms.canEdit,false);assert.equal(student.rooms.config,undefined);assert.equal(student.threads['topic-0001'].topic.viewers,undefined);
- assert.ok(!JSON.stringify(student).includes('private question'));assert.ok(!JSON.stringify(student).includes('unreviewed'));assert.ok(!JSON.stringify(admin).includes('PRIVATE TRANSCRIPT'));
+ assert.ok(!JSON.stringify(student).includes('private question'));assert.ok(JSON.stringify(student).includes('unreviewed'));assert.ok(!JSON.stringify(admin).includes('PRIVATE TRANSCRIPT'));
  await f.call('topic',{...topic(),create:false,version:1,viewers:[]});
  const revoked=await (await f.call('bootstrap',null,'student@example.test')).json();assert.equal(revoked.rooms.topics.length,0);assert.deepEqual(revoked.threads,{});
 });
@@ -191,7 +191,7 @@ test('recent summaries select latest Korean meeting day, lead topics only and re
  insert('record-0001','2026-10-23T16:00:00Z',{'topic-0001':reviewed});
  insert('record-0002','2026-10-24T01:00:00Z',{'topic-0002':reviewed});
  insert('record-0003','2026-10-25T01:00:00Z',{'topic-0003':reviewed,'topic-0001':{...reviewed,status:'draft'},'topic-0002':{...reviewed,content:''}});
- let result=await (await f.call('latest-meetings',null,email)).json();assert.equal(result.day,'2026-10-24');assert.equal(result.meetings.length,2);assert.ok(result.meetings.every(r=>!r.topic.viewers&&!r.topic.primaryResearchers));
+ let result=await (await f.call('latest-meetings',null,email)).json();assert.equal(result.day,'2026-10-25');assert.equal(result.meetings.length,1);assert.ok(result.meetings.every(r=>!r.topic.viewers&&!r.topic.primaryResearchers));
  await f.call('topic',{...topic(),create:false,version:0,viewers:[]});result=await (await f.call('latest-meetings',null,email)).json();assert.deepEqual(result.meetings.map(r=>r.topic.id),['topic-0002']);
  await f.call('delete-topic',{id:'topic-0002',version:0});assert.deepEqual((await (await f.call('latest-meetings',null,email)).json()).meetings,[]);
 });
@@ -205,17 +205,24 @@ test('professor preview scopes research reads to the selected student and refuse
  const owner=await(await f.call('rooms')).json();assert.equal(owner.topics.length,2);
 });
 
-test('professor pending meetings retain every unapproved summary across dates and exclude approved or empty content',async()=>{
- const f=fixture();await f.call('topic',topic());
- const insert=(id,created,item,status)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created,status,summary:{'topic-0001':item}}));
- const draft={status:'draft',content:'## 연구진행상황\n- 검토할 내용'};
- insert('pending-old','2026-10-20T01:00:00Z',draft);
- insert('pending-new','2026-10-25T01:00:00Z',draft);
- insert('reviewed','2026-10-25T02:00:00Z',{...draft,status:'reviewed'});
- insert('recheck','2026-10-24T01:00:00Z',{...draft,status:'reviewed',rolesChanged:true});
- insert('empty','2026-10-25T03:00:00Z',{...draft,content:' '});
- insert('cancelled','2026-10-25T04:00:00Z',draft,'cancelled');
- const result=await (await f.call('latest-meetings')).json();
- assert.equal(result.pending,true);assert.equal(result.day,null);
- assert.deepEqual(result.meetings.map(x=>x.recording),['pending-new','recheck','pending-old']);
+test('professor weekly meetings include completed summaries by registration date within Korean week',async()=>{
+ const f=fixture();await f.call('topic',topic());const {meetingWeekRange}=await import('../server/research-room.mjs');const week=meetingWeekRange();
+ const insert=(id,date,content='summary',status='ended')=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created:'2025-01-01T00:00:00Z',status,summary:{'topic-0001':{content,status:'reviewed',registeredAt:date}}}));
+ insert('at-start',week.start);insert('before-start',new Date(Date.parse(week.start)-1).toISOString());insert('at-end',week.end);insert('near-end',new Date(Date.parse(week.end)-1).toISOString());insert('empty',week.start,' ');insert('cancelled',week.start,'summary','cancelled');
+ const result=await (await f.call('latest-meetings')).json();assert.equal(result.pending,undefined);assert.equal(result.week.start,week.start);assert.deepEqual(result.meetings.map(x=>x.recording).sort(),['at-start','near-end']);
+ assert.deepEqual(meetingWeekRange(new Date('2026-10-25T15:00:00Z')),{start:'2026-10-25T15:00:00.000Z',end:'2026-11-01T15:00:00.000Z'});
+ assert.equal(meetingWeekRange(new Date('2026-10-25T14:59:59Z')).start,'2026-10-18T15:00:00.000Z');
+});
+
+test('participant summary edits are scoped, versioned, and never return private recording data',async()=>{
+ const f=fixture(),email='student@example.test';await f.call('topic',{...topic(),viewers:[email]});await f.call('topic',topic('topic-0002'));
+ const seed={id:'meeting-0001',created:new Date().toISOString(),status:'ended',segments:[{text:'SECRET TRANSCRIPT'}],voiceCatalog:[{name:'PRIVATE VOICE'}],summary:{'topic-0001':{content:'old',status:'reviewed'},'topic-0002':{content:'PRIVATE SUMMARY',status:'reviewed'}}};
+ f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+seed.id,JSON.stringify(seed));
+ const edit={id:seed.id,topic:'topic-0001',revision:0,content:'updated by student'};
+ const response=await f.call('meeting-summary-save',edit,email);assert.equal(response.status,200);const text=await response.text();assert.doesNotMatch(text,/SECRET|PRIVATE/);assert.equal(JSON.parse(text).summary.revision,1);
+ assert.equal((await f.call('meeting-summary-save',{...edit,content:'stale'},email)).status,409);
+ assert.equal((await f.call('meeting-summary-save',{...edit,topic:'topic-0002'},email)).status,403);
+ assert.equal((await f.call('recording-detail?id='+seed.id,null,email)).status,403);
+ const saved=JSON.parse(f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:'+seed.id).payload);assert.equal(saved.summaryHistory[0].content,'old');assert.equal(saved.segments[0].text,'SECRET TRANSCRIPT');assert.equal(saved.summary['topic-0002'].content,'PRIVATE SUMMARY');
+ await f.call('topic',{...topic(),create:false,version:0,viewers:[]});assert.equal((await f.call('meeting-summary-save',{...edit,revision:1},email)).status,403);
 });

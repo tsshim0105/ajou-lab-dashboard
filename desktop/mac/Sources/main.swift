@@ -12,7 +12,6 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     let meetingHotKey = MeetingHotKey()
     var meetingHotKeyStatus: OSStatus = noErr
     var window: NSWindow!
-    var nasWindow: NSWindow?
     var workspaceWindow: NSWindow?
     var workspaceWeb: WKWebView?
     var workspaceEntering = false
@@ -216,20 +215,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     @objc func goHome() { guard !recordingProtected() else { return }; web.load(URLRequest(url: Lab.home)); showDashboard() }
     @objc func reload() { guard !recordingProtected() else { return }; web.reload() }
     @objc func openNAS() {
-        if let existing = nasWindow { existing.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); return }
-        // Separate configuration: NAS pages never receive Hub's recording/workspace bridges.
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .default()
-        let browser = WKWebView(frame: .zero, configuration: config)
-        browser.allowsBackForwardNavigationGestures = true
-        let nas = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        nas.title = "연구실 NAS · tsshim.synology.me"
-        nas.minSize = NSSize(width: 600, height: 420)
-        nas.contentView = browser
-        nas.isReleasedWhenClosed = false
-        nas.center(); nas.makeKeyAndOrderFront(nil)
-        nasWindow = nas
-        browser.load(URLRequest(url: URL(string: "https://tsshim.synology.me:3874/#/signin")!))
+        NSWorkspace.shared.open(URL(string: "https://tsshim.synology.me:3874/#/signin")!)
     }
     @objc func openHomepage() { NSWorkspace.shared.open(URL(string: "https://nisml.ajou.ac.kr/")!) }
     @objc func openBrowser() { NSWorkspace.shared.open(Lab.home) }
