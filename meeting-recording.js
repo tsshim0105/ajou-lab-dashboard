@@ -154,12 +154,17 @@ function mrSummaryItems(part,section){return String(part||'').split('\n').filter
  let text=line.replace(/^\s*[-*•]\s*/,''),tags=[],due=[];
  const tag=value=>{const name=value.trim();if(name&&name.length<=40&&!tags.includes(name))tags.push(name);};
  text=text.replace(/\[\[(학생|이름|담당자|기한):([^\]\n]{1,80})\]\]/g,(_,kind,value)=>{if(kind==='기한'){if(!/미정|미언급|언급.*없/.test(value))due.push(value.trim());}else value.split(/[,、]/).forEach(tag);return '';}).trim();
+ // Remove generated metadata labels without changing the saved source minutes.
+ text=text.replace(/\*\*(채택\s*여부(?:\s*[·ㆍ/・,]\s*담당자)?|담당자)\*\*/g,'$1');
+ text=text.replace(/[（(]\s*채택\s*여부(?:\s*[·ㆍ/・,]\s*담당자)?\s*[:：][^）)\n]*[）)]/g,'');
+ text=text.replace(/채택\s*여부(?:\s*[·ㆍ/・,]\s*담당자)?\s*[:：]\s*(?:미정|미확정|확인 필요|언급 없음)(?:이다|입니다)?[。.]/g,'');
  // Legacy summaries name speakers in prose; remove only an explicit subject prefix.
  const students=/^(?:담당자\s*[:：]?\s*)?(학생\s*\d*(?:\s*(?:과|와|및|,|·)\s*학생\s*\d*)*)\s*(?:은|는|이|가|[:：])\s*/;
  const match=text.match(students);if(match){(match[1].match(/학생\s*\d*/g)||[]).forEach(x=>tag(x.replace(/\s+/g,' ').trim()));text=text.slice(match[0].length);}
  if(section===2)text=text.replace(/^교수(?:님)?(?:은|는|이|가)\s*/, '');
  text=text.replace(/[（(]?\s*(?:기한|마감일|마감)\s*[:：]?\s*(?:은|는)?\s*(?:미정(?:이다|입니다)?|미언급|언급(?:이)?\s*없(?:음|다|습니다))\.?\s*[）)]?/g,' ').trim();
  if(section===3){text=text.replace(/담당자\s*[:：]\s*([^。.\n]+)[。.]?/g,(_,value)=>{const names=value.match(/학생\s*\d+/g)||[];names.forEach(name=>tag(name+(/미정|제안|확정 여부|요청/.test(value)?' · 확인 필요':'')));return '';}).trim();}
+ text=text.replace(/채택\s*여부(?:\s*[·ㆍ/・,]\s*담당자)?\s*[:：]?\s*/g,'').replace(/담당자\s*[:：]?\s*/g,'').replace(/[（(]\s*[）)]/g,'').trim();
  const body=esc(text.replace(/^[,;·\s]+|[,;·\s]+$/g,'')).replace(/학생\s*\d+(?:[·,]\s*\d+)*(?:은|는|이|가|도)?/g,value=>{const numbers=value.match(/\d+/g)||[];return numbers.map(n=>'<span class="mr-person-tag">학생 '+n+'</span>').join('');});
  text=text.replace(/^[,;·\s]+|[,;·\s]+$/g,'');
  if(!text)return '';
