@@ -3,7 +3,7 @@ import {validateResearchBlocks,safeResearchSvg} from './research-blocks.mjs';
 const text=(v,n,required=false)=>{if(typeof v!=='string'||v.length>n||(required&&!v.trim()))throw Error('텍스트 길이와 필수 항목을 확인해주세요.');return v;};
 const url=v=>{try{const u=new URL(v);if(u.protocol==='https:'&&!u.username&&!u.password)return u.href;}catch{}throw Error('HTTPS 링크만 저장할 수 있습니다.');};
 const hash=async s=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),x=>x.toString(16).padStart(2,'0')).join('');
-export async function listResearchImports(env){const rows=await env.DB.prepare("SELECT payload FROM research_records WHERE id LIKE 'topic:%'").all();return {topics:rows.results.map(r=>JSON.parse(r.payload)).filter(t=>!t.deleted).map(({id,title,archived})=>({id,title,archived})),project:'연구미팅',instructions:'Use save_research_result only when the user selects an answer to save. Copy the question and answer faithfully; do not regenerate or summarize. Include paper URLs and transferable images. Report any missing image.'};}
+export async function listResearchImports(env){const rows=await env.DB.prepare("SELECT payload FROM research_records WHERE id LIKE 'topic:%'").all();return {topics:rows.results.map(r=>JSON.parse(r.payload)).filter(t=>!t.deleted).map(({id,title,archived})=>({id,title,archived})),project:'연구미팅',instructions:'When the user requests conversation transfer, send ALL not-yet-transferred question/answer pairs available in the current conversation in chronological order using save_research_conversation, not just the latest question. If transfer status is uncertain, resend available pairs: identical content is deduplicated. Only limit to a selected answer when the user explicitly asks. Copy verbatim with ordered blocks and attachments. Never invent or claim to access unseen history. Report missing files and partial failures. For older clients without the batch tool, call save_research_result for every unsent pair in order.'};}
 export async function saveResearchImport(env,b){
  const title=text(b.topicTitle,120,true),question=text(b.question,12000,true),answer=text(b.answer,80000,true);
  const source=b.chatUrl?url(b.chatUrl):'';if(source&&new URL(source).hostname!=='chatgpt.com')throw Error('원본 대화 링크는 chatgpt.com 주소여야 합니다.');
@@ -31,7 +31,23 @@ export async function saveResearchImport(env,b){
  }
  const fileNames=[...new Set([...blocks,...questionBlocks].filter(x=>x.type==='file').map(x=>x.name))];
  const files=old?(JSON.parse(old.payload).files||[]):[];for(const name of fileNames)if(!files.some(f=>f.name===name))files.push({name,kind:/\.(png|jpe?g|webp)$/i.test(name)?'image':'document',missing:true});
- const now=new Date().toISOString(),rich={files,origin:'chatgpt',project:'연구미팅',chatUrl:source,papers,sources:papers.map(p=>({title:p.title,url:p.url})),importImages:images,importWarnings:warnings,blocks,questionBlocks};
- const statements=[env.DB.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind('topic:'+topic,JSON.stringify({id:topic,title,description:'ChatGPT 연구미팅 프로젝트에서 저장한 결과',archived:false,created:now,summary:''})),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(id,topic,'교수님','human',question,null,now),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(message,topic,'ChatGPT · 저장한 답변','assistant',answer,id,new Date(Date.now()+1).toISOString()),env.DB.prepare('INSERT INTO research_records VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=version+1').bind('answer:'+topic+':'+message,JSON.stringify(rich))];
+ const latest=await env.DB.prepare('SELECT created FROM research_messages WHERE topic=? ORDER BY created DESC LIMIT 1').bind(topic).first();
+ const stamp=Math.max(Date.now(),(Date.parse(latest?.created)||0)+1);
+ const now=new Date(stamp).toISOString(),rich={files,origin:'chatgpt',project:'연구미팅',chatUrl:source,papers,sources:papers.map(p=>({title:p.title,url:p.url})),importImages:images,importWarnings:warnings,blocks,questionBlocks};
+ const statements=[env.DB.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind('topic:'+topic,JSON.stringify({id:topic,title,description:'ChatGPT 연구미팅 프로젝트에서 저장한 결과',archived:false,created:now,summary:''})),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(id,topic,'교수님','human',question,null,now),env.DB.prepare('INSERT OR IGNORE INTO research_messages VALUES(?,?,?,?,?,?,?)').bind(message,topic,'ChatGPT · 저장한 답변','assistant',answer,id,new Date(stamp+1).toISOString()),env.DB.prepare('INSERT INTO research_records VALUES(?,0,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=version+1').bind('answer:'+topic+':'+message,JSON.stringify(rich))];
  await env.DB.batch(statements);return {ok:true,topic,id,papers:papers.length,imagesSaved:images.filter(x=>x.asset).length,blocksSaved:blocks.length+questionBlocks.length,warnings};
+}
+
+// A batch is resumable: each committed pair retains the existing content-based identity.
+export async function saveResearchConversation(env,b){
+ if(!Array.isArray(b?.turns)||!b.turns.length||b.turns.length>30)throw Error('질문·답변은 한 번에 1~30쌍을 전달해주세요.');
+ const results=[];let topic=b.topicId;
+ for(let index=0;index<b.turns.length;index++){
+  try{
+   const turn=b.turns[index];
+   const result=await saveResearchImport(env,{...turn,topicId:topic,topicTitle:b.topicTitle,chatUrl:b.chatUrl||''});
+   topic=result.topic;results.push({index,...result,messageId:'ai-'+result.id});
+  }catch(error){return {ok:false,partial:results.length>0,topic,failedIndex:index,error:error.message,results,saved:results.filter(r=>!r.duplicate).length,duplicates:results.filter(r=>r.duplicate).length,remaining:b.turns.length-index,instructions:'Retry this batch after correcting the failed turn; already saved pairs are deduplicated. Do not report all turns saved.'};}
+ }
+ return {ok:true,topic,results,saved:results.filter(r=>!r.duplicate).length,duplicates:results.filter(r=>r.duplicate).length,remaining:0,instructions:'Attach files to the messageId for their own turn; report each missing attachment warning.'};
 }

@@ -12,3 +12,17 @@ test('explicit and caption-only placeholders save without HTTPS URLs and preserv
 test('non-HTTPS image references become missing slots instead of rejecting the whole answer',async()=>{const f=fixture();const r=await saveResearchImport(f.env,{...payload,images:[{url:'sandbox:/mnt/data/figure.png'}]});assert.equal(r.ok,true);assert.equal(r.imagesSaved,0);assert.equal(r.warnings.length,1);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM research_messages').get().n,2);});
 
 test('file links reserve exact positions without downloading documents',async()=>{const f=fixture(),blocks=[{type:'markdown',text:'Before'},{type:'file',name:'report.pdf'},{type:'markdown',text:'After'},{type:'file',name:'figure.png'}];const r=await saveResearchImport(f.env,{...payload,images:[],blocks});assert.equal(r.ok,true);const rich=JSON.parse(f.db.prepare("SELECT payload FROM research_records WHERE id LIKE 'answer:%'").get().payload);assert.deepEqual(rich.files.map(f=>f.kind),['document','image']);assert.equal(rich.blocks[1].name,'report.pdf');assert.equal(f.objects.size,0);});
+
+import {saveResearchConversation} from '../server/research-import.mjs';
+test('batch transfers every pair in order with own blocks, and retries skip saved pairs',async()=>{
+ const f=fixture(),turns=[{...payload,images:[],question:'첫 질문',answer:'첫 답변',blocks:[{type:'file',name:'first.pdf'}]},{...payload,images:[],question:'둘째 질문',answer:'둘째 답변'}];
+ const r=await saveResearchConversation(f.env,{topicTitle:'Batch research',turns});assert.equal(r.saved,2);assert.equal(r.remaining,0);
+ const rows=f.db.prepare('SELECT * FROM research_messages ORDER BY created').all();assert.deepEqual(rows.map(x=>x.content),['첫 질문','첫 답변','둘째 질문','둘째 답변']);assert.equal(new Set(rows.map(x=>x.created)).size,4);
+ assert.equal(JSON.parse(f.db.prepare('SELECT payload FROM research_records WHERE id=?').get('answer:'+r.topic+':'+r.results[0].messageId).payload).files[0].name,'first.pdf');
+ const retry=await saveResearchConversation(f.env,{topicId:r.topic,topicTitle:'Batch research',turns:[...turns,{...turns[1],question:'셋째 질문'}]});assert.equal(retry.saved,1);assert.equal(retry.duplicates,2);assert.equal(f.db.prepare('SELECT COUNT(*) n FROM research_messages').get().n,6);
+});
+test('batch reports partial failure and resumes without duplicating completed pairs',async()=>{
+ const f=fixture(),turn={...payload,images:[]};const r=await saveResearchConversation(f.env,{topicTitle:'Resume',turns:[turn,{...turn,question:''},turn]});assert.equal(r.ok,false);assert.equal(r.failedIndex,1);assert.equal(r.remaining,2);assert.equal(r.saved,1);
+ const retry=await saveResearchConversation(f.env,{topicTitle:'Resume',turns:[turn,{...turn,question:'수정한 질문'},{...turn,question:'마지막 질문'}]});assert.equal(retry.ok,true);assert.equal(retry.saved,2);assert.equal(retry.duplicates,1);
+ await assert.rejects(saveResearchConversation(f.env,{topicTitle:'Empty',turns:[]}));await assert.rejects(saveResearchConversation(f.env,{topicTitle:'Too many',turns:Array(31).fill(turn)}));
+});

@@ -1371,3 +1371,16 @@ body.hub-workspace-active{overflow:hidden!important}
 .mr-speaker-check{background:#fff3d6!important;color:#725000!important;border:1px solid #e2c57b;}
 
 .hub-weekly-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}.hub-weekly-meetings .hub-meeting-topic{min-width:0}.hub-weekly-meetings .mr-summary-grid{grid-template-columns:1fr}.hub-card-library [data-add-weekly]{margin:0 0 12px;}
+
+/* Professor desktop: recording panel and five-column topic picker above the meeting. */
+.mr-resource-actions{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px;align-items:center}.mr-resource-actions button{min-width:0;margin:0!important;padding:7px 6px!important;font-size:11px!important;white-space:nowrap}
+@media(min-width:1051px){
+#researchRoomRoot.mr-owner .rr-workspace{grid-template-columns:minmax(0,1fr);align-items:start}
+#researchRoomRoot.mr-owner .rr-sidebar{display:grid;grid-template-columns:235px minmax(0,1fr);grid-template-rows:auto 1fr;gap:8px 14px;border:0;padding:0;background:transparent;max-height:none;overflow:visible}
+#researchRoomRoot.mr-owner .rr-sidebar>.mr-controls{grid-column:1;grid-row:1 / 3;margin:0;align-self:start}
+#researchRoomRoot.mr-owner .rr-sidebar>.rr-list-filter{grid-column:2;grid-row:1;margin:0}
+#researchRoomRoot.mr-owner .rr-sidebar>.rr-topic-list{grid-column:2;grid-row:2;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;align-content:start;max-height:none;overflow:visible}
+#researchRoomRoot.mr-owner .rr-topic-list>.rr-topic{width:100%;min-width:0;max-width:none;margin:0;min-height:82px}
+#researchRoomRoot.mr-owner .rr-topic strong{white-space:normal;overflow-wrap:anywhere}
+#researchRoomRoot.mr-owner .rr-main{min-width:0;width:100%}
+}
