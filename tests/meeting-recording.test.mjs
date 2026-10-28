@@ -275,3 +275,11 @@ test('work stream sends heartbeat before slow result and preserves error semanti
  while(true){const {done,value}=await reader.read();if(done)break;text+=decoder.decode(value);}
  assert.deepEqual(JSON.parse(text),{error:'test rejection',__httpStatus:409});
 });
+
+test('queue refresh reflects completion by another client without another AI request',async()=>{
+ const c=nativeContext();const calls=[];
+ c.researchFetch=async action=>{calls.push(action);if(action==='recording-queue')return {meetings:[{id,processing:{status:'completed',updated:'new'}}]};if(action.startsWith('recording-detail'))return {id,version:3,segments:[],summary:{'topic-A':{content:'saved result'}},processing:{status:'completed',updated:'new'}};if(action==='recording-list')return {meetings:[]};throw Error(action);};
+ vm.runInContext(`meetingRecorder.session={id:'${id}',processing:{status:'working',updated:'old'}};meetingRecorder.active=false;meetingRecorder.dirty=false;meetingRecorder.syncing=false;mrPaint=()=>{};`,c);
+ await vm.runInContext('mrPump()',c);
+ assert.equal(vm.runInContext('meetingRecorder.session.processing.status',c),'completed');assert.equal(vm.runInContext("meetingRecorder.session.summary['topic-A'].content",c),'saved result');assert.ok(!calls.includes('recording-work'));
+});

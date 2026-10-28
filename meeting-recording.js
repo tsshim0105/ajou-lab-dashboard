@@ -192,7 +192,14 @@ async function mrPump(){
  try{
   const {meetings}=await researchFetch('recording-queue');
   mrQueue.pending=meetings.filter(x=>['queued','working','waiting'].includes(x.processing?.status)).length;
-  for(const item of meetings){await mrCleanLocal(item).catch(()=>{});if(!['queued','waiting','working'].includes(item.processing?.status))continue;if(item.processing.status==='working'&&Date.now()-Date.parse(item.processing.updated)<480000)continue;
+  for(const item of meetings){await mrCleanLocal(item).catch(()=>{});
+   const m=meetingRecorder;
+   if(m.session?.id===item.id&&!m.active&&!m.dirty&&!m.syncing&&!m.summaryEditing&&m.session.processing?.updated!==item.processing?.updated){
+    const fresh=await researchFetch('recording-detail?id='+encodeURIComponent(item.id));mrMergeTranscript(fresh);
+    if(['completed','failed','attention'].includes(fresh.processing?.status)){await mrLoadHistory();if(typeof refreshNotifications==='function')await refreshNotifications();}
+    if(tab==='researchRooms')rrDraw();
+   }
+   if(!['queued','waiting','working'].includes(item.processing?.status))continue;if(item.processing.status==='working'&&Date.now()-Date.parse(item.processing.updated)<480000)continue;
    const result=await researchFetch('recording-work',{id:item.id});if(result.busy)continue;
    mrMergeTranscript(result);await mrCleanLocal(result).catch(()=>{});if(meetingRecorder.session?.id===result.id&&!meetingRecorder.active&&!meetingRecorder.dirty&&!meetingRecorder.syncing)await mrLocal(mrDraftKey(),{session:meetingRecorder.session,version:meetingRecorder.version});
    if(result.processing?.status==='completed'){if(typeof refreshNotifications==='function')await refreshNotifications();await mrLoadHistory();if(tab==='researchRooms'&&!meetingRecorder.active&&!meetingRecorder.summaryEditing)rrDraw();}
