@@ -1357,3 +1357,9 @@ body.hub-workspace-active{overflow:hidden!important}
 .hub-card-board .hub-measure .hub-unit-body{position:static!important;height:auto!important;overflow:visible!important}
 .hub-card-board .hub-measure .hub-unit-body>*{min-height:0!important}
 .hub-card-board .hub-measure .hub-card-remove,.hub-card-board .hub-measure .hub-resize{display:none!important}
+
+.mr-voice-script{padding:14px;border:1px solid #b9d9e4;border-radius:12px;background:linear-gradient(120deg,#edf9f4,#f1effb);color:#203d4e}.mr-voice-script p{font-size:18px;line-height:1.6;margin:10px 0}.mr-voice-script small{color:#557083}.mr-voice-list article{padding:12px 0;border-bottom:1px solid #dce5ed}.mr-voice-list article>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mr-voice-list button{margin-left:auto}.mr-voice-list audio,[data-voice-preview]{width:100%;margin-top:8px}.mr-voice-status{padding:10px 12px;margin:8px 0;border:1px solid #c3dce5;border-radius:10px;background:#f0f8fa;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.mr-voice-status span{flex:1;min-width:160px}.mr-voice-status p{width:100%;margin:0}
+
+/* Meeting minutes retain a white reading surface in dark mode. */
+[data-theme=dark] .mr-summary-grid ul,[data-theme=dark] .mr-summary-grid textarea{background:#fff;color:#000;color-scheme:light}
+[data-theme=dark] .mr-summary-grid ul li,[data-theme=dark] .mr-summary-grid ul li::marker{color:#000}

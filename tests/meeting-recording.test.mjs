@@ -283,3 +283,36 @@ test('queue refresh reflects completion by another client without another AI req
  await vm.runInContext('mrPump()',c);
  assert.equal(vm.runInContext('meetingRecorder.session.processing.status',c),'completed');assert.equal(vm.runInContext("meetingRecorder.session.summary['topic-A'].content",c),'saved result');assert.ok(!calls.includes('recording-work'));
 });
+
+import {validateVoiceWav,matchMeetingVoices,labelKnownMeetingSegments} from '../server/meeting-recording.mjs';
+function voiceWav(seconds=3){const bytes=new Uint8Array(44+seconds*32000),v=new DataView(bytes.buffer),str=(n,s)=>[...s].forEach((c,i)=>bytes[n+i]=c.charCodeAt(0));str(0,'RIFF');v.setUint32(4,bytes.length-8,true);str(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);str(36,'data');v.setUint32(40,bytes.length-44,true);for(let i=44;i<bytes.length;i+=2)v.setInt16(i,Math.round(Math.sin(i/20)*3000),true);return bytes;}
+const voices=[{id:'voice-prof-001',name:'홍길동',role:'professor'},{id:'voice-student-001',name:'김하나',role:'student'},{id:'voice-student-002',name:'이지민',role:'student'}];
+async function registerVoices(f){for(const p of voices){const r=await f.call('recording-voice-save',{...p,base64:Buffer.from(voiceWav()).toString('base64')});assert.equal(r.status,200);}}
+test('voice registration validates audio and is inaccessible to students',async()=>{
+ const f=fixture(),b={...voices[0],base64:Buffer.from(voiceWav()).toString('base64')};
+ assert.equal((await f.call('recording-voice-save',b,STUDENT)).status,403);assert.equal((await f.call('recording-voices',null,STUDENT)).status,403);assert.equal((await f.call('recording-voice-audio?id='+b.id,null,STUDENT)).status,403);
+ assert.equal(validateVoiceWav(voiceWav()),3);assert.throws(()=>validateVoiceWav(voiceWav(1)));const silent=voiceWav();silent.fill(0,44);assert.throws(()=>validateVoiceWav(silent));
+ await registerVoices(f);const list=await(await f.call('recording-voices')).json();assert.equal(list.voices.length,3);assert.ok(list.voices.every(p=>!p.base64));assert.equal((await f.call('recording-voice-save',{...b,id:'voice-dupe-001'})).status,400);
+ assert.equal((await f.call('recording-voice-audio?id='+b.id)).headers.get('Content-Type'),'audio/wav');
+});
+test('roll call matches registered names without assuming the named person spoke',()=>{
+ const r=matchMeetingVoices('오늘 참여자는 김 하나, 이지민입니다.',voices);assert.equal(r.status,'ready');assert.deepEqual(r.participants.map(p=>p.name),['홍길동','김하나','이지민']);
+ assert.equal(matchMeetingVoices('오늘 학생과 미팅합니다.',voices).status,'review');
+ const many=[...voices,{id:'extra-001',name:'학생가',role:'student'},{id:'extra-002',name:'학생나',role:'student'}];assert.equal(matchMeetingVoices('김하나 이지민 학생가 학생나',many).status,'review');
+});
+test('voice identity stays stable across chunks and unrecognized voices remain unassigned',()=>{
+ const part={start:300,end:600},data={segments:[{speaker:'voice1',text:'결과입니다',start:1,end:2},{speaker:'other',text:'네',start:3,end:4}]};const a=labelKnownMeetingSegments(data,voices,part,1),b=labelKnownMeetingSegments(data,voices,{start:600,end:900},2);assert.equal(a[0].speaker,b[0].speaker);assert.equal(a[0].speaker,'voice-'+voices[1].id);assert.equal(a[1].speaker,'speaker-unmatched');assert.equal(a[0].start,301);
+});
+test('roll call and registered references drive subsequent transcription end to end',async()=>{
+ const f=fixture();await registerVoices(f);await create(f);await f.call('recording-audio',{id,index:0,base64:'AQID'});await f.call('recording-audio',{id,index:1,base64:'AQID'});
+ await f.call('recording-save',{...snap,segments:[],audioCount:2,audioParts:[{first:0,count:1,start:0,end:8,mime:'audio/webm'},{first:1,count:1,start:8,end:40,mime:'audio/webm'}]});f.env.OPENAI_API_KEY='test-secret';let calls=0;const old=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{if(url.includes('/models/'))return Response.json({});calls++;const form=options.body;if(calls===1){assert.deepEqual(form.getAll('known_speaker_names[]'),[]);return Response.json({segments:[{speaker:'A',start:0,end:7,text:'오늘 참여자는 홍길동 교수, 김하나, 이지민입니다.'}]});}assert.deepEqual(form.getAll('known_speaker_names[]'),['voice0','voice1','voice2']);assert.equal(form.getAll('known_speaker_references[]').length,3);return Response.json({segments:[{speaker:'voice1',start:0,end:3,text:'실험 결과를 설명합니다.'},{speaker:'voice0',start:4,end:6,text:'조건을 비교해주세요.'}]});};
+ try{let r=await f.call('recording-transcribe',{id});assert.equal(r.status,200);let m=await r.json();assert.equal(m.voiceSelection.status,'ready');assert.equal(m.segments[0].speaker,'voice-'+voices[0].id);r=await f.call('recording-transcribe',{id});assert.equal(r.status,200);m=await r.json();assert.equal(m.segments[1].speaker,'voice-'+voices[1].id);assert.equal(m.speakers[m.segments[1].speaker],'김하나 · 학생');assert.equal(m.speakers[m.segments[2].speaker],'홍길동 · 교수님');assert.equal(m.transcription.status,'completed');}finally{globalThis.fetch=old;}
+});
+test('ambiguous roster pauses transcription and manual confirmation resumes it',async()=>{
+ const f=fixture();await registerVoices(f);await create(f);await f.call('recording-save',snap);let m=JSON.parse(f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:'+id).payload);m.voiceSelection={status:'review'};m.transcription={completedParts:1,status:'partial'};m.processing={status:'queued'};f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(m),'recording:'+id);
+ const work=await(await f.call('recording-work',{id})).json();assert.equal(work.processing.status,'participants-required');
+ assert.equal((await f.call('recording-participants',{id,version:work.version,participants:[voices[0].id,voices[1].id]},STUDENT)).status,403);
+ const r=await f.call('recording-participants',{id,version:work.version,participants:[voices[0].id,voices[1].id]});assert.equal(r.status,200);assert.equal((await r.json()).voiceSelection.status,'ready');assert.equal((await f.call('recording-voice-delete',{id:voices[0].id,version:1})).status,409);
+});
+test('voice menu is professor only and script follows entered name',()=>{const c=nativeContext();vm.runInContext('researchRoomState.rooms={};esc=x=>x;',c);assert.match(vm.runInContext('mrSidebar()',c),/음성 등록/);assert.match(vm.runInContext("mrVoiceScript('김하나')",c),/저는 김하나입니다/);const s=nativeContext(undefined,false);assert.equal(vm.runInContext('mrSidebar()',s),'');});

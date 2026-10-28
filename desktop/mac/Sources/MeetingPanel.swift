@@ -3,9 +3,10 @@ import SwiftUI
 import AVFoundation
 import WebKit
 
-struct FloatingMeeting: Identifiable { let id: String; let title: String; var quick: Bool = true; var participants: String = "" }
+struct FloatingMeeting: Identifiable { let id: String; let title: String; var quick: Bool = true; var participants: String = ""; var cover: String = "" }
 @MainActor final class MeetingPanelModel: ObservableObject {
     @Published var topics: [FloatingMeeting] = []
+    @Published var covers: [String:NSImage] = [:]
     @Published var participantNames: [String] = []
     @Published var otherExpanded = false
     var quickTopics: [FloatingMeeting] { topics.filter { $0.quick } }
@@ -20,6 +21,7 @@ struct FloatingMeeting: Identifiable { let id: String; let title: String; var qu
     @Published var working = false
     @Published var recording = false
     @Published var readyToStart = false
+    @Published var cancelPending = false
     @Published var message = ""
     var action: (String, String?) -> Void = { _, _ in }
     var resize: () -> Void = {}
@@ -69,6 +71,9 @@ private struct MeetingPanelView: View {
                         .foregroundColor(Color(red:0.14,green:0.36,blue:0.58)).background(Color.white.opacity(0.75)).cornerRadius(10)
                 }.help(model.recording ? "현재 녹음을 마무리하고 회의 요약을 시작합니다. 패널은 유지됩니다." : "선택한 연구주제로 새 회의를 녹음합니다. 이전 회의 요약은 계속됩니다.")
                     .disabled(model.working || (!model.recording && !model.readyToStart))
+                if model.recording || model.cancelPending {
+                    Button { model.action("cancel",nil) } label: { Image(systemName:"xmark").frame(width:22,height:28) }.help("현재 회의 취소 · 요약하지 않음").accessibilityLabel("회의 취소").disabled(model.working)
+                }
                 if !model.recording {
                     Button { model.action("hide",nil) } label: { Image(systemName:"xmark").font(.system(size:11)).frame(width:18,height:28) }.help("플로팅 바 숨기기 · 요약은 계속 진행됩니다.").accessibilityLabel("플로팅 바 숨기기")
                 }
@@ -89,7 +94,16 @@ private struct MeetingPanelView: View {
                             Spacer(minLength:0)
                             if item.id == model.selected { Image(systemName:"checkmark").font(.system(size:11,weight:.semibold)) }
                         }.padding(10).frame(maxWidth:.infinity,minHeight:65,alignment:.leading)
-                        .background(item.id == model.selected ? Color(red:0.85,green:0.94,blue:0.98) : Color.white.opacity(0.85)).cornerRadius(10)
+                        .background {
+                            GeometryReader { geometry in
+                                ZStack {
+                                    Color.white.opacity(0.85)
+                                    if let image=model.covers[item.cover] { Image(nsImage:image).resizable().scaledToFill().frame(width:geometry.size.width,height:geometry.size.height).clipped().opacity(0.7)
+                                        LinearGradient(colors:[Color.white.opacity(0.72),.clear],startPoint:.leading,endPoint:.trailing)
+                                    }
+                                }
+                            }
+                        }.cornerRadius(10).overlay(RoundedRectangle(cornerRadius:10).stroke(item.id == model.selected ? Color(red:0.77,green:0.65,blue:0.42) : .clear,lineWidth:2))
                     }.disabled(model.working).accessibilityLabel(item.title + (item.id == model.selected ? " 선택됨" : ""))
                 }
             }.padding(12)
@@ -105,6 +119,9 @@ final class FloatingPanel: NSPanel {
     weak var owner: AppDelegate?
     let model=MeetingPanelModel()
     var panel: FloatingPanel?
+    var panelAnchor: NSPoint?
+    var resizingPanel=false
+    var moveObserver: NSObjectProtocol?
     var recorder: AVAudioEngine?
     var segmented: SegmentedAudio?
     var processingActivity: NSObjectProtocol?
@@ -123,7 +140,7 @@ final class FloatingPanel: NSPanel {
     func fail(_ text:String)->NSError { NSError(domain:"NISMLRecording",code:1,userInfo:[NSLocalizedDescriptionKey:text]) }
     func start(_ id:String) async throws {
         guard recorder == nil else { throw fail("이미 녹음 중입니다.") }
-        guard await AVCaptureDevice.requestAccess(for:.audio) else { throw fail("시스템 설정에서 NISML Dashboard의 마이크 권한을 허용해주세요.") }
+        guard await AVCaptureDevice.requestAccess(for:.audio) else { throw fail("시스템 설정에서 NISML Hub의 마이크 권한을 허용해주세요.") }
         try FileManager.default.createDirectory(at:audioDirectory,withIntermediateDirectories:true,attributes:[.posixPermissions:0o700])
         let folder=try partsDirectory(id)
         guard !FileManager.default.fileExists(atPath:folder.path) else { throw fail("이 회의의 녹음 파일이 이미 있습니다.") }
@@ -161,21 +178,25 @@ final class FloatingPanel: NSPanel {
         if panel == nil {
             let p=FloatingPanel(contentRect:NSRect(x:0,y:0,width:620,height:66),styleMask:[.borderless,.nonactivatingPanel],backing:.buffered,defer:false)
             p.alphaValue=0.78;p.level = .floating;p.collectionBehavior=[.canJoinAllSpaces,.fullScreenAuxiliary];p.hidesOnDeactivate=false;p.isFloatingPanel=true;p.isOpaque=false;p.backgroundColor = .clear;p.hasShadow=true;p.isMovableByWindowBackground=true;p.isReleasedWhenClosed=false
-            let host=NSHostingView(rootView:MeetingPanelView(model:model));p.contentView=host
+            let host=NSHostingView(rootView:MeetingPanelView(model:model));host.sizingOptions=[];p.contentView=host
             p.setFrameAutosaveName("MeetingFloatingPanel");if !p.setFrameUsingName("MeetingFloatingPanel"), let screen=NSScreen.main { p.setFrameOrigin(NSPoint(x:screen.visibleFrame.midX-310,y:screen.visibleFrame.minY+80)) }
-            panel=p
+            panel=p;panelAnchor=p.frame.origin
+            moveObserver=NotificationCenter.default.addObserver(forName:NSWindow.didMoveNotification,object:p,queue:.main) { [weak self] _ in
+                MainActor.assumeIsolated { guard let self,!self.resizingPanel else{return};self.panelAnchor=self.panel?.frame.origin }
+            }
         }
         resize();panel?.orderFrontRegardless()
     }
     func resize() {
         guard let panel else{return};let h:CGFloat=66+(model.expanded ? model.expandedHeight:0)+(model.message.isEmpty ? 0:38)
-        var f=panel.frame;f.size=NSSize(width:620,height:h)
+        var f=NSRect(origin:panelAnchor ?? panel.frame.origin,size:NSSize(width:620,height:h))
         if let screen=panel.screen ?? NSScreen.main { f.origin.x=max(screen.visibleFrame.minX,min(f.origin.x,screen.visibleFrame.maxX-f.width));f.origin.y=max(screen.visibleFrame.minY,min(f.origin.y,screen.visibleFrame.maxY-f.height)) }
-        panel.setFrame(f,display:true)
+        if panel.frame != f { resizingPanel=true;panel.setFrame(f,display:true);resizingPanel=false }
     }
     func command(_ action:String,_ topic:String?,confirm:Bool=true) {
         if action == "hide" && !recording { keepPanelVisible=false;panel?.orderOut(nil);return }
         guard !commandPending,let web=owner?.web, let url=web.url,Lab.isDashboard(url) else { model.message="대시보드를 다시 열어주세요.";return }
+        if action == "cancel" { let box=NSAlert();box.messageText="현재 회의를 취소할까요?";box.informativeText="녹음을 멈추고 이 회의의 전사·요약을 폐기합니다. 이미 처리된 API 비용은 취소되지 않습니다. 다른 회의는 유지됩니다.";box.addButton(withTitle:"회의 취소");box.addButton(withTitle:"계속 녹음");guard box.runModal() == .alertFirstButtonReturn else{return} }
         if action == "stop" && confirm { let box=NSAlert();box.messageText="녹음을 저장하고 종료할까요?";box.addButton(withTitle:"저장 후 종료");box.addButton(withTitle:"계속 녹음");guard box.runModal() == .alertFirstButtonReturn else{return} }
         let payload:[String:Any]=["action":action,"topic":topic ?? ""]
         commandPending=true;model.working=true
@@ -195,11 +216,12 @@ final class FloatingPanel: NSPanel {
                     let admin=body["admin"] as? Bool == true
                     if admin && body["backgroundProcessing"] as? Bool == true { if processingActivity == nil { processingActivity=ProcessInfo.processInfo.beginActivity(options:[.userInitiated,.idleSystemSleepDisabled],reason:"회의 전사 및 요약 완료");processingClock=Timer.scheduledTimer(withTimeInterval:5,repeats:true) { [weak controller = self] _ in Task { @MainActor in _ = try? await controller?.owner?.web?.evaluateJavaScript("if(typeof mrPump==='function')mrPump();void 0") } } } }
                     else if let processingActivity { ProcessInfo.processInfo.endActivity(processingActivity);self.processingActivity=nil;processingClock?.invalidate();processingClock=nil }
-                    if !admin { keepPanelVisible=false;panel?.orderOut(nil);replyHandler(["ok":true],nil);return }
-                    let items=body["topics"] as? [[String:String]] ?? [];model.topics=items.prefix(300).compactMap { x in guard let id=x["id"],let title=x["title"] else{return nil};return FloatingMeeting(id:id,title:String(title.prefix(120)),quick:x["quick"] != "false",participants:String((x["participants"] ?? "").prefix(180))) }
+                    if !admin { model.covers=[:];keepPanelVisible=false;panel?.orderOut(nil);replyHandler(["ok":true],nil);return }
+                    let items=body["topics"] as? [[String:String]] ?? [];model.topics=items.prefix(300).compactMap { x in guard let id=x["id"],let title=x["title"] else{return nil};return FloatingMeeting(id:id,title:String(title.prefix(120)),quick:x["quick"] != "false",participants:String((x["participants"] ?? "").prefix(180)),cover:x["cover"] ?? "") }
                     model.participantNames=body["participantNames"] as? [String] ?? [];resize()
                     model.selected=body["selected"] as? String ?? "__unclassified__";protectsSession=recording || body["protect"] as? Bool == true
                     model.recording=recording || body["active"] as? Bool == true
+                    model.cancelPending=body["cancelPending"] as? Bool == true
                     model.readyToStart = !model.recording && body["startReady"] as? Bool == true
                     if !model.recording && model.readyToStart { model.message="이전 회의는 별도로 처리됩니다. 주제를 선택하고 새 녹음을 시작하세요." }
                     if !model.recording && !protectsSession && !keepPanelVisible { panel?.orderOut(nil) }
@@ -208,6 +230,8 @@ final class FloatingPanel: NSPanel {
                 // Independently check current page role before any audio operation.
                 guard let web=owner?.web, (try await web.evaluateJavaScript("typeof admin === 'function' && admin()")) as? Bool == true else { throw fail("교수님만 녹음에 접근할 수 있습니다.") }
                 switch action {
+                case "covers":
+                    if let images=body["images"] as? [String:String] { for (key,value) in images.prefix(300) { if value.count<=80000,let data=Data(base64Encoded:value),let image=NSImage(data:data) { model.covers[key]=image } };let active=Set(model.topics.map { $0.cover });model.covers=model.covers.filter { active.contains($0.key) } };replyHandler(["ok":true],nil)
                 case "capabilities": replyHandler(["segmentedRecording":true,"segmentSeconds":300],nil)
                 case "parts": guard let id=body["id"] as? String else{throw fail("회의 ID가 없습니다.")};replyHandler(try parts(id),nil)
                 case "uploaded": model.working=false;model.message="";replyHandler(["ok":true],nil)
