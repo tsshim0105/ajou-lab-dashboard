@@ -232,7 +232,7 @@ test('history marks only topics with nonblank transcripts and does not expose tr
 });
 test('summary date filter excludes empty and cancelled meetings per topic',()=>{
  const context=vm.createContext({console,Blob,setInterval(){},window:{addEventListener(){}},document:{}});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),context);
- for(const [record,key,expected] of [[{markers,segments:[]},'topic-0001',false],[{markers,segments:[snap.segments[0]]},'topic-0002',false],[{markers,segments:[snap.segments[0]]},'topic-0001',true],[{transcriptTopics:['topic-0001']},'topic-0001',true],[{summary:{'topic-0001':{content:'saved summary'}}},'topic-0001',true],[{status:'cancelled',transcriptTopics:['topic-0001']},'topic-0001',false]]){context.record=record;context.key=key;assert.equal(!!vm.runInContext('mrHasMeetingContent(record,key)',context),expected);}
+ for(const [record,key,expected] of [[{markers,segments:[]},'topic-0001',false],[{markers,segments:[],processing:{status:'failed'}},'topic-0001',true],[{markers,segments:[],processing:{status:'failed'}},'other-topic',false],[{status:'cancelled',markers,segments:[],processing:{status:'failed'}},'topic-0001',false],[{markers,segments:[snap.segments[0]]},'topic-0002',false],[{markers,segments:[snap.segments[0]]},'topic-0001',true],[{transcriptTopics:['topic-0001']},'topic-0001',true],[{summary:{'topic-0001':{content:'saved summary'}}},'topic-0001',true],[{status:'cancelled',transcriptTopics:['topic-0001']},'topic-0001',false]]){context.record=record;context.key=key;assert.equal(!!vm.runInContext('mrHasMeetingContent(record,key)',context),expected);}
 });
 
 import {meetingReviewedKnowledge} from '../server/meeting-recording.mjs';
@@ -248,4 +248,30 @@ test('review edits retain prior approved text in history without stale overwrite
  await f.call('recording-summary-save',{id,version:2,topic:'topic-0001',content:'Corrected',status:'reviewed'});
  const s=await(await f.call('recording-detail?id='+id)).json();assert.equal(s.summaryHistory.at(-1).content,'First approved');assert.equal(s.summary['topic-0001'].content,'Corrected');
  assert.equal((await f.call('recording-summary-save',{id,version:2,topic:'topic-0001',content:'Stale'})).status,409);
+});
+
+test('explicit uncertain retry preserves completed transcript and isolates jobs',async()=>{
+ const f=fixture();await create(f);await f.call('recording-save',snap);
+ const row=f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:'+id),m=JSON.parse(row.payload);
+ m.processing={status:'attention'};m.transcription={completedParts:2,status:'partial'};
+ f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(m),'recording:'+id);
+ for(const [job,topic] of [['unknown','recording:'+id],['other','recording:other-0001']])f.sql.prepare('INSERT INTO research_jobs VALUES(?,?,?,?,?,?,?,?,?)').run(job,topic,OWNER.email,'2026-10','uncertain',100,0,'{}','now');
+ const b={id,version:1,acknowledgeDuplicateCost:true};
+ assert.equal((await f.call('recording-retry-uncertain',b,STUDENT)).status,403);
+ assert.equal((await f.call('recording-retry-uncertain',{...b,acknowledgeDuplicateCost:false})).status,400);
+ assert.equal((await f.call('recording-retry-uncertain',{...b,version:0})).status,409);
+ const r=await f.call('recording-retry-uncertain',b);assert.equal(r.status,200);const next=await r.json();
+ assert.deepEqual(next.segments,m.segments);assert.equal(next.transcription.completedParts,2);assert.equal(next.processing.status,'queued');assert.equal(next.transcriptionEpoch,1);
+ assert.equal(f.sql.prepare("SELECT status FROM research_jobs WHERE id='unknown'").get().status,'abandoned');assert.equal(f.sql.prepare("SELECT status FROM research_jobs WHERE id='other'").get().status,'uncertain');
+ assert.equal((await f.call('recording-retry-uncertain',{...b,version:2})).status,409);
+});
+
+test('work stream sends heartbeat before slow result and preserves error semantics',async()=>{
+ const {researchWorkStream}=await import('../server/research-room.mjs');let finish;
+ const response=researchWorkStream(()=>new Promise(resolve=>{finish=resolve}),5),reader=response.body.getReader(),decoder=new TextDecoder();
+ let text=decoder.decode((await reader.read()).value);assert.equal(text,'\n');
+ text+=decoder.decode((await reader.read()).value);assert.equal(text.trim(),'');
+ finish(Response.json({error:'test rejection'},{status:409}));
+ while(true){const {done,value}=await reader.read();if(done)break;text+=decoder.decode(value);}
+ assert.deepEqual(JSON.parse(text),{error:'test rejection',__httpStatus:409});
 });
