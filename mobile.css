@@ -1369,3 +1369,5 @@ body.hub-workspace-active{overflow:hidden!important}
 .mr-voice-record{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}.mr-voice-record [data-voice-timer]{font-variant-numeric:tabular-nums;font-size:14px;font-weight:650}
 
 .mr-speaker-check{background:#fff3d6!important;color:#725000!important;border:1px solid #e2c57b;}
+
+.hub-weekly-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start}.hub-weekly-meetings .hub-meeting-topic{min-width:0}.hub-weekly-meetings .mr-summary-grid{grid-template-columns:1fr}.hub-card-library [data-add-weekly]{margin:0 0 12px;}
