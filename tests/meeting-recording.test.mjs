@@ -326,3 +326,5 @@ test('summary display separates students and known dates without inventing ident
  c.sample='- [[학생:<img src=x onerror=alert(1)>]] 결과를 정리한다.';out=vm.runInContext('mrSummaryItems(sample,3)',c);assert.doesNotMatch(out,/<img/);assert.match(out,/&lt;img/);
  c.sample='- 학생에게 자료를 요청했다. 실험 조건은 미정이다.';out=vm.runInContext('mrSummaryItems(sample,0)',c);assert.match(out,/학생에게 자료/);assert.match(out,/실험 조건은 미정/);assert.doesNotMatch(out,/mr-person-tag/);
 });
+
+test('legacy summary inline speakers remain attributed without prose labels',()=>{const c=vm.createContext({setInterval(){},window:{addEventListener(){}},esc:x=>String(x)});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);c.sample='- 결과를 비교한다. 학생 2는 편차를 지적했다. 담당자: 학생 10으로 제안되나 최종 확정 여부는 미정. 기한: 미정.';const out=vm.runInContext('mrSummaryItems(sample,3)',c);assert.doesNotMatch(out,/학생 2는|담당자:|기한:|미정/);assert.match(out,/학생 10 · 확인 필요/);assert.match(out,/편차를 지적/);});

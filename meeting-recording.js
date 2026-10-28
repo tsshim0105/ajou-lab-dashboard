@@ -159,10 +159,11 @@ function mrSummaryItems(part,section){return String(part||'').split('\n').filter
  const match=text.match(students);if(match){(match[1].match(/학생\s*\d*/g)||[]).forEach(x=>tag(x.replace(/\s+/g,' ').trim()));text=text.slice(match[0].length);}
  if(section===2)text=text.replace(/^교수(?:님)?(?:은|는|이|가)\s*/, '');
  text=text.replace(/[（(]?\s*(?:기한|마감일|마감)\s*[:：]?\s*(?:은|는)?\s*(?:미정(?:이다|입니다)?|미언급|언급(?:이)?\s*없(?:음|다|습니다))\.?\s*[）)]?/g,' ').trim();
- if(section===3){text=text.replace(/[（(]?\s*담당자\s*[:：]?\s*(학생\s*\d+)\s*[）)]?/g,(_,name)=>{tag(name);return ' ';}).trim();}
+ if(section===3){text=text.replace(/담당자\s*[:：]\s*([^。.\n]+)[。.]?/g,(_,value)=>{const names=value.match(/학생\s*\d+/g)||[];names.forEach(name=>tag(name+(/미정|제안|확정 여부|요청/.test(value)?' · 확인 필요':'')));return '';}).trim();}
+ const body=esc(text.replace(/^[,;·\s]+|[,;·\s]+$/g,'')).replace(/학생\s*\d+(?:[·,]\s*\d+)*(?:은|는|이|가|도)?/g,value=>{const numbers=value.match(/\d+/g)||[];return numbers.map(n=>'<span class="mr-person-tag">학생 '+n+'</span>').join('');});
  text=text.replace(/^[,;·\s]+|[,;·\s]+$/g,'');
  if(!text)return '';
- return '<li>'+tags.map(name=>'<span class="mr-person-tag">'+esc(name)+'</span>').join('')+'<span class="mr-summary-text">'+esc(text)+'</span>'+due.map(value=>'<span class="mr-due-tag">'+esc(value)+'</span>').join('')+'</li>';
+ return '<li>'+tags.map(name=>'<span class="mr-person-tag">'+esc(name)+'</span>').join('')+'<span class="mr-summary-text">'+body+'</span>'+due.map(value=>'<span class="mr-due-tag">'+esc(value)+'</span>').join('')+'</li>';
 }).join('')||'<li class="muted">기록된 내용이 없습니다.</li>';}
 
 function mrSummaryContent(parts){return parts.map((x,i)=>'## '+mrSummaryTitles[i]+'\n'+x).join('\n\n');}
