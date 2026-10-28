@@ -152,6 +152,8 @@ function mrSummarySections(content){const parts=['','','',''];let section=0;for(
 // Keep stored minutes intact; presentation metadata is escaped and never interpreted as HTML.
 function mrSummaryItems(part,section){return String(part||'').split('\n').filter(x=>x.trim()).map(line=>{
  let text=line.replace(/^\s*[-*•]\s*/,''),tags=[],due=[];
+ const speakerCheck=/화자\s*확인\s*필요/.test(text);
+ text=text.replace(/[（(\[]?\s*화자\s*확인\s*필요\s*[）)\]]?\s*[:：]?/g,'').trim();
  const tag=value=>{const name=value.trim();if(name&&name.length<=40&&!tags.includes(name))tags.push(name);};
  text=text.replace(/\[\[(학생|이름|담당자|기한):([^\]\n]{1,80})\]\]/g,(_,kind,value)=>{if(kind==='기한'){if(!/미정|미언급|언급.*없/.test(value))due.push(value.trim());}else value.split(/[,、]/).forEach(tag);return '';}).trim();
  // Remove generated metadata labels without changing the saved source minutes.
@@ -167,8 +169,8 @@ function mrSummaryItems(part,section){return String(part||'').split('\n').filter
  text=text.replace(/채택\s*여부(?:\s*[·ㆍ/・,]\s*담당자)?\s*[:：]?\s*/g,'').replace(/담당자\s*[:：]?\s*/g,'').replace(/[（(]\s*[）)]/g,'').trim();
  const body=esc(text.replace(/^[,;·\s]+|[,;·\s]+$/g,'')).replace(/학생\s*\d+(?:[·,]\s*\d+)*(?:은|는|이|가|도)?/g,value=>{const numbers=value.match(/\d+/g)||[];return numbers.map(n=>'<span class="mr-person-tag">학생 '+n+'</span>').join('');});
  text=text.replace(/^[,;·\s]+|[,;·\s]+$/g,'');
- if(!text)return '';
- return '<li>'+tags.map(name=>'<span class="mr-person-tag">'+esc(name)+'</span>').join('')+'<span class="mr-summary-text">'+body+'</span>'+due.map(value=>'<span class="mr-due-tag">'+esc(value)+'</span>').join('')+'</li>';
+ if(!text&&!speakerCheck)return '';
+ return '<li>'+(speakerCheck?'<span class="mr-person-tag mr-speaker-check">화자확인필요</span>':'')+tags.map(name=>'<span class="mr-person-tag">'+esc(name)+'</span>').join('')+'<span class="mr-summary-text">'+body+'</span>'+due.map(value=>'<span class="mr-due-tag">'+esc(value)+'</span>').join('')+'</li>';
 }).join('')||'<li class="muted">기록된 내용이 없습니다.</li>';}
 
 function mrSummaryContent(parts){return parts.map((x,i)=>'## '+mrSummaryTitles[i]+'\n'+x).join('\n\n');}

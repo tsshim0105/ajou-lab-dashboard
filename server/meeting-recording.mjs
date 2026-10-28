@@ -307,9 +307,9 @@ export function matchMeetingVoices(text,profiles){
 }
 async function mrVoiceRequest(req,env,action,url,reply){
  const db=env.DB;
- if(req.method==='GET'){
+ if(req.method==='GET'||req.method==='HEAD'){
   if(action==='recording-voices')return reply({voices:await mrVoiceList(db)});
-  if(action==='recording-voice-audio'){const id=mrId(url.searchParams.get('id'));const p=await db.prepare('SELECT payload FROM research_records WHERE id=?').bind('voice:'+id).first();if(!p)throw mrFail('등록 음성이 없습니다.',404);const o=await env.BUCKET?.get('meeting-voices/'+id+'.wav');if(!o)throw mrFail('등록 음성이 없습니다.',404);return new Response(o.body,{headers:{'Content-Type':'audio/wav','Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});}
+  if(action==='recording-voice-audio'){const id=mrId(url.searchParams.get('id'));const p=await db.prepare('SELECT payload FROM research_records WHERE id=?').bind('voice:'+id).first();if(!p)throw mrFail('등록 음성이 없습니다.',404);const o=await env.BUCKET?.get('meeting-voices/'+id+'.wav');if(!o)throw mrFail('등록 음성이 없습니다.',404);return meetingVoiceResponse(req,new Uint8Array(await o.arrayBuffer()));}
  }
  if(req.method!=='POST')throw mrFail('허용되지 않는 요청입니다.',405);
  const raw=await req.text();if(raw.length>450000)throw mrFail('음성 파일이 너무 큽니다.',413);const b=JSON.parse(raw),id=mrId(b.id),key='voice:'+id;
@@ -352,4 +352,14 @@ export async function meetingCorrectionExamples(db,topic,current,input){
   }
  }
  let size=0;return examples.sort((a,b)=>b.rank-a.rank).filter(e=>{size+=e.before.length+e.after.length;return size<=6000;}).slice(0,8).map(({rank,...e})=>e);
+}
+
+export function meetingVoiceResponse(req,bytes){
+ const total=bytes.length,headers={'Content-Type':'audio/wav','Content-Length':String(total),'Accept-Ranges':'bytes','Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'};
+ if(req.method==='HEAD')return new Response(null,{headers});
+ const range=req.headers.get('Range');if(!range)return new Response(bytes,{headers});
+ const m=/^bytes=(\d*)-(\d*)$/.exec(range);let start=0,end=total-1;
+ if(m&&(m[1]||m[2])){if(!m[1])start=Math.max(0,total-Number(m[2]));else{start=Number(m[1]);if(m[2])end=Math.min(end,Number(m[2]));}}
+ if(!m||(!m[1]&&!m[2])||!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>=total||end<start||(!m[1]&&Number(m[2])===0))return new Response(null,{status:416,headers:{...headers,'Content-Length':'0','Content-Range':'bytes */'+total}});
+ return new Response(bytes.slice(start,end+1),{status:206,headers:{...headers,'Content-Length':String(end-start+1),'Content-Range':`bytes ${start}-${end}/${total}`}});
 }
