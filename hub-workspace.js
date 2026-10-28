@@ -36,7 +36,7 @@ const HubDeviceLayout={
  const recordKey=(r,i)=>String(r.id||r.doi||r.title||r.name||i);
  const empty='<p class="muted">등록된 자료가 없습니다.</p>';
  function add(id,title,group,html,w=6,h=4){catalog.set(id,{id,title,group,html,w,h});}
- function summary(m,topic){const s=m.summary?.[topic];if(!s?.content?.trim())return '';return '<section class="hub-meeting-record"><div class="hub-meeting-date"><time>'+esc(rrTime(m.created))+'</time><span>'+(s.status==='reviewed'?'검토 확정':'초안')+'</span></div><div class="mr-summary-grid">'+mrSummarySections(s.content).map((part,i)=>'<section><h4>'+esc(mrSummaryTitles[i])+'</h4><ul>'+part.split(/\n/).filter(x=>x.trim()).map(line=>'<li>'+esc(line.replace(/^\s*[-*•]\s*/,''))+'</li>').join('')+'</ul></section>').join('')+'</div></section>';}
+ function summary(m,topic){const s=m.summary?.[topic];if(!s?.content?.trim())return '';return '<section class="hub-meeting-record"><div class="hub-meeting-date"><time>'+esc(rrTime(m.created))+'</time><span>'+(s.status==='reviewed'?'검토 확정':'초안')+'</span></div><div class="mr-summary-grid">'+mrSummarySections(s.content).map((part,i)=>'<section><h4>'+esc(mrSummaryTitles[i])+'</h4><ul>'+mrSummaryItems(part,i)+'</ul></section>').join('')+'</div></section>';}
  function buildCatalog(){
   catalog=new Map();const group=groupMeetingCards(),year=yearAndGameNight();
   add('meeting-now','이번 그룹미팅','대시보드',extract(group,'.aurora-meeting',0),6,3);add('meeting-next','다음 그룹미팅','대시보드',extract(group,'.aurora-meeting',1),6,3);

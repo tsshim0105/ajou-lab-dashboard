@@ -316,3 +316,13 @@ test('ambiguous roster pauses transcription and manual confirmation resumes it',
  const r=await f.call('recording-participants',{id,version:work.version,participants:[voices[0].id,voices[1].id]});assert.equal(r.status,200);assert.equal((await r.json()).voiceSelection.status,'ready');assert.equal((await f.call('recording-voice-delete',{id:voices[0].id,version:1})).status,409);
 });
 test('voice menu is professor only and script follows entered name',()=>{const c=nativeContext();vm.runInContext('researchRoomState.rooms={};esc=x=>x;',c);assert.match(vm.runInContext('mrSidebar()',c),/음성 등록/);assert.match(vm.runInContext("mrVoiceScript('김하나')",c),/저는 김하나입니다/);const s=nativeContext(undefined,false);assert.equal(vm.runInContext('mrSidebar()',s),'');});
+
+test('summary display separates students and known dates without inventing identity or deadlines',()=>{
+ const c=vm.createContext({setInterval(){},window:{addEventListener(){}},esc:x=>String(x).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;')});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);
+ c.sample='- 학생 21과 학생 22는 200 nm 입자의 건조 조건을 비교했다.';let out=vm.runInContext('mrSummaryItems(sample,1)',c);assert.equal((out.match(/class="mr-person-tag"/g)||[]).length,2);assert.match(out,/학생 21/);assert.match(out,/200 nm/);assert.doesNotMatch(out,/학생 22는/);
+ c.sample='- 교수는 유속을 고정하고 기포 제거 전후를 비교하도록 제안했다.';out=vm.runInContext('mrSummaryItems(sample,2)',c);assert.doesNotMatch(out,/교수는/);assert.match(out,/유속을 고정/);
+ c.sample='- [[학생:손은지]] [[학생:김혜림]] 비교 그래프를 정리한다. [[기한:10월 30일]]';out=vm.runInContext('mrSummaryItems(sample,3)',c);assert.match(out,/mr-due-tag/);assert.match(out,/손은지/);assert.doesNotMatch(out,/\[\[/);
+ c.sample='- 담당자 학생 20은 반복 실험을 진행한다. (기한: 미정이다.)';out=vm.runInContext('mrSummaryItems(sample,3)',c);assert.match(out,/학생 20/);assert.doesNotMatch(out,/담당자|미정|mr-due-tag/);assert.match(out,/반복 실험/);
+ c.sample='- [[학생:<img src=x onerror=alert(1)>]] 결과를 정리한다.';out=vm.runInContext('mrSummaryItems(sample,3)',c);assert.doesNotMatch(out,/<img/);assert.match(out,/&lt;img/);
+ c.sample='- 학생에게 자료를 요청했다. 실험 조건은 미정이다.';out=vm.runInContext('mrSummaryItems(sample,0)',c);assert.match(out,/학생에게 자료/);assert.match(out,/실험 조건은 미정/);assert.doesNotMatch(out,/mr-person-tag/);
+});
