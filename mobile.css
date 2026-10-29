@@ -1447,3 +1447,14 @@ html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nt
 .group-paper-list{margin-top:8px;border-top:1px solid #cad6e2}.group-paper-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #d5dfe8;font-size:13px}.group-paper-row:last-child{border:0;padding-bottom:0}.group-paper-title{overflow-wrap:anywhere;min-width:0}.group-paper-actions{display:flex;gap:5px;align-items:center}.group-paper-actions a,.group-paper-actions button{font-size:12px;padding:5px 8px;margin:0;white-space:nowrap;text-decoration:none}.meeting-agenda-card:has(.group-paper-list){align-items:start}.meeting-agenda-card:has(.group-paper-list) .meeting-agenda-info{min-width:0}@media(max-width:540px){.group-paper-row{grid-template-columns:45px minmax(0,1fr)}.group-paper-actions{grid-column:2;justify-content:flex-end}}
 
 .meeting-agenda-card:has(>.group-paper-list){align-items:center;row-gap:0}.meeting-agenda-card>.group-paper-list{grid-column:2/-1;margin-top:0;padding-bottom:10px}.meeting-agenda-card:has(>.group-paper-list)>.meeting-agenda-kind{grid-column:3;grid-row:1;align-self:center}.meeting-agenda-card:has(>.group-paper-list)>.meeting-agenda-date{grid-row:1}
+
+.personal-meeting-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}.personal-meeting-heading h3{min-width:0;white-space:normal}.personal-meeting-heading .personal-paper-button{flex:none;font-size:11px;line-height:1.3;padding:4px 7px;min-height:26px;border-radius:7px;white-space:nowrap;background:#ffffffb8}
+
+/* Let mobile content scroll behind the translucent dock instead of reserving a viewport strip. */
+@media(max-width:760px){
+ html .app,html[data-active-tab="papers"] .app{padding-bottom:0}
+ .app>#panel{padding-bottom:calc(94px + env(safe-area-inset-bottom));scroll-padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+ #tabs{background:rgba(248,252,253,.72);backdrop-filter:blur(10px) saturate(125%);-webkit-backdrop-filter:blur(10px) saturate(125%);border-color:rgba(180,202,213,.55);box-shadow:0 4px 18px #16344b14}
+ #tabs .tab:not(.active){background:transparent}
+ [data-theme=dark] #tabs{background:rgba(25,39,52,.76);border-color:rgba(142,167,188,.3)}
+}

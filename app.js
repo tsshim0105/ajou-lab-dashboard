@@ -506,7 +506,7 @@ const groupMeetingDates=[
  ['2027-02-18','랩세미나','김혜림 · 이윤서 · 김태희']
 ];
 function upcomingGroupMeetings(now=new Date()){
- return savedGroupMeetings().map(r=>[r.date,r.kind,r.presenter,r.time,r.location,r.note]).filter(r=>Date.parse(r[0]+'T'+r[3]+':00+09:00')>now.getTime());
+ return savedGroupMeetings().map(r=>[r.date,r.kind,r.presenter,r.time,r.location,r.note,r.id]).filter(r=>Date.parse(r[0]+'T'+r[3]+':00+09:00')>now.getTime());
 }
 function groupMeetingCountdown(date,now=new Date()){
  const parts=new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
@@ -524,7 +524,7 @@ function personalGroupMeetings(name,now=new Date()){
 function studentMeetingCards(now=new Date()){
  const shared=groupMeetingCards(now);if(user.role!=='student'&&!studentPreviewEmail)return shared;
  const next=personalGroupMeetings(studentPreviewEmail?studentNames[studentPreviewEmail]:user.name,now);
- return '<div class="student-meeting-row">'+shared+'<section class="personal-meeting-pair" aria-label="나의 발표 일정">'+[['paper','나의 논문 발표'],['seminar','나의 랩세미나']].map(([key,title])=>{const r=next[key];return '<article class="personal-meeting-card"><h3>'+title+'</h3>'+(r?'<div class="personal-meeting-date-row"><time datetime="'+esc(r[0])+'" title="'+esc(r[0])+'">'+esc(r[0].slice(5).replace('-','.'))+'</time><span class="personal-meeting-countdown">'+groupMeetingCountdown(r[0],now)+'</span></div>':'<p class="personal-meeting-empty">예정 없음</p>')+'</article>';}).join('')+'</section></div>';
+ return '<div class="student-meeting-row">'+shared+'<section class="personal-meeting-pair" aria-label="나의 발표 일정">'+[['paper','나의 논문 발표'],['seminar','나의 랩세미나']].map(([key,title])=>{const r=next[key];const paper=key==='paper'&&r&&!studentPreview&&!studentPreviewEmail?(data.groupPresentationPapers||[]).find(p=>p.meeting===r[6]&&p.canEdit):null;return '<article class="personal-meeting-card"><header class="personal-meeting-heading"><h3>'+title+'</h3>'+(paper?'<button class="secondary personal-paper-button" data-group-paper="'+esc(paper.meeting)+'" aria-label="발표 논문 '+(paper.title?'수정':'등록')+'">'+(paper.title?'수정':'＋ 등록')+'</button>':'')+'</header>'+(r?'<div class="personal-meeting-date-row"><time datetime="'+esc(r[0])+'" title="'+esc(r[0])+'">'+esc(r[0].slice(5).replace('-','.'))+'</time><span class="personal-meeting-countdown">'+groupMeetingCountdown(r[0],now)+'</span></div>':'<p class="personal-meeting-empty">예정 없음</p>')+'</article>';}).join('')+'</section></div>';
 }
 function groupMeetingCards(now=new Date()){
  const upcoming=upcomingGroupMeetings(now);
