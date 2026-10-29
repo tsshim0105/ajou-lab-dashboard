@@ -1404,7 +1404,7 @@ body.hub-workspace-active{overflow:hidden!important}
 .mr-summary-grid.mr-summary-grid>section:nth-child(4){order:-1;border-bottom:1px solid var(--edge,#d7e2e9)}
 .mr-summary-grid.mr-summary-grid>section:nth-child(3){border-bottom:0}
 /* Aurora label ledger; research image headers remain unchanged. */
-.mr-summary-grid.mr-summary-grid{border:0;border-radius:0;background:transparent;gap:8px}
+.mr-summary-grid.mr-summary-grid{border:0;border-radius:0;background:transparent;gap:8px;align-items:stretch}
 .mr-summary-grid.mr-summary-grid>section:nth-child(n){border:1px solid #ccdae4;border-radius:8px;overflow:hidden;grid-template-columns:150px minmax(0,1fr);background:#fff;color:#243c4c}
 .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{background:linear-gradient(150deg,#e1edf7,#d9f1e9);color:#243c4c;border-right:1px solid #ccdae4;font-size:14px}
 .mr-summary-grid.mr-summary-grid>section:nth-child(2)>h4{background:linear-gradient(150deg,#ede5f8,#e1edf7)}
