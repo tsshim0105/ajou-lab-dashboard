@@ -1443,3 +1443,5 @@ html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nt
 .recent-meetings .recent-meeting .mr-summary{padding:7px 0 0}
 .recent-meetings .mr-summary-grid.mr-summary-grid{display:flex;flex-direction:column;gap:7px}
 .recent-meetings .mr-summary-grid.mr-summary-grid>section:nth-child(n){display:block;width:100%;min-width:0}
+
+.group-paper-list{margin-top:8px;border-top:1px solid #cad6e2}.group-paper-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #d5dfe8;font-size:13px}.group-paper-row:last-child{border:0;padding-bottom:0}.group-paper-title{overflow-wrap:anywhere;min-width:0}.group-paper-actions{display:flex;gap:5px;align-items:center}.group-paper-actions a,.group-paper-actions button{font-size:12px;padding:5px 8px;margin:0;white-space:nowrap;text-decoration:none}.meeting-agenda-card:has(.group-paper-list){align-items:start}.meeting-agenda-card:has(.group-paper-list) .meeting-agenda-info{min-width:0}@media(max-width:540px){.group-paper-row{grid-template-columns:45px minmax(0,1fr)}.group-paper-actions{grid-column:2;justify-content:flex-end}}

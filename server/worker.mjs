@@ -47,6 +47,20 @@ export function validateReagentLinks(links){
 
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
 export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,achievement,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:[],payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
+export function groupPaperRows(state,email,admin=false){
+ return (state.data.groupMeetings||[]).filter(r=>r.kind==='논문발표').flatMap(r=>r.presenter.split(/[·,、;\n]/).map(n=>n.trim()).filter(Boolean).map(name=>{
+  const accounts=state.students.filter(e=>state.studentNames?.[e]===name),owner=accounts.length===1?accounts[0]:null,entry=owner?state.groupPresentationPapers?.[r.id]?.[owner]:null;
+  return {meeting:r.id,name,title:entry?.title||'',url:entry?.url||'',canEdit:!admin&&owner===email};
+ }));
+}
+export function updateGroupPaper(state,email,admin,input){
+ if(admin||!state.students.includes(email))throw Object.assign(Error('해당 발표 학생만 등록·수정할 수 있습니다.'),{status:403});
+ if(!input||Object.keys(input).some(k=>!['version','meeting','title','url'].includes(k)))throw Error('논문 제목과 링크만 입력해주세요.');
+ const mine=groupPaperRows(state,email).find(r=>r.meeting===input.meeting&&r.canEdit);if(!mine)throw Object.assign(Error('해당 발표 학생만 등록·수정할 수 있습니다.'),{status:403});
+ if(typeof input.title!=='string'||!input.title.trim()||input.title.length>500||typeof input.url!=='string'||input.url.length>2000)throw Error('논문 제목과 링크를 확인해주세요.');
+ let link;try{link=new URL(input.url.trim());}catch{throw Error('올바른 논문 링크를 입력해주세요.');}if(link.protocol!=='https:'||link.username||link.password)throw Error('https 논문 링크를 입력해주세요.');
+ state.groupPresentationPapers??={};state.groupPresentationPapers[input.meeting]??={};state.groupPresentationPapers[input.meeting][email]={title:input.title.trim(),url:link.href};
+}
 export function validateGroupMeetings(rows){
  if(!Array.isArray(rows)||rows.length>1000)throw Error('일정은 1,000개까지 저장할 수 있습니다.');
  const ids=new Set();return rows.map(r=>{
@@ -258,6 +272,13 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    validateData(next.data);const changed=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(next),row.version).run();if(!changed.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
    row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
   }
+  if(url.pathname==='/api/group-paper'&&req.method==='PUT'){
+   const raw=await req.text();if(raw.length>6000)return reply({error:'입력이 너무 깁니다.'},413);const input=JSON.parse(raw);
+   if(input.version!==row.version)return reply({error:'자료가 변경되었습니다. 새로고침 후 다시 저장해주세요.'},409);
+   try{updateGroupPaper(state,email,admin,input);}catch(e){return reply({error:e.message},e.status||400);}
+   const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();if(!saved.meta?.changes)return reply({error:'자료가 변경되었습니다. 다시 저장해주세요.'},409);
+   return reply({version:row.version+1,groupPresentationPapers:groupPaperRows(state,email,admin)});
+  }
   if(url.pathname==='/api/preferences'&&req.method==='PUT'){
    const raw=await req.text();if(raw.length>16000)return reply({error:'설정이 너무 큽니다.'},413);
    const input=JSON.parse(raw),next={};
@@ -304,7 +325,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(saved.meta?.changes)break;
    }
   }
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,name:admin?'교수님':state.studentNames?.[email]||'',role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[]),data:visible(state.data,admin),homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,name:admin?'교수님':state.studentNames?.[email]||'',role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[]),data:{...visible(state.data,admin),groupPresentationPapers:groupPaperRows(state,email,admin)},homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
