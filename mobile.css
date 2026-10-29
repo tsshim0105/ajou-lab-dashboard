@@ -1384,3 +1384,16 @@ body.hub-workspace-active{overflow:hidden!important}
 #researchRoomRoot.mr-owner .rr-topic strong{white-space:normal;overflow-wrap:anywhere}
 #researchRoomRoot.mr-owner .rr-main{min-width:0;width:100%}
 }
+
+/* Meeting minutes: compact category ledger, shared by professor/student and board cards. */
+.mr-summary-grid.mr-summary-grid{display:block;container-type:inline-size;border:1px solid var(--edge,#d7e2e9);border-radius:9px;overflow:hidden;background:var(--panel,#fff)}
+.mr-summary-grid.mr-summary-grid>section{display:grid;grid-template-columns:132px minmax(0,1fr);gap:0;align-items:stretch;border:0;border-bottom:1px solid var(--edge,#d7e2e9);border-radius:0;padding:0;margin:0;background:var(--panel,#fff);min-width:0}
+.mr-summary-grid.mr-summary-grid>section:last-child{border-bottom:0}
+.mr-summary-grid.mr-summary-grid>section>h4{padding:14px 12px;margin:0;font-size:14px;line-height:1.6;font-weight:650;align-self:stretch;border-right:1px solid var(--edge,#d7e2e9)}
+.mr-summary-grid.mr-summary-grid>section>ul{list-style:disc;padding:2px 18px 2px 30px;margin:0;font-size:14px;line-height:1.65;min-width:0;overflow-wrap:anywhere;background:var(--panel,#fff)}
+.mr-summary-grid.mr-summary-grid>section>ul>li{margin:0;padding:6px 0;border-bottom:1px solid var(--edge,#d7e2e9)}
+.mr-summary-grid.mr-summary-grid>section>ul>li:last-child{border-bottom:0}
+.mr-summary-grid.mr-summary-grid>section>textarea{width:100%;min-width:0;box-sizing:border-box;margin:0;padding:8px 14px;font-size:14px;line-height:1.65}
+[data-theme=dark] .mr-summary-grid.mr-summary-grid>section>ul{background:#fff;color:#000}
+@container(max-width:600px){.mr-summary-grid.mr-summary-grid>section{grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section>h4{padding:8px 12px;border-right:0;border-bottom:1px solid var(--edge,#d7e2e9)}}
+@media(max-width:760px){.mr-summary-grid.mr-summary-grid>section{grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section>h4{padding:8px 12px;border-right:0;border-bottom:1px solid var(--edge,#d7e2e9)}}
