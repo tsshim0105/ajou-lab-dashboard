@@ -141,7 +141,7 @@
 .group-schedule>h2+.toolbar{justify-content:flex-end}@media(max-width:760px){.meeting-sheet{min-width:740px}}
 
 /* Keep native selectors aligned with the schedule's date and text inputs. */
-.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-ight:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
+.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-eight:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
 
 /* Compact aurora schedule cards; stack cards before their text could wrap. */
 .aurora-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -1431,3 +1431,5 @@ html[data-meeting-view=normal] .mr-summary-grid.mr-summary-grid>section:nth-chil
 .mr-summary-grid.mr-summary-grid>section:nth-child(3)>h4{background:linear-gradient(100deg,#f5e5ee,#ede5f8)}
 html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nth-child(4)>h4{background:linear-gradient(100deg,#d9f1e9,#e1edf7,#ede5f8)}
 .mr-label-title{display:inline-flex;align-items:center;gap:8px;min-width:0}.mr-label-title svg{width:17px;height:17px;flex:none}.mr-item-count{font-size:12px;font-weight:400;white-space:nowrap;color:#405b6d}
+
+.mr-text-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}.mr-text-actions p{flex-basis:100%;font-size:12px;color:var(--muted);margin:0}.mr-word-editing textarea{resize:vertical;cursor:text}.mr-word-form{margin:8px 12px}

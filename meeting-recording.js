@@ -194,10 +194,10 @@ function mrSummaryView(root){
  const meetings=[s,...(m.history||[]).filter(x=>x.id!==s.id)].filter(x=>mrHasMeetingContent(x,key)).sort((a,b)=>b.created.localeCompare(a.created));
  root.innerHTML=`${mrVoiceStatus(s)}<div class="mr-summary">${s.processing?.status==='failed'?`<div role="status" class="mr-recovery"><p>전사·요약이 중단되었습니다. ${esc(s.processing.error||'')}</p><button class="primary" data-mr="transcribe" ${locked?'disabled':''}>저장된 녹음으로 다시 처리</button></div>`:['queued','working','waiting'].includes(s.processing?.status)?`<p role="status">전사·요약 처리 중 · 완료되면 알림으로 알려드립니다.</p>`:s.processing?.status==='attention'?`<p role="status">${esc(s.processing.error||'처리 상태 확인이 필요합니다.')}</p><button class="primary" data-mr="retry-uncertain">미확인 구간 재처리</button>`:''}<div class="mr-date-tabs">${meetings.map(x=>`<button class="secondary ${x.id===s.id?'selected':''}" data-summary-meeting="${esc(x.id)}" ${locked?'disabled':''}>${esc(new Date(x.created).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))}</button>`).join('')}</div><div class="mr-summary-heading"><div><h3>${rrTime(s.created)}</h3><p>${esc(mrTopicName(topic))}</p></div><span class="mr-review-state">${s.summary?.[key]?.rolesChanged?'역할 변경 · 재검토 필요':s.summary?.[key]?.status==='reviewed'&&m.summaryDrafts[draftKey]===undefined?'등록 완료':'등록된 회의요약'}</span><button class="secondary" id="mrEditSentences" ${locked?'disabled':''}>${editing?'문장 편집 닫기':'문장 수정'}</button><button class="secondary" id="mrEditSummary" ${locked?'disabled':''}>${editing?'보기':'수정'}</button></div><p class="muted">요약은 자동 등록되며, 참여 학생과 교수님이 수정할 수 있습니다.${s.summary?.[key]?.knowledgeSources?.length ? ` 이번 요약은 이전 회의 ${s.summary[key].knowledgeSources.length}건을 참고했습니다.` : ''}</p><div class="mr-summary-grid">${parts.map((part,i)=>`<section><h4>${mrSummaryHeader(part,i)}</h4>${editing?`<textarea data-summary-section="${i}" aria-label="${mrSummaryTitles[i]}" maxlength="40000" placeholder="- 구체적인 내용을 문장으로 작성하세요.">${esc(part)}</textarea>`:`<ul>${mrSummaryItems(part,i)}</ul>`}</section>`).join('')}</div><div class="mr-review-actions">${segments.length?`<button class="secondary" data-mr="speaker-roles" ${locked?'disabled':''}>교수님 변경</button>`:''}${s.summary?.[key]?.rolesChanged?`<button class="secondary" data-mr="summarize" ${locked?'disabled':''}>역할 반영해 요약 재생성</button>`:''}<button class="primary" id="mrSaveSummary" ${locked?'disabled':''}>수정 내용 저장</button>${mrDiscardButton()}<span id="mrSummaryStatus" role="status"></span></div><details class="mr-tools"><summary>전사 원문 · 교수님 전용 / 요약 도구</summary><div class="mr-summary-actions">${mrCreateTopicButton()}<button class="primary" data-mr="transcribe" ${locked||!m.ready?.transcriptionReady?'disabled':''}>전사 · 주제별 요약</button><button class="secondary" data-mr="import" ${locked?'disabled':''}>전사문 가져오기</button><button class="secondary" data-mr="summarize" ${locked||!segments.length||!m.ready?.summaryReady?'disabled':''}>AI 요약 생성</button></div>${segments.map(x=>`<p><time>${mrStamp(x.start)}</time> <strong>${esc(s.speakers?.[x.speaker]||x.speaker)}</strong> ${esc(x.text)}</p>`).join('')||'<p>전사 내용이 없습니다.</p>'}<details><summary>주제 전환 기록</summary>${s.markers.map(x=>`<p>${mrStamp(x.at)} · ${esc(x.title)}</p>`).join('')}</details></details></div>`;
  root.querySelectorAll('[data-summary-section]').forEach(input=>input.oninput=()=>{parts[+input.dataset.summarySection]=input.value;m.summaryDrafts[draftKey]=mrSummaryContent(parts);root.querySelector('.mr-review-state').textContent='수정 중 · 미저장';});
- root.querySelector('#mrEditSentences').onclick=()=>{root.classList.remove('mr-word-editing');m.summaryEditing=editing?null:draftKey;mrSummaryView(root);};
+ root.querySelector('#mrEditSentences').hidden=true;
  root.querySelector('#mrEditSummary').onclick=()=>{
  if(root.classList.contains('mr-word-editing')){root.classList.remove('mr-word-editing');mrSummaryView(root);return;}
- root.querySelector('#mrSaveSummary').hidden=true;
+ root.querySelector('#mrSaveSummary').hidden=true;m.summaryEditing=draftKey;
  mrEnableWordEditing(root,content,async change=>{
   await mrSync();if(m.dirty)throw Error('회의 저장이 끝난 뒤 다시 시도해주세요.');
   const result=await researchFetch('meeting-summary-save',{id:s.id,topic:key,revision:s.summary?.[key]?.revision||0,...change});
@@ -342,39 +342,35 @@ async function mrParticipants(){
  const d=rrDialog('회의 참여자 확인',`<p>등록된 음성을 최대 4명까지 선택합니다. 녹음은 계속되며, 확인이 필요한 동안 다음 구간 전사만 대기합니다.</p>${s.voiceSelection?.heard?`<p>시작 발언: ${esc(s.voiceSelection.heard)}</p>`:''}<fieldset><legend>참여자</legend>${(s.voiceCatalog||[]).map(p=>`<label class="rr-check"><input type="checkbox" name="participant" value="${esc(p.id)}" ${(s.voiceParticipants||[]).some(q=>q.id===p.id)?'checked':''}>${esc(p.name)} · ${p.role==='professor'?'교수님':'학생'}</label>`).join('')}</fieldset>`,async()=>{const selected=[...d.querySelectorAll('[name=participant]:checked')].map(x=>x.value);const fresh=await researchFetch('recording-detail?id='+encodeURIComponent(s.id));const result=await researchFetch('recording-participants',{id:s.id,version:fresh.version,participants:selected});mrMergeTranscript(result);mrQueue.last=0;mrPump();},'참여자 적용');
 }
 
-// Inline word editing keeps exact source offsets; only the selected occurrence is saved.
+// Free text editing with explicit selection-based glossary corrections.
 function mrEnableWordEditing(root,initial,onSave){
- let content=initial,busy=false;root.classList.add('mr-word-editing');
- const toggle=root.querySelector('#mrEditSummary')||root.querySelector('[data-edit-meeting-summary]');if(toggle)toggle.textContent='수정 완료';
+ let saved=initial,busy=false;root.classList.add('mr-word-editing');
+ const toggle=root.querySelector('#mrEditSummary')||root.querySelector('[data-edit-meeting-summary]');
+ if(toggle){toggle.textContent='편집 닫기';toggle.onclick=()=>{if(busy)return;if(read()!==saved&&!confirm('저장하지 않은 수정 내용을 닫을까요?'))return;root.classList.remove('mr-word-editing');if(admin()){meetingRecorder.summaryEditing=null;mrSummaryView(root);}else rrStudentMeetingView(root,researchRoomState.thread);};}
  const grid=root.querySelector('.mr-summary-grid');
- function draw(){
-  let at=0,section=0;const groups=[[],[],[],[]];
-  for(const line of content.split('\n')){
-   const heading=line.match(/^\s*#{1,3}\s*(.+)/);if(heading){const i=mrSummaryTitles.findIndex(t=>heading[1].trim()===t);if(i>=0)section=i;at+=line.length+1;continue;}
-   if(line.trim()){
-    const prefix=line.match(/^\s*[-*•]\s*/)?.[0]||'';const text=line.slice(prefix.length);let html='',cursor=0;
-    for(const match of text.matchAll(/\[\[(?:학생|이름|담당자|기한):([^\]\n]+)\]\]|[\p{L}\p{N}][\p{L}\p{N}_.·-]*/gu)){
-     html+=esc(text.slice(cursor,match.index));const word=match[0];
-     html+=match[1]?'<span class="mr-person-tag">'+esc(match[1])+'</span>':'<button type="button" class="mr-edit-word" data-word-start="'+(at+prefix.length+match.index)+'" data-word="'+esc(word)+'"><span>'+esc(word)+'</span><span aria-hidden="true" class="mr-word-weight">'+esc(word)+'</span></button>';
-     cursor=match.index+word.length;
-    }
-    groups[section].push('<li>'+html+esc(text.slice(cursor))+'</li>');
-   }at+=line.length+1;
-  }
-  grid.innerHTML=mrSummaryTitles.map((title,i)=>'<section><h4>'+mrSummaryLabel(i,groups[i].length)+'</h4><ul>'+groups[i].join('')+'</ul></section>').join('');
-  grid.querySelectorAll('[data-word-start]').forEach(button=>button.onclick=()=>{
-   if(busy)return;grid.querySelector('.mr-word-form')?.remove();grid.querySelectorAll('.mr-word-selected').forEach(b=>b.classList.remove('mr-word-selected'));button.classList.add('mr-word-selected');
-   const before=button.dataset.word,start=Number(button.dataset.wordStart),form=document.createElement('form');form.className='mr-word-form';
-   form.innerHTML='<label>선택한 표현 <strong>'+esc(before)+'</strong><input name="replacement" aria-label="바꿀 표현" maxlength="100" value="'+esc(before)+'" required></label><label>용어집 적용 범위<select name="scope"><option value="topic">해당 연구에서만</option><option value="mine">내 연구에서만</option><option value="all">전체 반영</option></select></label><p>같은 표현을 이후 전사·회의요약에 반영합니다. 원문은 보존합니다.</p><div><button type="button" class="secondary" data-word-cancel>취소</button><button class="primary" type="submit">수정·용어집 저장</button></div><span role="status"></span>';
-   button.closest('li').append(form);form.elements.replacement.focus();form.elements.replacement.select();
-   form.querySelector('[data-word-cancel]').onclick=()=>{form.remove();button.classList.remove('mr-word-selected');};
-   form.onsubmit=async event=>{event.preventDefault();if(busy)return;const after=form.elements.replacement.value.trim();if(!after||after===before){form.querySelector('[role=status]').textContent='바꿀 표현을 입력해주세요.';return;}
-    busy=true;form.querySelectorAll('button,input,select').forEach(x=>x.disabled=true);if(toggle)toggle.disabled=true;
-    try{const result=await onSave({content:content.slice(0,start)+after+content.slice(start+before.length),correction:{start,before,after,scope:form.elements.scope.value}});content=result.content;draw();const state=root.querySelector('.mr-review-state');if(state)state.textContent='단어 수정·용어집 저장 완료';}
-    catch(error){form.querySelector('[role=status]').textContent=error.message;form.querySelectorAll('button,input,select').forEach(x=>x.disabled=false);}
-    finally{busy=false;if(toggle)toggle.disabled=false;}
+ grid.innerHTML=mrSummarySections(initial).map((part,i)=>'<section><h4>'+mrSummaryHeader(part,i)+'</h4><textarea data-text-section="'+i+'" aria-label="'+mrSummaryTitles[i]+'" rows="10" maxlength="40000">'+esc(part)+'</textarea></section>').join('');
+ const inputs=[...grid.querySelectorAll('textarea')],actions=document.createElement('div');actions.className='mr-text-actions';actions.innerHTML='<p>문장을 자유롭게 수정하세요. 용어집에 저장할 표현은 드래그로 선택한 뒤 교정하세요.</p><button type="button" class="primary" data-text-save>수정 내용 저장</button><span role="status"></span>';grid.after(actions);
+ const read=()=>mrSummaryContent(inputs.map(x=>x.value));
+ const status=actions.querySelector('[role=status]');
+ const lock=value=>{busy=value;inputs.forEach(x=>x.disabled=value);actions.querySelector('button').disabled=value;if(toggle)toggle.disabled=value;};
+ actions.querySelector('button').onclick=async()=>{if(busy)return;lock(true);try{const result=await onSave({content:read()});saved=result.content;status.textContent='수정 내용을 저장했습니다.';}catch(e){status.textContent=e.message;}finally{lock(false);}};
+ inputs.forEach((input,i)=>{
+  input.oninput=()=>{grid.querySelector('.mr-word-form')?.remove();status.textContent='수정 중 · 미저장';};
+  const select=()=>{
+   if(busy)return;const from=input.selectionStart,to=input.selectionEnd,before=input.value.slice(from,to);if(!before.trim()||before.length>100)return;
+   grid.querySelector('.mr-word-form')?.remove();const form=document.createElement('form');form.className='mr-word-form';
+   form.innerHTML='<label>선택한 표현 <strong>'+esc(before)+'</strong><input name="replacement" aria-label="바꿀 표현" maxlength="100" value="'+esc(before)+'" required></label><label>용어집 적용 범위<select name="scope"><option value="topic">해당 연구에서만</option><option value="mine">내 연구에서만</option><option value="all">전체 반영</option></select></label><p>선택한 표현을 교정하여 이후 전사·회의요약에 반영합니다. 일반 문장 수정은 용어집에 등록되지 않습니다.</p><button type="button" class="secondary" data-cancel>취소</button><button class="primary" type="submit">교정·용어집 저장</button><span role="status"></span>';
+   input.after(form);form.querySelector('[data-cancel]').onclick=()=>form.remove();
+   form.onsubmit=async event=>{event.preventDefault();if(busy)return;const after=form.elements.replacement.value.trim(),scope=form.elements.scope.value;if(!after||after===before)return;
+    const draft=read();
+    const start=inputs.slice(0,i).reduce((n,x,j)=>n+('## '+mrSummaryTitles[j]+'\n'+x.value+'\n\n').length,0)+('## '+mrSummaryTitles[i]+'\n').length+from;
+    if(draft.slice(start,start+before.length)!==before){form.querySelector('[role=status]').textContent='선택한 표현을 다시 선택해주세요.';return;}
+    lock(true);form.querySelectorAll('button,input,select').forEach(x=>x.disabled=true);
+    try{if(saved!==draft){const result=await onSave({content:draft});saved=result.content;}if(saved!==draft)throw Error('저장된 내용이 변경되었습니다. 다시 열어 선택해주세요.');
+     const result=await onSave({content:draft.slice(0,start)+after+draft.slice(start+before.length),correction:{start,before,after,scope}});saved=result.content;mrSummarySections(saved).forEach((part,j)=>inputs[j].value=part);form.remove();status.textContent='표현 교정·용어집 저장 완료';
+    }catch(e){form.querySelector('[role=status]').textContent=e.message;form.querySelectorAll('button,input,select').forEach(x=>x.disabled=false);}finally{lock(false);}
    };
-  });
- }
- draw();
+  };
+  input.onmouseup=select;input.onkeyup=e=>{if(e.key==='Shift'||e.shiftKey)select();};input.onselect=select;
+ });
 }
