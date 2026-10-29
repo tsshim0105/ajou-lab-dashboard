@@ -210,7 +210,21 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         web.heightAnchor.constraint(greaterThanOrEqualToConstant: 380).isActive = true
         web.load(URLRequest(url: Lab.home))
     }
-    @objc func showDashboard() { if window.isMiniaturized { window.deminiaturize(nil) }; window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true); statusItem.button?.title = "" }
+    @objc func showDashboard() {
+        // Restore only the ordinary Hub window, without activating the workspace Space.
+        let moveToCurrentSpace = !window.styleMask.contains(.fullScreen)
+        if moveToCurrentSpace { window.collectionBehavior.insert(.moveToActiveSpace) }
+        NSApp.unhideWithoutActivation()
+        if window.isMiniaturized { window.deminiaturize(nil) }
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        statusItem.button?.title = ""
+        if moveToCurrentSpace {
+            DispatchQueue.main.async { [weak self] in
+                self?.window.collectionBehavior.remove(.moveToActiveSpace)
+            }
+        }
+    }
     @objc func goHome() { guard !recordingProtected() else { return }; web.load(URLRequest(url: Lab.home)); showDashboard() }
     @objc func reload() { guard !recordingProtected() else { return }; web.reload() }
     @objc func openHomepage() { NSWorkspace.shared.open(URL(string: "https://nisml.ajou.ac.kr/")!) }
@@ -319,7 +333,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply { recordingProtected() ? .terminateCancel : .terminateNow }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showDashboard(); return true }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showDashboard(); return false }
     func setStatus(_ text: String) {
         statusLine.stringValue = text; statusItem.button?.toolTip = "NISML · " + text
         guard let url = web?.url, Lab.isSite(url), url.path.hasPrefix("/dashboard"),
