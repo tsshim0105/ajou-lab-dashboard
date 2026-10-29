@@ -1180,7 +1180,7 @@ html[data-theme="dark"][data-active-tab="conferences"] .card-layout td::before{c
 
 /* Desktop option 1: full-width group pair, then 25/25/15/35 personal/activity/game. */
 @media(min-width:761px){
- .student-home-overview{display:grid;grid-template-columns:minmax(0,25fr) minmax(0,25fr) minmax(0,15fr) minmax(0,35fr);gap:12px;margin-bottom:12px}
+ .student-home-overview{display:grid;grid-template-columns:repeat(3,minmax(0,65fr)) minmax(0,105fr);gap:12px;margin-bottom:12px}
  .student-home-overview>.student-meeting-row,.student-home-overview .personal-meeting-pair,.student-home-overview>.year-game-row{display:contents}
  .student-home-overview .group-meeting-summary{grid-column:1/-1;margin-bottom:0}
  .student-home-overview .personal-meeting-card{flex-direction:column;align-items:stretch;justify-content:space-between;padding:14px 16px;min-height:104px}
