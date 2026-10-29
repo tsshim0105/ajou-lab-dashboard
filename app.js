@@ -506,7 +506,7 @@ const groupMeetingDates=[
  ['2027-02-18','랩세미나','김혜림 · 이윤서 · 김태희']
 ];
 function upcomingGroupMeetings(now=new Date()){
- return savedGroupMeetings().map(r=>[r.date,r.kind,r.presenter,r.time,r.location,r.note,r.id]).filter(r=>Date.parse(r[0]+'T'+r[3]+':00+09:00')>now.getTime());
+ return savedGroupMeetings().map(r=>[r.date,r.kind,r.presenter,r.time,r.location,r.note,r.id]).filter(r=>Date.parse(r[0]+'T00:00:00+09:00')+86400000>now.getTime());
 }
 function groupMeetingCountdown(date,now=new Date()){
  const parts=new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
