@@ -141,7 +141,7 @@
 .group-schedule>h2+.toolbar{justify-content:flex-end}@media(max-width:760px){.meeting-sheet{min-width:740px}}
 
 /* Keep native selectors aligned with the schedule's date and text inputs. */
-.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-eight:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
+.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-ight:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
 
 /* Compact aurora schedule cards; stack cards before their text could wrap. */
 .aurora-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -1423,3 +1423,11 @@ html[data-meeting-view=normal] .mr-summary-grid.mr-summary-grid>section:nth-chil
 .mr-word-form{display:block;clear:both;max-width:380px;padding:12px;margin:10px 0 5px auto;background:var(--panel,#fff);color:var(--ink,#243746);border:1px solid #bccfdf;border-top:3px solid #2870d9;border-radius:8px;box-shadow:0 6px 18px #18384b15}
 .mr-word-form label{display:block;margin-bottom:8px;font-size:12px}.mr-word-form strong{margin-left:7px}.mr-word-form input,.mr-word-form select{display:block;width:100%;min-width:0;margin-top:4px;padding:7px 9px;font-size:14px;box-sizing:border-box}.mr-word-form p{font-size:11px;margin:7px 0;color:var(--muted,#5b7183)}.mr-word-form>div{display:flex;justify-content:flex-end;gap:6px}.mr-word-form button{font-size:12px}.mr-word-form [role=status]{display:block;font-size:12px;margin-top:6px}
 [data-theme=dark] .mr-word-form{background:#fff;color:#203747}[data-theme=dark] .mr-word-form input,[data-theme=dark] .mr-word-form select{background:#fff;color:#203747}
+
+/* Aurora header bands keep every section label visible at full width. */
+.mr-summary-grid.mr-summary-grid>section:nth-child(n){display:block}
+.mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-right:0;border-bottom:1px solid #ccdae4;background:linear-gradient(100deg,#e1edf7,#d9f1e9)}
+.mr-summary-grid.mr-summary-grid>section:nth-child(2)>h4{background:linear-gradient(100deg,#ede5f8,#e1edf7)}
+.mr-summary-grid.mr-summary-grid>section:nth-child(3)>h4{background:linear-gradient(100deg,#f5e5ee,#ede5f8)}
+html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nth-child(4)>h4{background:linear-gradient(100deg,#d9f1e9,#e1edf7,#ede5f8)}
+.mr-label-title{display:inline-flex;align-items:center;gap:8px;min-width:0}.mr-label-title svg{width:17px;height:17px;flex:none}.mr-item-count{font-size:12px;font-weight:400;white-space:nowrap;color:#405b6d}
