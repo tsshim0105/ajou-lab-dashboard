@@ -1454,7 +1454,7 @@ html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nt
 @media(max-width:760px){
  html .app,html[data-active-tab="papers"] .app{padding-bottom:0}
  .app>#panel{padding-bottom:calc(94px + env(safe-area-inset-bottom));scroll-padding-bottom:calc(94px + env(safe-area-inset-bottom))}
- #tabs{background:rgba(248,252,253,.72);backdrop-filter:blur(10px) saturate(125%);-webkit-backdrop-filter:blur(10px) saturate(125%);border-color:rgba(180,202,213,.55);box-shadow:0 4px 18px #16344b14}
+ #tabs{background:rgba(248,252,253,.55);backdrop-filter:blur(6px) saturate(125%);-webkit-backdrop-filter:blur(6px) saturate(125%);border-color:rgba(180,202,213,.55);box-shadow:0 4px 18px #16344b14}
  #tabs .tab:not(.active){background:transparent}
- [data-theme=dark] #tabs{background:rgba(25,39,52,.76);border-color:rgba(142,167,188,.3)}
+ [data-theme=dark] #tabs{background:rgba(25,39,52,.55);border-color:rgba(142,167,188,.3)}
 }
