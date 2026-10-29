@@ -31,10 +31,27 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
   if(record.status==='cancelled'||!prior?.content?.trim())throw rrError('회의요약을 찾을 수 없습니다.',404);
   if(['queued','working'].includes(record.processing?.status))throw rrError('요약 처리가 완료된 뒤 수정해주세요.',409);
   if(!Number.isInteger(b.revision)||b.revision!==(prior.revision||0))throw rrError('다른 사람이 요약을 수정했습니다. 최신 내용을 확인해주세요. 입력 내용은 유지됩니다.',409);
-  const content=rrText(b.content,40000),now=new Date().toISOString();
+  let content=rrText(b.content,40000);const now=new Date().toISOString();
+  let correction=null;
+  if(b.correction){
+   const c=b.correction,before=rrText(c.before,100),after=rrText(c.after,100);
+   if(before===after||/[\r\n<>]/.test(before+after)||!Number.isInteger(c.start)||c.start<0||prior.content.slice(c.start,c.start+before.length)!==before)throw rrError('선택한 단어가 변경되었습니다. 회의록을 다시 열어주세요.',409);
+   const expected=prior.content.slice(0,c.start)+after+prior.content.slice(c.start+before.length);
+   if(content!==expected)throw rrError('선택한 단어만 수정해주세요.');
+   const scope=c.scope||'topic';if(!['topic','mine','all'].includes(scope))throw rrError('적용 범위를 확인해주세요.');
+   correction={before,after,scope,topic:topic.id,owner:!!actor.admin,recording:id,updated:now,editedBy:actor.email,token:crypto.randomUUID()};
+  }
   const summary={...prior,content,status:'reviewed',revision:(prior.revision||0)+1,registeredAt:prior.registeredAt||prior.notificationAt||prior.updated||record.created,updated:now,editedBy:actor.email};
   const summaryHistory=[...(record.summaryHistory||[]),{topic:topic.id,...prior,supersededAt:now}].slice(-100);
-  await rrUpdate(db,'recording:'+id,row.version,{...record,summaryHistory,summary:{...record.summary,[topic.id]:summary}});
+  const next={...record,summaryHistory,summary:{...record.summary,[topic.id]:summary},...(correction?{lastTermCorrection:correction.token}:{})};
+  if(correction){
+   const termId='term:'+(correction.scope==='all'?'all':correction.scope==='mine'?'mine:'+encodeURIComponent(actor.email):topic.id)+':'+encodeURIComponent(correction.before);
+   const results=await db.batch([
+    db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(next),'recording:'+id,row.version),
+    db.prepare("INSERT INTO research_records(id,version,payload) SELECT ?,1,? WHERE EXISTS (SELECT 1 FROM research_records WHERE id=? AND json_extract(payload,'$.lastTermCorrection')=?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,version=research_records.version+1").bind(termId,JSON.stringify(correction),'recording:'+id,correction.token)
+   ]);
+   if(!results[0].meta?.changes)throw rrError('다른 화면에서 회의록이 수정되었습니다. 다시 열어주세요.',409);
+  }else await rrUpdate(db,'recording:'+id,row.version,next);
   return reply({ok:true,summary:{id,created:record.created,content,status:summary.status,revision:summary.revision,updated:now,rolesChanged:!!summary.rolesChanged}});
  }
  if(req.method==='POST'&&['generate','search','image','summarize','message','config'].includes(action)&&env.RESEARCH_AI_ENABLED!==true)return reply({error:'대시보드 AI 질문 기능이 종료되었습니다. ChatGPT에서 질문한 뒤 저장해주세요.'},410);

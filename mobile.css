@@ -141,7 +141,7 @@
 .group-schedule>h2+.toolbar{justify-content:flex-end}@media(max-width:760px){.meeting-sheet{min-width:740px}}
 
 /* Keep native selectors aligned with the schedule's date and text inputs. */
-.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-height:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
+.meeting-sheet input,.meeting-sheet select{box-sizing:border-box;height:44px;min-eight:44px;margin:0;border:1px solid #c5d5ef;border-radius:6px;background:var(--card,#fff);color:inherit;vertical-align:middle}
 
 /* Compact aurora schedule cards; stack cards before their text could wrap. */
 .aurora-meetings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -1397,3 +1397,29 @@ body.hub-workspace-active{overflow:hidden!important}
 [data-theme=dark] .mr-summary-grid.mr-summary-grid>section>ul{background:#fff;color:#000}
 @container(max-width:600px){.mr-summary-grid.mr-summary-grid>section{grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section>h4{padding:8px 12px;border-right:0;border-bottom:1px solid var(--edge,#d7e2e9)}}
 @media(max-width:760px){.mr-summary-grid.mr-summary-grid>section{grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section>h4{padding:8px 12px;border-right:0;border-bottom:1px solid var(--edge,#d7e2e9)}}
+
+/* One research per dashboard row; task list leads every meeting summary. */
+.recent-meetings-grid{grid-template-columns:minmax(0,1fr)}
+.mr-summary-grid.mr-summary-grid{display:flex;flex-direction:column}
+.mr-summary-grid.mr-summary-grid>section:nth-child(4){order:-1;border-bottom:1px solid var(--edge,#d7e2e9)}
+.mr-summary-grid.mr-summary-grid>section:nth-child(3){border-bottom:0}
+/* Aurora label ledger; research image headers remain unchanged. */
+.mr-summary-grid.mr-summary-grid{border:0;border-radius:0;background:transparent;gap:8px}
+.mr-summary-grid.mr-summary-grid>section:nth-child(n){border:1px solid #ccdae4;border-radius:8px;overflow:hidden;grid-template-columns:150px minmax(0,1fr);background:#fff;color:#243c4c}
+.mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{background:linear-gradient(150deg,#e1edf7,#d9f1e9);color:#243c4c;border-right:1px solid #ccdae4;font-size:14px}
+.mr-summary-grid.mr-summary-grid>section:nth-child(2)>h4{background:linear-gradient(150deg,#ede5f8,#e1edf7)}
+.mr-summary-grid.mr-summary-grid>section:nth-child(3)>h4{background:linear-gradient(150deg,#f5e5ee,#ede5f8)}
+.mr-summary-grid.mr-summary-grid>section:nth-child(n)>ul{background:#fff;color:#182c38}
+.mr-summary-grid.mr-summary-grid>section>ul>li{border-bottom:0;padding:6px 0}
+html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nth-child(4){display:block;border-color:#80baa6;border-top-width:3px}
+html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nth-child(4)>h4{background:linear-gradient(100deg,#d9f1e9,#e1edf7,#ede5f8);font-size:16px;padding:10px 14px;border-right:0}
+html[data-meeting-view=normal] .mr-summary-grid.mr-summary-grid>section:nth-child(4){order:0}
+.meeting-view-options{display:flex;flex-wrap:wrap;gap:10px}.meeting-view-options label{display:flex;align-items:flex-start;gap:10px;padding:14px;flex:1;min-width:220px;border:1px solid var(--edge,#ccdae4);border-radius:10px}.meeting-view-options label:has(input:checked){background:linear-gradient(110deg,#e2f2eb,#ece8f7);color:#243c4c;border-color:#86b6aa}.meeting-view-options strong,.meeting-view-options small{display:block}.meeting-view-options small{margin-top:4px}.meeting-view-options input{margin-top:5px}
+@container(max-width:600px){.mr-summary-grid.mr-summary-grid>section:nth-child(n){grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{border-right:0}}
+@media(max-width:760px){.mr-summary-grid.mr-summary-grid>section:nth-child(n){grid-template-columns:minmax(0,1fr)}.mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{border-right:0}}
+.mr-edit-word{display:inline-grid;vertical-align:baseline;padding:0!important;margin:0!important;border:0!important;background:transparent;color:inherit;font:inherit;line-height:inherit;text-align:left;border-radius:3px;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+.mr-edit-word>span{grid-area:1/1}.mr-edit-word .mr-word-weight{font-weight:750;visibility:hidden}
+.mr-edit-word:hover,.mr-edit-word:focus-visible,.mr-word-selected{background:#e9f1ff!important;color:#205baf;font-weight:750}
+.mr-word-form{display:block;clear:both;max-width:380px;padding:12px;margin:10px 0 5px auto;background:var(--panel,#fff);color:var(--ink,#243746);border:1px solid #bccfdf;border-top:3px solid #2870d9;border-radius:8px;box-shadow:0 6px 18px #18384b15}
+.mr-word-form label{display:block;margin-bottom:8px;font-size:12px}.mr-word-form strong{margin-left:7px}.mr-word-form input,.mr-word-form select{display:block;width:100%;min-width:0;margin-top:4px;padding:7px 9px;font-size:14px;box-sizing:border-box}.mr-word-form p{font-size:11px;margin:7px 0;color:var(--muted,#5b7183)}.mr-word-form>div{display:flex;justify-content:flex-end;gap:6px}.mr-word-form button{font-size:12px}.mr-word-form [role=status]{display:block;font-size:12px;margin-top:6px}
+[data-theme=dark] .mr-word-form{background:#fff;color:#203747}[data-theme=dark] .mr-word-form input,[data-theme=dark] .mr-word-form select{background:#fff;color:#203747}

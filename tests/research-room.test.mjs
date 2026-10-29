@@ -232,3 +232,23 @@ test('student summary renders edit button before binding and tolerates missing c
  const button={},root={innerHTML:'',querySelector(sel){return this.innerHTML.includes('data-edit-meeting-summary')?button:null},querySelectorAll(){return []}};const t={topic:{id:'topic-one'},meetingSummaries:[{id:'meeting-one',created:'2026-10-28T00:00:00Z',content:'detail'}]};ctx.rrStudentMeetingView(root,t);assert.match(root.innerHTML,/data-edit-meeting-summary/);assert.match(root.innerHTML,/등록 완료/);assert.equal(typeof button.onclick,'function');button.onclick();assert.equal(dialog[0],'회의요약 수정');assert.match(dialog[1],/detail/);
  root.querySelector=()=>null;assert.doesNotThrow(()=>ctx.rrStudentMeetingView(root,t));ctx.rrStudentMeetingView(root,{topic:t.topic,meetingSummaries:[]});assert.match(root.innerHTML,/아직 없습니다/);
 });
+
+import {meetingTermRules,meetingApplyTerms} from '../server/meeting-recording.mjs';
+test('word correction commits selected occurrence and scoped glossary together, rejects stale or altered bodies',async()=>{
+ const f=fixture(),email='student@example.test';await f.call('topic',{...topic(),viewers:[email]});await f.call('topic',{...topic('topic-0002'),viewers:[email]});await f.call('topic',topic('topic-0003'));
+ const id='meeting-word-01',content='## 연구진행상황\n- 티에스피 티에스피';f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,status:'ended',created:new Date().toISOString(),summary:{'topic-0001':{content,revision:0,status:'reviewed'}},segments:[{text:'원문 보존'}]}));
+ const start=content.indexOf('티에스피'),body={id,topic:'topic-0001',revision:0,content:content.slice(0,start)+'TSP'+content.slice(start+4),correction:{start,before:'티에스피',after:'TSP',scope:'topic'}};
+ assert.equal((await f.call('meeting-summary-save',{...body,content:'unrelated'},email)).status,400);
+ assert.equal((await f.call('meeting-summary-save',body,email)).status,200);
+ assert.equal((await f.call('meeting-summary-save',body,email)).status,409);
+ assert.equal((await meetingTermRules(f.DB,'topic-0001')).length,1);assert.equal((await meetingTermRules(f.DB,'topic-0002')).length,0);
+ const saved=JSON.parse(f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:'+id).payload);assert.equal(saved.segments[0].text,'원문 보존');assert.equal(saved.summary['topic-0001'].content,body.content);
+ const nextStart=body.content.lastIndexOf('티에스피');const next={...body,revision:1,content:body.content.slice(0,nextStart)+'TSP',correction:{...body.correction,start:nextStart,scope:'mine'}};assert.equal((await f.call('meeting-summary-save',next,email)).status,200);
+ assert.equal((await meetingTermRules(f.DB,'topic-0002')).length,1);assert.equal((await meetingTermRules(f.DB,'topic-0003')).length,0);
+});
+test('term replacement is literal, non-cascading, bounded and prefers topic over shared glossary',async()=>{
+ assert.equal(meetingApplyTerms('티에스피, X티에스피 티에스피의 TSP', [{before:'티에스피',after:'TSP'},{before:'TSP',after:'Other'}]),'TSP, X티에스피 티에스피의 Other');
+ assert.equal(meetingApplyTerms('A+B AAB', [{before:'A+B',after:'correct'}]),'correct AAB');
+ const f=fixture();await f.call('topic',topic());for(const [id,rule] of [['global',{scope:'all',before:'a',after:'global'}],['topic',{scope:'topic',topic:'topic-0001',before:'a',after:'local'}]])f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('term:'+id,JSON.stringify({...rule,updated:new Date().toISOString()}));
+ assert.equal(meetingApplyTerms('a',await meetingTermRules(f.DB,'topic-0001')),'local');assert.equal(meetingApplyTerms('a',await meetingTermRules(f.DB,'topic-0002')),'global');
+});

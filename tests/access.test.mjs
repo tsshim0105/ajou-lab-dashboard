@@ -154,7 +154,7 @@ test('lab paper highlighting and recent papers distinguish lead and correspondin
 
 test('account preferences survive reload, isolate users and preserve research records',async()=>{
  const {worker,env}=fixture();const before=await (await worker.fetch(req(OWNER),env)).json();
- const prefs={theme:'dark',accent:'green',texture:'jelly',papers:{selected:['논문 제목','출판일'],order:['출판일','논문 제목']},notifications:{read:['n1'],hidden:['n2']}};
+ const prefs={meetingView:'normal',theme:'dark',accent:'green',texture:'jelly',papers:{selected:['논문 제목','출판일'],order:['출판일','논문 제목']},notifications:{read:['n1'],hidden:['n2']}};
  const saved=await worker.fetch(req('student@example.test','/api/preferences','PUT',prefs),env);assert.equal(saved.status,200);
  const student=await (await worker.fetch(req('student@example.test'),env)).json();assert.deepEqual(student.preferences,prefs);
  const owner=await (await worker.fetch(req(OWNER),env)).json();assert.deepEqual(owner.preferences,{});assert.deepEqual(owner.data,before.data);

@@ -13,7 +13,7 @@ export function validateMeetingSnapshot(b){
  if(!Array.isArray(b.markers)||b.markers.length>20000||!Array.isArray(b.segments)||b.segments.length>100000)throw mrFail('회의 기록을 확인해주세요.');
  let prev=-1;const markers=b.markers.map(m=>{if(!Number.isFinite(m.at)||m.at<prev||m.at<0||m.at>b.duration+2)throw mrFail('주제 전환 시간을 확인해주세요.');prev=m.at;return {at:m.at,topic:m.topic===null?null:mrId(m.topic),title:String(m.title||'미분류').slice(0,120)};});
  if(!markers.length||markers[0].at!==0)throw mrFail('회의 시작 주제가 필요합니다.');
- const seen=new Set();const segments=b.segments.map(s=>{if(typeof s.id!=='string'||s.id.length>100||seen.has(s.id)||!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<0||s.end<s.start||s.end>b.duration+10||typeof s.text!=='string'||s.text.length>4000)throw mrFail('전사 구간을 확인해주세요.');seen.add(s.id);return {id:s.id,start:s.start,end:s.end,text:s.text,speaker:String(s.speaker||'화자').slice(0,60),topic:meetingTopicAt(markers,s.start)};});
+ const seen=new Set();const segments=b.segments.map(s=>{if(typeof s.id!=='string'||s.id.length>100||seen.has(s.id)||!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<0||s.end<s.start||s.end>b.duration+10||typeof s.text!=='string'||s.text.length>4000)throw mrFail('전사 구간을 확인해주세요.');seen.add(s.id);return {id:s.id,start:s.start,end:s.end,text:s.text,...(typeof s.rawText==='string'?{rawText:s.rawText.slice(0,4000),termCorrected:true}:{}),speaker:String(s.speaker||'화자').slice(0,60),topic:meetingTopicAt(markers,s.start)};});
  const names={};for(const [k,v] of Object.entries(b.speakers||{}).slice(0,30))if(/^(speaker-(\d+|unmatched)|voice-[-\w]{8,100})$/.test(k))names[k]=String(v).slice(0,60);
  return {duration:b.duration,markers,segments,speakers:names,status:['recording','paused','ended','interrupted'].includes(b.status)?b.status:'interrupted'};
 }
@@ -25,7 +25,7 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
  try{
  if(['recording-voices','recording-voice-audio','recording-voice-save','recording-voice-delete'].includes(action))return await mrVoiceRequest(req,env,action,url,reply);
  if(req.method==='GET'){
-  if(action==='recording-knowledge'){const topic=mrId(url.searchParams.get('topic'));const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('knowledge:'+topic).first();return reply(row?{...JSON.parse(row.payload),version:row.version}:{topic,entries:[],version:0});}
+  if(action==='recording-knowledge'){const topic=mrId(url.searchParams.get('topic'));const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('knowledge:'+topic).first();const terms=await meetingTermRules(db,topic);return reply({... (row?{...JSON.parse(row.payload),version:row.version}:{topic,entries:[],version:0}),terms});}
   if(action==='recording-status')return reply({transcriptionReady:!!env.OPENAI_API_KEY,summaryReady:!!env.OPENAI_API_KEY,provider:'OpenAI',mode:'five-minute-segments',segmentSeconds:300,maxMinutes:null,segmentedRecording:true,queueMode:'app-assisted'});
   if(action==='recording-queue'){const rows=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'recording:%' AND json_extract(payload,'$.processing') IS NOT NULL ORDER BY json_extract(payload,'$.created')").all();return reply({meetings:rows.results.map(r=>JSON.parse(r.payload)).map(x=>({id:x.id,created:x.created,processing:x.processing,audioDeletedAt:x.audioDeletedAt,audioCount:x.audioCount}))});}
   if(action==='recording-list'){const rows=await db.prepare("SELECT payload,version FROM research_records WHERE id LIKE 'recording:%' ORDER BY json_extract(payload,'$.created') DESC LIMIT 200").all();return reply({meetings:rows.results.map(r=>{const x=JSON.parse(r.payload);return {id:x.id,created:x.created,duration:x.duration,status:x.status,markers:x.markers,transcriptTopics:[...new Set((x.segments||[]).filter(s=>s.text?.trim()).map(s=>meetingTopicAt(x.markers,s.start)||'unclassified'))],summary:x.summary||{},processing:x.processing||null,audioDeletedAt:x.audioDeletedAt,version:r.version};}).sort((a,b)=>b.created.localeCompare(a.created))});}
@@ -145,7 +145,7 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   const parts=current.audioParts?.length?current.audioParts:[{start:0,end:current.duration,first:0,count:current.audioCount||0,mime:current.mime}];
   const partIndex=(current.transcription?.completedParts||0),part=parts[partIndex];
   if(transcribe&&!part){if(['ended','interrupted'].includes(current.status)){await db.prepare("UPDATE research_records SET payload=json_set(payload,'$.transcription.status','completed'),version=version+1 WHERE id=? AND version=?").bind(key,current.version).run();await purgeMeetingAudio(env,await read(id));return reply(await read(id));}return reply(current);}
-  let summaryPart=0,summaryTotal=1,reference=null,voiceReferences=[],knowledge=[],background=[],corrections=[];
+  let summaryPart=0,summaryTotal=1,reference=null,voiceReferences=[],knowledge=[],background=[],corrections=[],termRules=[];
   if(transcribe&&partIndex>0&&current.voiceEnrollment){if(current.voiceSelection?.status!=='ready')throw mrFail('호명한 참여자를 먼저 확인해주세요.',409);voiceReferences=await meetingVoiceReferences(env,current.voiceParticipants||[]);}
   const topic=b.topic||'unclassified';
   if(!transcribe&&!current.markers.some(m=>(m.topic||'unclassified')===topic))throw mrFail('이 회의의 주제를 선택해주세요.');
@@ -163,7 +163,8 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
     const sample=await meetingAudioBlob(env,id,parts[0]),bytes=new Uint8Array(await sample.arrayBuffer());let binary='';for(let at=0;at<bytes.length;at+=8192)binary+=String.fromCharCode(...bytes.subarray(at,at+8192));reference='data:'+parts[0].mime.split(';')[0]+';base64,'+btoa(binary);
    }
   }else{
-   input=current.segments.filter(s=>(meetingTopicAt(current.markers,s.start)||'unclassified')===topic).map(s=>'['+s.start.toFixed(1)+'초] '+(current.speakers?.[s.speaker]||s.speaker)+': '+s.text).join('\n');
+   termRules=await meetingTermRules(db,topic);
+   input=current.segments.filter(s=>(meetingTopicAt(current.markers,s.start)||'unclassified')===topic).map(s=>'['+s.start.toFixed(1)+'초] '+(current.speakers?.[s.speaker]||s.speaker)+': '+meetingApplyTerms(s.rawText||s.text,termRules)).join('\n');
    if(!input)throw mrFail('이 주제의 전사 내용이 없습니다.');knowledge=await meetingReviewedKnowledge(db,topic,current);background=await meetingResearchBackground(db,topic,input);corrections=await meetingCorrectionExamples(db,topic,current,input);const chunks=meetingTextChunks(input);summaryTotal=chunks.length;summaryPart=(current.summaryProgress?.[topic]?.contents||[]).length;input=chunks[summaryPart];if(input===undefined)throw mrFail('요약 처리 상태를 확인해주세요.',409);
   }
   const jobId='meeting-'+(transcribe?'transcribe-':'summary-')+id+(transcribe&&current.audioParts?.length?'-p'+partIndex:'')+(!transcribe&&summaryTotal>1?'-p'+summaryPart:'')+(transcribe?(current.transcriptionEpoch?'-r'+current.transcriptionEpoch:''):'-'+topic+(current.summaryEpoch?'-r'+current.summaryEpoch:'')),month=new Date().toISOString().slice(0,7);
@@ -193,6 +194,8 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
      }else segments=labelKnownMeetingSegments(data,current.voiceParticipants,part,partIndex);
     }
     updated.segments=validateMeetingSnapshot({...latest,segments:[...previous,...segments]}).segments;
+    const termTopics=[...new Set(updated.segments.map(s=>s.topic).filter(Boolean))];const termMap=new Map();for(const t of termTopics)termMap.set(t,await meetingTermRules(db,t));
+    updated.segments=updated.segments.map(s=>{const rawText=s.rawText||s.text;const text=meetingApplyTerms(rawText,termMap.get(s.topic)||[]);return {...s,text,...(text!==rawText?{rawText,termCorrected:true}:{})};});
     updated.speakers=current.voiceEnrollment?meetingVoiceLabels(updated.voiceParticipants||current.voiceParticipants||[]):meetingSpeakerRoles(updated.segments,updated.segments.some(x=>x.speaker==='speaker-0')?'speaker-0':null);
     updated.transcription={status:['ended','interrupted'].includes(latest.status)&&partIndex+1===(latest.audioParts?.length||parts.length)?'completed':'partial',completedParts:partIndex+1,totalParts:parts.length,model,created:new Date().toISOString()};
     cost=Math.ceil(Math.max(part.end-part.start,Number(data.duration)||0)/60*6000);usage={transcription:cost,estimated:true};
@@ -362,4 +365,20 @@ export function meetingVoiceResponse(req,bytes){
  if(m&&(m[1]||m[2])){if(!m[1])start=Math.max(0,total-Number(m[2]));else{start=Number(m[1]);if(m[2])end=Math.min(end,Number(m[2]));}}
  if(!m||(!m[1]&&!m[2])||!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>=total||end<start||(!m[1]&&Number(m[2])===0))return new Response(null,{status:416,headers:{...headers,'Content-Length':'0','Content-Range':'bytes */'+total}});
  return new Response(bytes.slice(start,end+1),{status:206,headers:{...headers,'Content-Length':String(end-start+1),'Content-Range':`bytes ${start}-${end}/${total}`}});
+}
+
+// Topic-scoped exact term corrections; never cascade replacements or rewrite the raw transcript.
+export async function meetingTermRules(db,topic){
+ if(!topic||topic==='unclassified')return [];
+ const topicRow=await db.prepare('SELECT payload FROM research_records WHERE id=?').bind('topic:'+topic).first();const viewers=topicRow?(JSON.parse(topicRow.payload).viewers||[]):[];
+ const rows=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'term:%' ORDER BY json_extract(payload,'$.updated') DESC LIMIT 1500").all();
+ const applicable=rows.results.map(r=>JSON.parse(r.payload)).filter(r=>r.before&&r.after&&(r.scope==='all'||(r.scope==='mine'&&(r.owner||viewers.includes(r.editedBy)))||((!r.scope||r.scope==='topic')&&r.topic===topic)));
+ applicable.sort((a,b)=>({topic:0,mine:1,all:2}[a.scope||'topic'])-({topic:0,mine:1,all:2}[b.scope||'topic']));
+ const seen=new Set();return applicable.filter(r=>{if(seen.has(r.before))return false;seen.add(r.before);return true;}).slice(0,500);
+}
+export function meetingApplyTerms(text,rules){
+ if(!rules.length)return text;
+ const map=new Map(rules.map(r=>[r.before,r.after]));const escape=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ const pattern=new RegExp('(?<![\\p{L}\\p{N}_])('+[...map.keys()].sort((a,b)=>b.length-a.length).map(escape).join('|')+')(?![\\p{L}\\p{N}_])','gu');
+ return text.replace(pattern,match=>map.get(match));
 }
