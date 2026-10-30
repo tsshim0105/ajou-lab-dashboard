@@ -10,7 +10,7 @@ function studentPreviewOptions(){return '<option value="">학생 선택</option>
 const offline=!!globalThis.LAB_PREVIEW,admin=()=>user.role==='admin'&&!studentPreview;
 const canEditResearch=()=>['admin','student'].includes(user.role);
 const canManageHomepage=()=>user.canManageHomepage===true&&!studentPreview;
-const menu=[['home','대시보드'],['groupMeetings','그룹미팅/게임나잇'],['researchRooms','연구미팅'],['papers','논문 출판'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
+const menu=[['home','대시보드'],['groupMeetings','그룹미팅/게임나잇'],['researchRooms','연구미팅'],['papers','논문 출판'],['conferences','학회 발표'],['reagents','시약관리'],['meetingInfo','학술대회 정보'],['funds','연구비'],['payroll','인건비'],['dataPlot','데이터 생성'],['settings','자료·계정 관리'],['homepage','홈페이지 관리']];
 const searchKey=value=>String(value??'').normalize('NFKC').toLowerCase().replace(/[\s\-‐‑–—.,·*†]/g,'');
 const filter=rows=>rows.filter(r=>($('year').value==='all'||String(r.year)===$('year').value)&&matchesResearch(r,$('query').value.trim()));
 function authorAliases(){return data.authorAliases||[];}
@@ -37,7 +37,7 @@ const card=(label,value,note)=>`<div class="card"><span class="label">${esc(labe
 function bar(label,value,max,light=false){return `<div class="bar-row"><span>${esc(label)}</span><div class="track"><div class="fill ${light?'light':''}" style="width:${max?value/max*100:0}%"></div></div><strong>${count(value)}</strong></div>`;}
 function nav(){
  const allowed=menu.filter(([k])=>k==='homepage'?canManageHomepage():admin()||['home','groupMeetings','researchRooms','papers','conferences','meetingInfo','reagents','funds','settings'].includes(k));
- const navLabels={...mobileLabels,researchRooms:['연구미팅','◌'],homepage:['홈페이지','⚒'],funds:['연구비','₩'],payroll:['인건비','▦'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
+ const navLabels={...mobileLabels,researchRooms:['연구미팅','◌'],homepage:['홈페이지','⚒'],funds:['연구비','₩'],payroll:['인건비','▦'],dataPlot:['데이터 생성','⌁'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
  $('tabs').innerHTML=allowed.map(([k,v])=>`<button class="tab ${k===tab?'active':''}" data-tab="${k}" aria-label="${esc(v)}" aria-current="${k===tab?'page':'false'}"><span class="tab-label">${v}</span><span class="tab-icon" aria-hidden="true">${navLabels[k][1]}</span><span class="tab-short" aria-hidden="true">${navLabels[k][0]}</span></button>`).join('');
  $('tabs').scrollLeft=navScroll;
  if(typeof matchMedia==='function'&&matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>{$('tabs').querySelector('.active')?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});});
@@ -56,6 +56,7 @@ function placePageFooter(){
  (scroller||panel).append(footer);
 }
 function render(){const pageFooter=document.querySelector('.foot');if(pageFooter)document.querySelector('main.app').append(pageFooter);if(lastRenderedSection!==tab){lastRenderedSection=tab;resetSectionScroll();}const filterFocus=$('filters')?.contains(document.activeElement)?document.activeElement:null,filterSelection=filterFocus?.tagName==='INPUT'?[filterFocus.selectionStart,filterFocus.selectionEnd]:null;if($('filters')?.parentElement===$('panel'))$('panel').before($('filters'));document.documentElement.dataset.activeTab=tab;if(tab==='homepage'&&!canManageHomepage())tab='home';if(tab!=='homepage'&&!admin()&&!['home','groupMeetings','researchRooms','papers','conferences','meetingInfo','reagents','funds','settings'].includes(tab))tab='home';$('userLabel').innerHTML=badge(studentPreview?'학생 화면 미리보기':admin()?'교수님':'연구실 구성원');nav();exportRows=[];const panel=$('panel'),p=tab==='home'?homePeriod(data.papers):filter(data.papers),c=tab==='home'?homePeriod(data.conferences):filter(data.conferences);const title=tab==='home'?'연구실 활동 (2015년~현재)':menu.find(([k])=>k===tab)[1];let html=['papers','conferences'].includes(tab)?`<div class="research-title"><div class="research-title-label"><h1>${title}</h1>${tab==='papers'?'<small class="paper-title-note">연초록: 학생 제1저자·교수 교신저자 · 국문명 검색 가능</small>':''}</div><div class="research-title-actions">${tab==='papers'&&admin()?'<button class="secondary" id="paperAchievements">업적관리</button>':''}${canEditResearch()?`<button class="primary" id="${tab==='papers'?'addPaper':'addConference'}">${tab==='papers'?'논문추가':'발표 내역 추가'}</button>`:''}<button class="secondary" id="csv">CSV 저장</button></div></div>`:['home','groupMeetings','meetingInfo','funds'].includes(tab)?'':`<h1>${title}</h1>`;
+ if(tab==='dataPlot'){panel.innerHTML=html+'<div id="dataPlotRoot"></div>';mountDataPlot();placePageFooter();return;}
  if(tab==='researchRooms'){panel.innerHTML='<div id="researchRoomRoot"></div>';mountResearchRooms();placePageFooter();return;}
  if(tab==='homepage'){panel.innerHTML=html+'<iframe title="홈페이지 관리" src="/dashboard/homepage#admin" style="width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:12px;background:white"></iframe>';syncSectionClock();placePageFooter();return;}
  if(tab==='home'){

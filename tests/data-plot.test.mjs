@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const src=readFileSync(new URL('../data-plot.js',import.meta.url),'utf8');
+const ctx={};vm.createContext(ctx);vm.runInContext(src+';globalThis.plot=DataPlot;',ctx);const p=ctx.plot;
+test('spreadsheet headers, missing values and scientific numbers',()=>{const r=p.parse('Time\tA\tB\n0\t1e-3\t\n1\t2\t3');assert.equal(r.names[1],'A');assert.equal(r.data[0][1],.001);assert.equal(r.data[0][2],null);});
+test('invalid input is rejected rather than silently coerced',()=>{for(const x of ['x\ty\n0\tbad','x\ty\n\t1','x\ty\n1\t2\t3','x\ty\n0\t'])assert.throws(()=>p.parse(x));});
+test('dimensions, line width, series style and safe labels exported',()=>{const r=p.parse('X\tA\n0\t1\n1\t2');const s=p.svg(r,{...p.defaults,width:1000,height:600,line:4,title:'<script>',series:[{color:'#dc2626',shape:'square'}]});assert.match(s,/width="1000" height="600"/);assert.match(s,/stroke-width="4"/);assert.match(s,/#dc2626/);assert.match(s,/&lt;script&gt;/);assert.doesNotMatch(s,/<script>/);});
+test('reject invalid ranges and sizes',()=>{const r=p.parse('0\t1\n1\t2');assert.throws(()=>p.svg(r,{...p.defaults,xmin:2,xmax:1}));assert.throws(()=>p.normalize({width:0}));});
+test('professor guard and student navigation exclusion',()=>{const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');assert.match(src,/if\(!admin\(\)\)return/);const allowed=app.match(/const allowed=menu.filter[^\n]+/)[0];assert.doesNotMatch(allowed,/dataPlot/);assert.match(app,/if\(tab!=='homepage'&&!admin\(\)/);});
