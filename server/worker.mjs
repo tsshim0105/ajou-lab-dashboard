@@ -46,7 +46,7 @@ export function validateReagentLinks(links){
 }
 
 export const fresh=()=>({version:0,data:{papers:[],conferences:[],reagents:[],funds:[],payroll:[],standards:[],sources:[],issues:[]},students:[]});
-export function studentFunds(data){return (data.funds||[]).filter(f=>f.studentVisible===true).map(f=>{const keys=['id','title','category','total','balance','endDate','note','closed','manual','initialEdited','months','entries'];return Object.fromEntries(keys.filter(k=>f[k]!==undefined).map(k=>[k,structuredClone(f[k])]));});}
+export function studentFunds(data){return (data.funds||[]).filter(f=>f.studentVisible===true).map(f=>{const keys=['id','title','category','total','balance','endDate','note','closed','manual','initialEdited','months','entries','budgetLines','reportStart'];return Object.fromEntries(keys.filter(k=>f[k]!==undefined).map(k=>[k,structuredClone(f[k])]));});}
 export function visible(data,admin){if(admin)return data;return {papers:data.papers.map(({points,engineeringPoints,achievement,...r})=>r),conferences:data.conferences,reagents:data.reagents||[],funds:studentFunds(data),payroll:[],standards:[],sources:data.sources.filter(s=>['papers','conferences','reagents'].includes(s.type)),issues:[],authorAliases:data.authorAliases||[],groupMeetings:data.groupMeetings,groupPlans:data.groupPlans,gameNight:data.gameNight,gameNights:data.gameNights};}
 export function groupPaperRows(state,email,admin=false){
  return (state.data.groupMeetings||[]).filter(r=>r.kind==='논문발표').flatMap(r=>r.presenter.split(/[·,、;\n]/).map(n=>n.trim()).filter(Boolean).map(name=>{
@@ -120,6 +120,14 @@ export function validateData(d){
  for(const r of d.conferences)if(r.manual&&(!(r.year>=1900&&r.year<=2200)||!r.presenter.trim()||typeof r.conference!=='string'||!r.conference.trim()||!['구두','포스터','미기재'].includes(r.kind)||(r.date&&(!dateOK(r.date)||Number(r.date.slice(0,4))!==r.year))))throw Error('학회명, 발표자, 연도와 발표일을 확인해주세요.');
  for(const r of d.conferences)if(r.locationEdited&&(!['국내','국제'].includes(r.scope)||typeof r.city!=='string'||r.city.length>500||typeof r.venue!=='string'||r.venue.length>1000))throw Error('학회 국내/국제 구분, 도시와 장소를 확인해주세요.');
  for(const f of d.funds){
+  if(f.reportStart!==undefined&&!/^\d{4}-(0[1-9]|1[0-2])$/.test(f.reportStart))throw Error('집계 시작월을 확인해주세요.');
+  if(f.budgetLines!==undefined){
+   if(!Array.isArray(f.budgetLines)||f.budgetLines.length>50)throw Error('비목 목록을 확인해주세요.');
+   const ids=new Set(),names=new Set();for(const l of f.budgetLines){if(!l||typeof l.id!=='string'||!l.id||l.id.length>100||ids.has(l.id)||typeof l.name!=='string'||!l.name.trim()||l.name.length>100||names.has(l.name.trim())||!amountOK(l.budget)||!amountOK(l.openingSpent)||l.openingSpent>l.budget)throw Error('비목 이름·예산·기존 지출을 확인해주세요.');ids.add(l.id);names.add(l.name.trim());}
+   const base=(f.manual||f.initialEdited)?Number(f.total||0)-Number(f.balance||0):f.months.reduce((s,m)=>s+Number(m.spend||0),0);
+   if(f.budgetLines.reduce((s,l)=>s+l.budget,0)>f.total||f.budgetLines.reduce((s,l)=>s+l.openingSpent,0)>base)throw Error('비목별 합계가 기존 예산 또는 누적 지출을 초과합니다.');
+  }
+  for(const e of f.entries||[])if(e.budgetLineId!==undefined&&(typeof e.budgetLineId!=='string'||(e.budgetLineId&&!f.budgetLines?.some(l=>l.id===e.budgetLineId))))throw Error('지출 비목을 확인해주세요.');
   if(f.studentVisible!==undefined&&typeof f.studentVisible!=='boolean')throw Error('학생 공개 설정을 확인해주세요.');
   if(f.endDate!==undefined&&f.endDate!==''&&(!dateOK(f.endDate)||f.endDate<'1900-01-01'||f.endDate>'2200-12-31'))throw Error('연구비 종료일을 확인해주세요.');
   if(f.initialEdited&&f.months.some(m=>!m||typeof m.month!=='string'||!m.month.trim()||(m.spend!==null&&!amountOK(m.spend))||(m.balance!==null&&!amountOK(m.balance))))throw Error('연구비 월별 기록의 기간과 금액을 확인해주세요.');
