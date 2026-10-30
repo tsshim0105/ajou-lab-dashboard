@@ -1458,3 +1458,14 @@ html:not([data-meeting-view=normal]) .mr-summary-grid.mr-summary-grid>section:nt
  #tabs .tab:not(.active){background:transparent}
  [data-theme=dark] #tabs{background:rgba(25,39,52,.55);border-color:rgba(142,167,188,.3)}
 }
+
+/* Balance-first fund list, shared by professor and student views. */
+.fund-balance-card.section-card{padding:0;overflow:hidden;margin-bottom:12px}
+.fund-balance-head{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 18px;background:linear-gradient(110deg,#def1e9,#ece9f8)}
+.fund-balance-head h2{flex:1;margin:0;font-size:16px;min-width:0}.fund-balance-head label{display:flex;align-items:center;gap:6px;font-size:12px}
+.fund-balance-body{padding:12px 18px}.fund-balance-body .fund-end-date{margin:0 0 12px;font-size:12px}
+.fund-balance-numbers{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:16px;align-items:center}.fund-balance-numbers span{display:block;font-size:12px;color:var(--muted,#617486)}.fund-balance-numbers strong{display:block;font-size:20px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.fund-balance-numbers .fund-remaining strong{font-size:30px;color:#227563}
+.fund-use-track{height:5px;background:#e7eef0;border-radius:4px;overflow:hidden;margin:10px 0 4px}.fund-use-track i{display:block;height:100%;background:#72aea4}.fund-use-label{font-size:11px;text-align:right;color:var(--muted,#617486)}
+.fund-balance-bottom{display:flex;align-items:start;gap:12px;flex-wrap:wrap;margin-top:8px}.fund-balance-bottom .fund-expenses{flex:1;min-width:180px;margin:0;padding:6px 0 0;border:0}.fund-balance-bottom:has(details[open]){display:block}.fund-balance-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}.fund-balance-actions button,.fund-balance-actions select{min-height:32px;padding:5px 10px;font-size:12px}
+html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#294844,#37334c)}html[data-theme="dark"] .fund-remaining strong{color:#8bd7c1}html[data-theme="dark"] .fund-use-track{background:#35465a}
+@media(max-width:600px){.fund-balance-head{padding:12px 14px}.fund-balance-head h2{flex-basis:100%;font-size:15px}.fund-balance-body{padding:12px 14px}.fund-balance-numbers{grid-template-columns:1fr 1fr;gap:10px}.fund-balance-numbers .fund-remaining{grid-column:1/-1}.fund-balance-numbers .fund-remaining strong{font-size:30px}.fund-balance-numbers strong{font-size:18px}.fund-balance-bottom{flex-direction:column}.fund-balance-bottom .fund-expenses{width:100%}.fund-balance-actions{width:100%;justify-content:flex-start}.fund-balance-actions button,.fund-balance-actions select{min-height:40px}}
