@@ -97,7 +97,6 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         _ = item("Hub 열기", #selector(showDashboard))
         _ = item("통합 전체화면 열기", #selector(showWorkspace))
         _ = item("최근 알림 보기", #selector(showRecentNotifications))
-        _ = item("녹음 일시정지 / 재개  ⌃⌥⌘R", #selector(toggleMeetingRecording))
         updateItems.append(item("업데이트 확인", #selector(checkForUpdates)))
         _ = item("로그아웃", #selector(logout))
         _ = item("앱 완전종료", #selector(quit))
