@@ -9,6 +9,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, UNUserNotificationCenterDelegate, WKScriptMessageHandler {
     lazy var meeting = MeetingController(owner: self)
+    lazy var qtiPlot = QtiPlotBridge(owner: self)
     let meetingHotKey = MeetingHotKey()
     var meetingHotKeyStatus: OSStatus = noErr
     var window: NSWindow!
@@ -164,6 +165,7 @@ final class NoRedirect: NSObject, URLSessionTaskDelegate {
         config.websiteDataStore = .default()
         config.userContentController.add(self, name: "nismlWorkspace")
         config.userContentController.addScriptMessageHandler(meeting, contentWorld: .page, name: "nismlMeeting")
+        config.userContentController.addScriptMessageHandler(qtiPlot, contentWorld: .page, name: "nismlQtiPlot")
         // Keep normal WebKit identity; never disguise an embedded browser to bypass OAuth restrictions.
         web = WKWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self; web.uiDelegate = self

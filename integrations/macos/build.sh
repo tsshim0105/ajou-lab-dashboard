@@ -20,7 +20,8 @@ body=b''.join(chunks)
 Path('build/NISML Hub.app/Contents/Resources/AppIcon.icns').write_bytes(b'icns'+struct.pack('>I',len(body)+8)+body)
 PYICON
 cp Resources/Logo.png "$APP/Contents/Resources/Logo.png"
-xcrun swiftc -swift-version 5 -O -target arm64-apple-macosx13.0 -module-cache-path "$PWD/build/ModuleCache" Sources/Core.swift Sources/SegmentedAudio.swift Sources/MeetingPanel.swift Sources/MeetingHotKey.swift Sources/main.swift -o "$APP/Contents/MacOS/NISMLDashboard" -framework AppKit -framework WebKit -framework UserNotifications -framework ServiceManagement -framework SwiftUI -framework AVFoundation -framework Carbon
+cp Resources/qtiplot_bridge.py "$APP/Contents/Resources/qtiplot_bridge.py"
+xcrun swiftc -swift-version 5 -O -target arm64-apple-macosx13.0 -module-cache-path "$PWD/build/ModuleCache" Sources/Core.swift Sources/SegmentedAudio.swift Sources/MeetingPanel.swift Sources/MeetingHotKey.swift Sources/QtiPlotBridge.swift Sources/main.swift -o "$APP/Contents/MacOS/NISMLDashboard" -framework AppKit -framework WebKit -framework UserNotifications -framework ServiceManagement -framework SwiftUI -framework AVFoundation -framework Carbon
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -30,8 +31,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>NISML Hub</string>
 <key>CFBundleExecutable</key><string>NISMLDashboard</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.19</string>
-<key>CFBundleVersion</key><string>27</string>
+<key>CFBundleShortVersionString</key><string>0.4.20</string>
+<key>CFBundleVersion</key><string>28</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSMicrophoneUsageDescription</key><string>연구미팅을 녹음하고 회의 종료 후 전사와 요약을 작성합니다.</string>
