@@ -32,8 +32,7 @@ import UniformTypeIdentifiers
               let body = message.body as? [String:Any],let action = body["action"] as? String else { replyHandler(nil,"허용되지 않는 요청입니다.");return }
         Task { @MainActor in
             do {
-                try await authorize(web)
-                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":3],nil);return }
+                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":4],nil);return }
                 if action == "export" {
                     guard let name = body["name"] as? String,["graph.svg","graph-2x.png"].contains(name),
                           let encoded = body["base64"] as? String,encoded.count <= 48_000_000,
@@ -52,6 +51,7 @@ import UniformTypeIdentifiers
                     try bytes.write(to:target,options:.atomic)
                     replyHandler(["ok":true],nil);return
                 }
+                try await authorize(web)
                 if action == "reveal" { guard let folder = lastOutput else { throw fail("생성된 결과가 없습니다.") };NSWorkspace.shared.open(folder);replyHandler(["ok":true],nil);return }
                 guard action == "plot" else { throw fail("지원하지 않는 요청입니다.") }
                 guard !busy else { throw fail("이전 그래프 생성이 진행 중입니다.") }
