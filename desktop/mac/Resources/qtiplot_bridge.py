@@ -64,6 +64,7 @@ def run():
     for axis in [qti.Layer.Bottom,qti.Layer.Left]:
         optional('축 글꼴',lambda axis=axis:l.setAxisFont(axis,font))
         optional('축 제목 글꼴',lambda axis=axis:l.setAxisTitleFont(axis,font))
+        optional('축 제목 간격',lambda axis=axis:l.setAxisTitleDistance(axis,10))
     legend_font = QtGui.QFont('Arial');legend_font.setPixelSize(int(s['legendFont']))
     legend = l.legend()
     if legend: legend.setFont(legend_font)
