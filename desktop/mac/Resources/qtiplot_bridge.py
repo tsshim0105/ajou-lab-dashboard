@@ -63,13 +63,36 @@ def run():
     for axis in [qti.Layer.Bottom,qti.Layer.Left]:
         optional('축 글꼴',lambda axis=axis:l.setAxisFont(axis,font))
         optional('축 제목 글꼴',lambda axis=axis:l.setAxisTitleFont(axis,font))
-    for axis, prefix, values in [(qti.Layer.Bottom,'x',[r[0] for r in rows]),(qti.Layer.Left,'y',[v for r in rows for v in r[1:] if v is not None])]:
-        low, high = s.get(prefix+'min',''),s.get(prefix+'max','')
-        if low != '' or high != '':
-            low = float(low) if low != '' else min(values)
-            high = float(high) if high != '' else max(values)
-            if not math.isfinite(low) or not math.isfinite(high) or low >= high: raise ValueError('축 범위가 올바르지 않습니다.')
-            l.setScale(axis,low,high)
+    # Four-sided frame; six major marks, four minor marks per interval.
+    l.enableAutoscaling(False)
+    l.setSynchronizedScaleDivisions(False)
+    for axis in [qti.Layer.Bottom,qti.Layer.Left,qti.Layer.Top,qti.Layer.Right]:
+        l.enableAxis(axis)
+        l.setMajorTicksType(axis,qti.Layer.In)
+        l.setMinorTicksType(axis,qti.Layer.In)
+        l.setAxisTicksLength(axis,qti.Layer.In,qti.Layer.In,4,7)
+    for axis in [qti.Layer.Top,qti.Layer.Right]:
+        l.enableAxisLabels(axis,False)
+        l.setAxisTitle(axis,'')
+    for axes, prefix, values in [([qti.Layer.Bottom,qti.Layer.Top],'x',[r[0] for r in rows]),([qti.Layer.Left,qti.Layer.Right],'y',[v for r in rows for v in r[1:] if v is not None])]:
+        low, high = min(values),max(values)
+        if prefix == 'y' and s['type'] == 'bar':
+            low,high=min(0,low),max(0,high)
+        if low == high:
+            delta=abs(low)*.1 or 1
+            low,high=low-delta,high+delta
+        else:
+            delta=(high-low)*.05
+            low,high=low-delta,high+delta
+        low=float(s[prefix+'min']) if s.get(prefix+'min','') != '' else low
+        high=float(s[prefix+'max']) if s.get(prefix+'max','') != '' else high
+        if not math.isfinite(low) or not math.isfinite(high) or low >= high:
+            raise ValueError('축 범위가 올바르지 않습니다.')
+        for axis in axes:
+            l.setScale(axis,low,high,(high-low)/5,6,4)
+    # A canvas frame avoids small gaps where QtiPlot axis backbones meet.
+    l.drawAxesBackbones(False)
+    l.setCanvasFrame(1,QtGui.QColor('#111111'))
     if s.get('grid'): warnings.append('격자선은 QtiPlot에서 확인·조정해 주세요.')
     l.replot()
     size = QtCore.QSizeF(s['width'],s['height'])

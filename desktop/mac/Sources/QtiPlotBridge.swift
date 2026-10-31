@@ -32,7 +32,7 @@ import WebKit
         Task { @MainActor in
             do {
                 try await authorize(web)
-                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":1],nil);return }
+                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":2],nil);return }
                 if action == "reveal" { guard let folder = lastOutput else { throw fail("생성된 결과가 없습니다.") };NSWorkspace.shared.open(folder);replyHandler(["ok":true],nil);return }
                 guard action == "plot" else { throw fail("지원하지 않는 요청입니다.") }
                 guard !busy else { throw fail("이전 그래프 생성이 진행 중입니다.") }
