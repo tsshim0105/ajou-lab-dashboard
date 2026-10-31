@@ -28,3 +28,5 @@ test('axis and legend fonts are independent; plot box dimensions never shrink',(
  assert.ok(dimensions(large)[0]>dimensions(small)[0]);assert.ok(dimensions(large)[1]>dimensions(small)[1]);
  assert.match(src,/c.width=img.naturalWidth\*2;c.height=img.naturalHeight\*2/);
 });
+
+test('default line-only mode omits markers and adapts QtiPlot without changing stored styles',()=>{const data=p.parse('0\t1\n1\t2'),settings={...p.defaults,series:[{shape:'circle',color:'#ff0000'}]};assert.equal(p.defaults.type,'lineonly');const svg=p.svg(data,settings);assert.match(svg,/stroke-linejoin="round"/);assert.doesNotMatch(svg,/<circle/);assert.match(p.svg(data,{...settings,type:'line'}),/<circle/);const native=p.nativeSettings(settings,1);assert.equal(native.type,'line');assert.equal(native.series[0].shape,'none');assert.equal(settings.series[0].shape,'circle');});
