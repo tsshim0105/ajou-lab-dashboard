@@ -32,9 +32,9 @@ const DataPlot = (()=>{
   const text=(xx,yy,v,anchor='middle')=>`<text x="${xx}" y="${yy}" text-anchor="${anchor}">${xml(v)}</text>`;
   let ticks='';
   for(let i=0;i<=25;i++){
-   const major=i%5===0,len=major?7:4,xx=L+pw*i/25,yy=T+ph-ph*i/25;
+   const major=i%5===0,len=major?12:7,xx=L+pw*i/25,yy=T+ph-ph*i/25;
    if(major&&s.grid)out+=line(xx,T,xx,T+ph,'#e5e7eb')+line(L,yy,L+pw,yy,'#e5e7eb');
-   ticks+=`<g class="plot-${major?'major':'minor'}-ticks">`+line(xx,T+ph,xx,T+ph-len)+line(xx,T,xx,T+len)+line(L,yy,L+len,yy)+line(L+pw,yy,L+pw-len,yy)+'</g>';
+   ticks+=`<g class="plot-${major?'major':'minor'}-ticks">`+line(xx,T+ph,xx,T+ph-len,'#111',2)+line(xx,T,xx,T+len,'#111',2)+line(L,yy,L+len,yy,'#111',2)+line(L+pw,yy,L+pw-len,yy,'#111',2)+'</g>';
    if(major)out+=text(xx,T+ph+F+10,fmt(xa+(xb-xa)*i/25))+text(L-12,yy+F*.35,fmt(ya+(yb-ya)*i/25),'end');
   }
   const frame=`<rect class="plot-axis-frame" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="none" stroke="#111" stroke-width="1"/>`;
@@ -114,7 +114,7 @@ function mountDataPlot(){
  const status=(msg,error=false)=>{$('plotStatus').textContent=msg;$('plotStatus').style.color=error?'#c43c3c':'';};
  const sheet=mountPlotSheet($('plotSheet'),()=>{parsed=null;output='';$('plotSvg').disabled=$('plotPng').disabled=true;$('plotPreview').innerHTML='<div class="empty">입력한 데이터로 그래프를 다시 그려 주세요.</div>';$('plotLegend').innerHTML='';status('데이터가 변경되었습니다. 그래프 그리기를 눌러 주세요.');},msg=>status(msg,true));
  const qtiBridge=window.webkit?.messageHandlers?.nismlQtiPlot;let qtiBusy=false;
- $('plotQti').onclick=async()=>{if(qtiBusy)return;if(!qtiBridge){status('Mac용 Hub 0.4.22 이상에서 사용할 수 있습니다. 앱의 업데이트 확인을 이용해 주세요.',true);return;}try{read();const input=sheet.read();DataPlot.svg(input,settings);qtiBusy=true;$('plotQti').disabled=true;status('QtiPlot 설치 확인 중…');const ready=await qtiBridge.postMessage({action:'status'});if(ready.bridgeVersion<6)throw Error('박스 크기·글자 포맷 적용을 위해 Mac용 Hub 0.4.25로 업데이트해 주세요.');if(!ready.installed)throw Error('QtiPlot을 응용 프로그램 폴더에 설치해 주세요.');status('QtiPlot에서 그래프를 만드는 중…');const result=await qtiBridge.postMessage({action:'plot',payload:{...input,settings}});$('plotQtiFolder').hidden=false;status(result.message+(result.warnings?.length?' 일부 설정 확인 필요: '+result.warnings.join(' / '):''));}catch(e){status(e.message||String(e),true);}finally{qtiBusy=false;$('plotQti').disabled=false;}};
+ $('plotQti').onclick=async()=>{if(qtiBusy)return;if(!qtiBridge){status('Mac용 Hub 0.4.22 이상에서 사용할 수 있습니다. 앱의 업데이트 확인을 이용해 주세요.',true);return;}try{read();const input=sheet.read();DataPlot.svg(input,settings);qtiBusy=true;$('plotQti').disabled=true;status('QtiPlot 설치 확인 중…');const ready=await qtiBridge.postMessage({action:'status'});if(ready.bridgeVersion<7)throw Error('박스 크기·글자 포맷 적용을 위해 Mac용 Hub 0.4.26로 업데이트해 주세요.');if(!ready.installed)throw Error('QtiPlot을 응용 프로그램 폴더에 설치해 주세요.');status('QtiPlot에서 그래프를 만드는 중…');const result=await qtiBridge.postMessage({action:'plot',payload:{...input,settings}});$('plotQtiFolder').hidden=false;status(result.message+(result.warnings?.length?' 일부 설정 확인 필요: '+result.warnings.join(' / '):''));}catch(e){status(e.message||String(e),true);}finally{qtiBusy=false;$('plotQti').disabled=false;}};
  $('plotQtiFolder').onclick=async()=>{try{await qtiBridge.postMessage({action:'reveal'});}catch(e){status(e.message||String(e),true);}};
  const read=()=>{root.querySelectorAll('[data-plot]').forEach(el=>settings[el.dataset.plot]=el.type==='checkbox'?el.checked:el.value);settings=DataPlot.normalize(settings);};
  const draw=()=>{try{read();if(!parsed)return;output=DataPlot.svg(parsed,settings);$('plotPreview').innerHTML=output;$('plotSvg').disabled=$('plotPng').disabled=false;status(`${parsed.data.length}행 · ${parsed.names.length-1}개 계열`);$('plotLegend').innerHTML=parsed.names.slice(1).map((n,i)=>`<span><i style="background:${settings.series[i]?.color||DataPlot.colors[i%6]}"></i>${esc(n)}</span>`).join('');}catch(e){output='';$('plotSvg').disabled=$('plotPng').disabled=true;status(e.message,true);}};

@@ -68,13 +68,14 @@ def run():
     legend = l.legend()
     if legend: legend.setFont(legend_font)
     # Four-sided frame; six major marks, four minor marks per interval.
+    l.setAxisLineWidth(2)
     l.enableAutoscaling(False)
     l.setSynchronizedScaleDivisions(False)
     for axis in [qti.Layer.Bottom,qti.Layer.Left,qti.Layer.Top,qti.Layer.Right]:
         l.enableAxis(axis)
         l.setMajorTicksType(axis,qti.Layer.In)
         l.setMinorTicksType(axis,qti.Layer.In)
-        l.setAxisTicksLength(axis,qti.Layer.In,qti.Layer.In,4,7)
+        l.setAxisTicksLength(axis,qti.Layer.In,qti.Layer.In,7,12)
     for axis in [qti.Layer.Top,qti.Layer.Right]:
         l.enableAxisLabels(axis,False)
         l.setAxisTitle(axis,'')

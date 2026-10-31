@@ -15,7 +15,7 @@ test('closed frame with inward major and minor ticks on four sides',()=>{
  const groups=[...s.matchAll(/<g class="plot-(major|minor)-ticks">(.*?)<\/g>/g)];
  assert.equal(groups.filter(g=>g[1]==='major').length,6);
  assert.equal(groups.filter(g=>g[1]==='minor').length,20);
- for(const [,kind,content] of groups){const lines=[...content.matchAll(/x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m=>m.slice(1).map(Number));assert.equal(lines.length,4);assert.ok(lines[0][3]<lines[0][1]);assert.ok(lines[1][3]>lines[1][1]);assert.ok(lines[2][2]>lines[2][0]);assert.ok(lines[3][2]<lines[3][0]);assert.equal(lines[0][1]-lines[0][3],kind==='major'?7:4);}
+ for(const [,kind,content] of groups){const lines=[...content.matchAll(/x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m=>m.slice(1).map(Number));assert.equal(lines.length,4);assert.ok(lines[0][3]<lines[0][1]);assert.ok(lines[1][3]>lines[1][1]);assert.ok(lines[2][2]>lines[2][0]);assert.ok(lines[3][2]<lines[3][0]);assert.equal(lines[0][1]-lines[0][3],kind==='major'?12:7);}
 });
 test('square default and CSP-compatible PNG conversion',()=>{assert.equal(p.defaults.width,p.defaults.height);assert.match(src,/const url=await dataURL\(new Blob\(\[snapshot\]/);assert.match(src,/action:'export',name,base64/);assert.match(src,/document.body.append\(a\)/);});
 test('axis and legend fonts are independent; plot box dimensions never shrink',()=>{
