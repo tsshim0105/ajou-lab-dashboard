@@ -1,7 +1,7 @@
 /* Browser-only scientific plotting. No pasted data is sent to the server. */
 const DataPlot = (()=>{
  const colors=['#2563eb','#dc2626','#059669','#9333ea','#d97706','#0891b2'];
- const defaults={width:800,height:800,line:2,font:16,marker:6,type:'line',xLabel:'X',yLabel:'Y',title:'',xmin:'',xmax:'',ymin:'',ymax:'',grid:false,series:[]};
+ const defaults={width:800,height:800,line:2,font:30,legendFont:15,formatVersion:2,marker:6,type:'line',xLabel:'X',yLabel:'Y',title:'',xmin:'',xmax:'',ymin:'',ymax:'',grid:false,series:[]};
  const xml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  function parse(text){
   if(text.length>1000000)throw Error('데이터는 1 MB 이하로 입력해 주세요.');
@@ -16,18 +16,20 @@ const DataPlot = (()=>{
   if(!data.some(r=>r.slice(1).some(v=>v!==null)))throw Error('Y 데이터가 없습니다.');
   return {names,data};
  }
- function normalize(raw={}){const s={...defaults,...raw,series:Array.isArray(raw.series)?raw.series.map(v=>({...v})):[]};for(const [k,min,max] of [['width',400,2400],['height',300,1800],['line',0.5,12],['font',8,36],['marker',2,20]]){s[k]=Number(s[k]);if(!Number.isFinite(s[k])||s[k]<min||s[k]>max)throw Error(`${k}: ${min}~${max} 범위로 설정해 주세요.`);}if(!['line','scatter','bar'].includes(s.type))s.type='line';return s;}
+ function normalize(raw={}){const s={...defaults,...raw,series:Array.isArray(raw.series)?raw.series.map(v=>({...v})):[]};for(const [k,min,max] of [['width',400,2400],['height',300,1800],['line',0.5,12],['font',8,72],['legendFont',8,48],['marker',2,20]]){s[k]=Number(s[k]);if(!Number.isFinite(s[k])||s[k]<min||s[k]>max)throw Error(`${k}: ${min}~${max} 범위로 설정해 주세요.`);}if(!['line','scatter','bar'].includes(s.type))s.type='line';return s;}
  function svg(parsed,raw){
-  const s=normalize(raw),{data,names}=parsed,W=s.width,H=s.height,F=s.font,L=F*4.6,R=30,T=50,B=F*5.5,pw=W-L-R,ph=H-T-B;
-  if(pw<80||ph<80)throw Error('글자 크기에 비해 그래프 크기가 작습니다.');
+  const s=normalize(raw),{data,names}=parsed,F=s.font,LF=s.legendFont,pw=s.width,ph=s.height;
+  const fmt=v=>Number(v.toPrecision(4)).toString(),textWidth=(v,size)=>Array.from(String(v)).reduce((n,c)=>n+(c.charCodeAt(0)>255?1:.65)*size,0);
   const xs=data.map(r=>r[0]),ys=data.flatMap(r=>r.slice(1).filter(v=>v!==null));
   function range(vals,lo,hi,zero=false){let a=vals.reduce((a,v)=>Math.min(a,v),Infinity),b=vals.reduce((a,v)=>Math.max(a,v),-Infinity);if(zero){a=Math.min(0,a);b=Math.max(0,b);}if(a===b){a-=Math.abs(a)*.1||1;b+=Math.abs(b)*.1||1;}else{const pad=(b-a)*.05;a-=pad;b+=pad;}a=lo===''?a:Number(lo);b=hi===''?b:Number(hi);if(!Number.isFinite(a)||!Number.isFinite(b)||a>=b)throw Error('축 최솟값은 최댓값보다 작아야 합니다.');return [a,b];}
   const [xa,xb]=range(xs,s.xmin,s.xmax),[ya,yb]=range(ys,s.ymin,s.ymax,s.type==='bar');
+  const xTicks=Array.from({length:6},(_,i)=>fmt(xa+(xb-xa)*i/5)),yTicks=Array.from({length:6},(_,i)=>fmt(ya+(yb-ya)*i/5));
+  const titleOver=Math.max(0,(textWidth(s.title,F)-pw)/2),xOver=Math.max(0,(textWidth(s.xLabel,F)-pw)/2),yOver=Math.max(0,(textWidth(s.yLabel,F)-ph)/2);
+  const L=Math.ceil(Math.max(F*2+Math.max(...yTicks.map(t=>textWidth(t,F)))+24,textWidth(xTicks[0],F)/2+12,titleOver+12,xOver+12)),R=Math.ceil(Math.max(24,textWidth(xTicks[5],F)/2+12,titleOver+12,xOver+12)),T=Math.ceil(Math.max(s.title?F*2+20:F+20,yOver+20)),B=Math.ceil(Math.max(F*3.5+24,yOver+20)),W=L+pw+R,H=T+ph+B;
   const x=v=>L+(v-xa)/(xb-xa)*pw,y=v=>T+ph-(v-ya)/(yb-ya)*ph;
   let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${xml(s.title||'데이터 그래프')}"><rect width="100%" height="100%" fill="white"/><defs><clipPath id="plot-clip"><rect x="${L}" y="${T}" width="${pw}" height="${ph}"/></clipPath></defs><g font-family="Arial,sans-serif" font-size="${F}" fill="#111">`;
   const line=(x1,y1,x2,y2,c='#111',w=1)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}"/>`;
   const text=(xx,yy,v,anchor='middle')=>`<text x="${xx}" y="${yy}" text-anchor="${anchor}">${xml(v)}</text>`;
-  const fmt=v=>Number(v.toPrecision(4)).toString();
   let ticks='';
   for(let i=0;i<=25;i++){
    const major=i%5===0,len=major?7:4,xx=L+pw*i/25,yy=T+ph-ph*i/25;
@@ -36,7 +38,7 @@ const DataPlot = (()=>{
    if(major)out+=text(xx,T+ph+F+10,fmt(xa+(xb-xa)*i/25))+text(L-12,yy+F*.35,fmt(ya+(yb-ya)*i/25),'end');
   }
   const frame=`<rect class="plot-axis-frame" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="none" stroke="#111" stroke-width="1"/>`;
-  out+=text(W/2,27,s.title)+text(L+pw/2,T+ph+F*3+4,s.xLabel)+`<text transform="translate(${F*1.2},${T+ph/2}) rotate(-90)" text-anchor="middle">${xml(s.yLabel)}</text>`;
+  out+=text(L+pw/2,T-F,s.title)+text(L+pw/2,T+ph+F*2.7+12,s.xLabel)+`<text transform="translate(${F*1.2},${T+ph/2}) rotate(-90)" text-anchor="middle">${xml(s.yLabel)}</text>`;
   const marks=(xx,yy,c,shape)=>{let r=s.marker/2;const attr=`fill="${c}" stroke="${c}" stroke-width="1.5"`;if(shape==='none')return '';if(shape==='square')return `<rect x="${xx-r}" y="${yy-r}" width="${r*2}" height="${r*2}" ${attr}/>`;if(shape==='triangle')return `<path d="M${xx},${yy-r} L${xx+r},${yy+r} L${xx-r},${yy+r} Z" ${attr}/>`;if(shape==='diamond')return `<path d="M${xx},${yy-r} L${xx+r},${yy} L${xx},${yy+r} L${xx-r},${yy} Z" ${attr}/>`;if(shape==='cross')return line(xx-r,yy-r,xx+r,yy+r,c,1.5)+line(xx-r,yy+r,xx+r,yy-r,c,1.5);return `<circle cx="${xx}" cy="${yy}" r="${r}" ${attr}/>`;};
   names.slice(1).forEach((name,j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],shape=cfg.shape||'circle';out+='<g clip-path="url(#plot-clip)">';let path='',connected=false;
    data.forEach(row=>{const v=row[j+1];if(v===null){connected=false;return;}const xx=x(row[0]),yy=y(v);path+=`${connected?'L':'M'}${xx},${yy} `;connected=true;
@@ -45,7 +47,9 @@ const DataPlot = (()=>{
    });if(s.type==='line')out+=`<path d="${path}" fill="none" stroke="${c}" stroke-width="${s.line}" stroke-linejoin="round"/>`;out+='</g>';
   });
   out+=frame+ticks;
-  names.slice(1).forEach((name,j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],xx=L+pw-140,yy=T+18+j*(F+6);out+=line(xx,yy-5,xx+20,yy-5,c,s.line)+marks(xx+10,yy-5,c,cfg.shape||'circle')+text(xx+28,yy,String(name).slice(0,18),'start');});out+='</g></svg>';return out;
+  const legendWidth=Math.min(pw-32,Math.max(...names.slice(1).map(n=>textWidth(n,LF)))+48);
+  out+=`<g class="plot-legend-text" font-size="${LF}">`;
+  names.slice(1).forEach((name,j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],xx=L+pw-legendWidth-16,yy=T+LF+12+j*(LF+8);out+=line(xx,yy-LF*.3,xx+20,yy-LF*.3,c,s.line)+marks(xx+10,yy-LF*.3,c,cfg.shape||'circle')+text(xx+28,yy,name,'start');});out+='</g>';out+='</g></svg>';return out;
  }
  return {parse,normalize,svg,defaults,colors,xml};
 })();
@@ -103,14 +107,14 @@ function mountPlotSheet(container,onChange,onError){
 
 function mountDataPlot(){
  if(!admin())return;const root=$('dataPlotRoot'),key='nisml.plot.format.v1:'+String(user.email||user.id||'professor');let settings={...DataPlot.defaults},parsed=null,output='';
- try{settings=DataPlot.normalize(JSON.parse(localStorage.getItem(key)||'null')||{});}catch{}
+ try{const saved=JSON.parse(localStorage.getItem(key)||'null');settings=DataPlot.normalize(saved?.formatVersion===2?saved:saved?{...saved,width:800,height:800,font:30,legendFont:15,formatVersion:2}:{});}catch{}
  const field=(k,label,type='text')=>`<label>${label}<input data-plot="${k}" type="${type}" value="${esc(settings[k])}" ${type==='number'?'step="any"':''}></label>`;
- root.innerHTML=`<div class="plot-intro"><strong>스프레드시트 → 그래프</strong><span>교수님 전용 · 데이터는 서버로 전송하지 않습니다.</span></div><div class="plot-layout"><div class="plot-controls"><strong>X · Y 데이터</strong><small>X값과 Y값을 각 열에 입력하세요. 엑셀 범위는 시작 셀을 선택한 뒤 그대로 붙여 넣을 수 있습니다. 열 제목도 함께 복사했다면 아래 옵션을 선택하세요.</small><div id="plotSheet"></div><div class="plot-actions"><button id="plotDraw" class="primary">그래프 그리기</button><button id="plotExample" class="secondary">예시 데이터</button></div><div class="plot-fields"><label>그래프 종류<select data-plot="type"><option value="line">선 + 기호</option><option value="scatter">산점도</option><option value="bar">막대</option></select></label>${field('title','그래프 제목')}${field('width','너비 (px)','number')}${field('height','높이 (px)','number')}${field('line','선 두께 (px)','number')}${field('marker','기호 크기 (px)','number')}${field('font','글자 크기 (px)','number')}${field('xLabel','X축 제목')}${field('yLabel','Y축 제목')}${field('xmin','X 최소 (빈칸: 자동)','number')}${field('xmax','X 최대 (빈칸: 자동)','number')}${field('ymin','Y 최소 (빈칸: 자동)','number')}${field('ymax','Y 최대 (빈칸: 자동)','number')}<label><span>격자선</span><input data-plot="grid" type="checkbox" ${settings.grid?'checked':''}></label></div><div id="plotSeries" class="plot-series"></div><div class="plot-actions"><button class="secondary" id="plotSave">포맷 저장</button><button class="secondary" id="plotReset">기본 포맷</button></div><small>포맷은 이 브라우저에 저장됩니다. 데이터는 탭을 닫으면 사라집니다.</small></div><div class="plot-result"><div class="plot-actions"><strong>미리보기</strong><button class="secondary" id="plotSvg" disabled>SVG</button><button class="secondary" id="plotPng" disabled>PNG 2×</button><button class="primary" id="plotQti">QtiPlot으로 그리기</button><button class="secondary" id="plotQtiFolder" hidden>QtiPlot 결과 폴더</button></div><p id="plotStatus" role="status"></p><div id="plotPreview" class="plot-preview"><div class="empty">데이터를 붙여 넣고 그래프를 그려 주세요.</div></div><div id="plotLegend" class="plot-legend"></div></div></div>`;
+ root.innerHTML=`<div class="plot-intro"><strong>스프레드시트 → 그래프</strong><span>교수님 전용 · 데이터는 서버로 전송하지 않습니다.</span></div><div class="plot-layout"><div class="plot-controls"><strong>X · Y 데이터</strong><small>X값과 Y값을 각 열에 입력하세요. 엑셀 범위는 시작 셀을 선택한 뒤 그대로 붙여 넣을 수 있습니다. 열 제목도 함께 복사했다면 아래 옵션을 선택하세요.</small><div id="plotSheet"></div><div class="plot-actions"><button id="plotDraw" class="primary">그래프 그리기</button><button id="plotExample" class="secondary">예시 데이터</button></div><small>너비·높이는 내부 그래프 박스 기준입니다. 글자와 바깥 여백은 내보내기 이미지에 추가됩니다.</small><div class="plot-fields"><label>그래프 종류<select data-plot="type"><option value="line">선 + 기호</option><option value="scatter">산점도</option><option value="bar">막대</option></select></label>${field('title','그래프 제목')}${field('width','박스 너비 (px)','number')}${field('height','박스 높이 (px)','number')}${field('line','선 두께 (px)','number')}${field('marker','기호 크기 (px)','number')}${field('font','축 제목·눈금 크기 (px)','number')}${field('legendFont','범례 크기 (px)','number')}${field('xLabel','X축 제목')}${field('yLabel','Y축 제목')}${field('xmin','X 최소 (빈칸: 자동)','number')}${field('xmax','X 최대 (빈칸: 자동)','number')}${field('ymin','Y 최소 (빈칸: 자동)','number')}${field('ymax','Y 최대 (빈칸: 자동)','number')}<label><span>격자선</span><input data-plot="grid" type="checkbox" ${settings.grid?'checked':''}></label></div><div id="plotSeries" class="plot-series"></div><div class="plot-actions"><button class="secondary" id="plotSave">포맷 저장</button><button class="secondary" id="plotReset">기본 포맷</button></div><small>포맷은 이 브라우저에 저장됩니다. 데이터는 탭을 닫으면 사라집니다.</small></div><div class="plot-result"><div class="plot-actions"><strong>미리보기</strong><button class="secondary" id="plotSvg" disabled>SVG</button><button class="secondary" id="plotPng" disabled>PNG 2×</button><button class="primary" id="plotQti">QtiPlot으로 그리기</button><button class="secondary" id="plotQtiFolder" hidden>QtiPlot 결과 폴더</button></div><p id="plotStatus" role="status"></p><div id="plotPreview" class="plot-preview"><div class="empty">데이터를 붙여 넣고 그래프를 그려 주세요.</div></div><div id="plotLegend" class="plot-legend"></div></div></div>`;
  root.querySelector('[data-plot="type"]').value=settings.type;
  const status=(msg,error=false)=>{$('plotStatus').textContent=msg;$('plotStatus').style.color=error?'#c43c3c':'';};
  const sheet=mountPlotSheet($('plotSheet'),()=>{parsed=null;output='';$('plotSvg').disabled=$('plotPng').disabled=true;$('plotPreview').innerHTML='<div class="empty">입력한 데이터로 그래프를 다시 그려 주세요.</div>';$('plotLegend').innerHTML='';status('데이터가 변경되었습니다. 그래프 그리기를 눌러 주세요.');},msg=>status(msg,true));
  const qtiBridge=window.webkit?.messageHandlers?.nismlQtiPlot;let qtiBusy=false;
- $('plotQti').onclick=async()=>{if(qtiBusy)return;if(!qtiBridge){status('Mac용 Hub 0.4.22 이상에서 사용할 수 있습니다. 앱의 업데이트 확인을 이용해 주세요.',true);return;}try{read();const input=sheet.read();DataPlot.svg(input,settings);qtiBusy=true;$('plotQti').disabled=true;status('QtiPlot 설치 확인 중…');const ready=await qtiBridge.postMessage({action:'status'});if(ready.bridgeVersion<2)throw Error('닫힌 축·안쪽 눈금 적용을 위해 Mac용 Hub 0.4.22로 업데이트해 주세요.');if(!ready.installed)throw Error('QtiPlot을 응용 프로그램 폴더에 설치해 주세요.');status('QtiPlot에서 그래프를 만드는 중…');const result=await qtiBridge.postMessage({action:'plot',payload:{...input,settings}});$('plotQtiFolder').hidden=false;status(result.message+(result.warnings?.length?' 일부 설정 확인 필요: '+result.warnings.join(' / '):''));}catch(e){status(e.message||String(e),true);}finally{qtiBusy=false;$('plotQti').disabled=false;}};
+ $('plotQti').onclick=async()=>{if(qtiBusy)return;if(!qtiBridge){status('Mac용 Hub 0.4.22 이상에서 사용할 수 있습니다. 앱의 업데이트 확인을 이용해 주세요.',true);return;}try{read();const input=sheet.read();DataPlot.svg(input,settings);qtiBusy=true;$('plotQti').disabled=true;status('QtiPlot 설치 확인 중…');const ready=await qtiBridge.postMessage({action:'status'});if(ready.bridgeVersion<5)throw Error('박스 크기·글자 포맷 적용을 위해 Mac용 Hub 0.4.24로 업데이트해 주세요.');if(!ready.installed)throw Error('QtiPlot을 응용 프로그램 폴더에 설치해 주세요.');status('QtiPlot에서 그래프를 만드는 중…');const result=await qtiBridge.postMessage({action:'plot',payload:{...input,settings}});$('plotQtiFolder').hidden=false;status(result.message+(result.warnings?.length?' 일부 설정 확인 필요: '+result.warnings.join(' / '):''));}catch(e){status(e.message||String(e),true);}finally{qtiBusy=false;$('plotQti').disabled=false;}};
  $('plotQtiFolder').onclick=async()=>{try{await qtiBridge.postMessage({action:'reveal'});}catch(e){status(e.message||String(e),true);}};
  const read=()=>{root.querySelectorAll('[data-plot]').forEach(el=>settings[el.dataset.plot]=el.type==='checkbox'?el.checked:el.value);settings=DataPlot.normalize(settings);};
  const draw=()=>{try{read();if(!parsed)return;output=DataPlot.svg(parsed,settings);$('plotPreview').innerHTML=output;$('plotSvg').disabled=$('plotPng').disabled=false;status(`${parsed.data.length}행 · ${parsed.names.length-1}개 계열`);$('plotLegend').innerHTML=parsed.names.slice(1).map((n,i)=>`<span><i style="background:${settings.series[i]?.color||DataPlot.colors[i%6]}"></i>${esc(n)}</span>`).join('');}catch(e){output='';$('plotSvg').disabled=$('plotPng').disabled=true;status(e.message,true);}};
@@ -133,13 +137,13 @@ function mountDataPlot(){
  };
  $('plotSvg').onclick=async()=>{if(!output)return;try{await download(new Blob([output],{type:'image/svg+xml;charset=utf-8'}),'graph.svg');}catch(e){status(e.message||String(e),true);}};
  $('plotPng').onclick=async()=>{
-  if(!output)return;const snapshot=output,width=settings.width,height=settings.height;
+  if(!output)return;const snapshot=output;
   try{
    const img=new Image();
    // data: is allowed by the Hub CSP; blob: images are intentionally not allowed.
    const url=await dataURL(new Blob([snapshot],{type:'image/svg+xml;charset=utf-8'}));
    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('PNG 변환용 그래프 이미지를 읽지 못했습니다.'));img.src=url;});
-   const c=document.createElement('canvas');c.width=width*2;c.height=height*2;const ctx=c.getContext('2d');if(!ctx)throw Error('이미지 변환을 시작하지 못했습니다.');ctx.drawImage(img,0,0,c.width,c.height);
+   const c=document.createElement('canvas');c.width=img.naturalWidth*2;c.height=img.naturalHeight*2;const ctx=c.getContext('2d');if(!ctx)throw Error('이미지 변환을 시작하지 못했습니다.');ctx.drawImage(img,0,0,c.width,c.height);
    const blob=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('PNG 파일 생성에 실패했습니다.')),'image/png'));
    await download(blob,'graph-2x.png');
   }catch(e){status(e.message||String(e),true);}

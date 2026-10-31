@@ -25,7 +25,7 @@ def run():
         return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
     if any(len(r) != len(names) or not numeric(r[0]) or any(v is not None and not numeric(v) for v in r[1:]) for r in rows):
         raise ValueError('숫자 데이터를 확인해 주세요.')
-    for key, lo, hi in [('width',400,2400),('height',300,1800),('line',.5,12),('font',8,36),('marker',2,20)]:
+    for key, lo, hi in [('width',400,2400),('height',300,1800),('line',.5,12),('font',8,72),('legendFont',8,48),('marker',2,20)]:
         if not numeric(s[key]) or not lo <= s[key] <= hi:
             raise ValueError('그래프 설정 범위 오류: '+key)
     modes = {'line':qti.Layer.LineSymbols,'scatter':qti.Layer.Scatter,'bar':qti.Layer.VerticalBars}
@@ -44,7 +44,8 @@ def run():
     l.setTitle(str(s.get('title',''))[:300])
     l.setAxisTitle(qti.Layer.Bottom,str(s.get('xLabel','X'))[:300])
     l.setAxisTitle(qti.Layer.Left,str(s.get('yLabel','Y'))[:300])
-    g.resize(int(s['width']),int(s['height']))
+    g.setScaleLayersOnResize(False)
+    l.setAutoscaleFonts(False)
     palette = ['#2563eb','#dc2626','#059669','#9333ea','#d97706','#0891b2']
     styles = {'circle':0,'square':1,'diamond':2,'triangle':3,'cross':9,'none':-1}
     for j in range(len(names)-1):
@@ -63,6 +64,9 @@ def run():
     for axis in [qti.Layer.Bottom,qti.Layer.Left]:
         optional('축 글꼴',lambda axis=axis:l.setAxisFont(axis,font))
         optional('축 제목 글꼴',lambda axis=axis:l.setAxisTitleFont(axis,font))
+    legend_font = QtGui.QFont('Arial');legend_font.setPixelSize(int(s['legendFont']))
+    legend = l.legend()
+    if legend: legend.setFont(legend_font)
     # Four-sided frame; six major marks, four minor marks per interval.
     l.enableAutoscaling(False)
     l.setSynchronizedScaleDivisions(False)
@@ -95,7 +99,13 @@ def run():
     l.setCanvasFrame(1,QtGui.QColor('#111111'))
     if s.get('grid'): warnings.append('격자선은 QtiPlot에서 확인·조정해 주세요.')
     l.replot()
-    size = QtCore.QSizeF(s['width'],s['height'])
+    # Width and height refer to the canvas, never the complete image.
+    margin_x = int(s['font']*7+40)
+    margin_y = int(s['font']*4+40)
+    g.resize(int(s['width'])+margin_x+60,int(s['height'])+margin_y+100)
+    l.setCanvasGeometry(margin_x,80,int(s['width']),int(s['height']))
+    l.replot()
+    size = QtCore.QSizeF()
     g.exportImage(os.path.join(folder,'graph.png'),100,False,0,size,qti.Frame.Pixel)
     g.exportVector(os.path.join(folder,'graph.svg'),size,qti.Frame.Pixel)
     for name in ['graph.png','graph.svg']:

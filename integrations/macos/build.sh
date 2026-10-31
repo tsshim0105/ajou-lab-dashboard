@@ -31,8 +31,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>NISML Hub</string>
 <key>CFBundleExecutable</key><string>NISMLDashboard</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.4.23</string>
-<key>CFBundleVersion</key><string>31</string>
+<key>CFBundleShortVersionString</key><string>0.4.24</string>
+<key>CFBundleVersion</key><string>32</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSMicrophoneUsageDescription</key><string>연구미팅을 녹음하고 회의 종료 후 전사와 요약을 작성합니다.</string>
