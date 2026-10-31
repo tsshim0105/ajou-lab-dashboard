@@ -1,13 +1,13 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../startup.js',import.meta.url),'utf8');
 function setup(){
- let load,decode,fonts;const raf=[],timers=new Map(),classes=new Set(),brand={style:{}},app={},calls=[];
+ let load,decode,fonts;const raf=[],timers=new Map(),classes=new Set(),brand={scrollWidth:260,offsetWidth:260,style:{setProperty(k,v){this[k]=v;}}},app={},calls=[];
  const ctx=new Proxy({}, {get:(o,k)=>k==='measureText'?()=>({width:100}):(...args)=>calls.push([k,...args]),set:()=>true});
  const canvas={isConnected:true,width:0,setAttribute(){},getContext:()=>ctx,remove(){this.isConnected=false;}};
  const logo={complete:true,naturalWidth:90,decode:()=>new Promise(r=>decode=r)};
  const splash={classList:{add:x=>classes.add(x)},querySelector:s=>s.includes('>img')?logo:brand,prepend(){},remove(){canvas.isConnected=false;}};
  const document={hidden:false,readyState:'loading',fonts:{ready:new Promise(r=>fonts=r)},documentElement:{dataset:{}},getElementById:()=>splash,querySelector:()=>app,createElement:()=>canvas};
- const sandbox={document,matchMedia:()=>({matches:false}),innerWidth:390,devicePixelRatio:2,requestAnimationFrame:f=>raf.push(f),addEventListener:(n,f)=>load=f,setTimeout:(f,ms)=>{timers.set(f,ms);return f},clearTimeout:f=>timers.delete(f)};
+ const sandbox={document,matchMedia:()=>({matches:false}),innerWidth:390,devicePixelRatio:2,requestAnimationFrame:f=>raf.push(f),addEventListener:(n,f)=>{if(n==='load')load=f;},removeEventListener(){},setTimeout:(f,ms)=>{timers.set(f,ms);return f},clearTimeout:f=>timers.delete(f)};
  vm.runInNewContext(source,sandbox);return {sandbox,document,raf,timers,brand,app,calls,classes,ready:()=>{load();decode();fonts();}};
 }
 const flush=()=>new Promise(r=>setImmediate(r));

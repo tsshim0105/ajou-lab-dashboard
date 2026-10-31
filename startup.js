@@ -5,7 +5,9 @@
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const brand=splash.querySelector('.startup-brand'),logo=splash.querySelector('.startup-brand>img');
  let play,closing=false,requested=false;app.inert=true;
- function dismiss(){if(closing)return;closing=true;clearTimeout(failsafe);app.inert=false;splash.classList.add('startup-leaving');setTimeout(()=>splash.remove(),reduced?0:360);}
+ function fitBrand(){if(closing)return;const width=Math.max(brand.scrollWidth||0,brand.offsetWidth||0,1);brand.style.setProperty('--startup-brand-scale',String(Math.min(1.5,Math.max(1,innerWidth-32)/width)));}
+ addEventListener('resize',fitBrand);
+ function dismiss(){if(closing)return;closing=true;removeEventListener('resize',fitBrand);clearTimeout(failsafe);app.inert=false;splash.classList.add('startup-leaving');setTimeout(()=>splash.remove(),reduced?0:360);}
  const loaded=document.readyState==='complete'?Promise.resolve():new Promise(resolve=>addEventListener('load',resolve,{once:true}));
  const assets=Promise.allSettled([loaded,document.fonts?.ready||Promise.resolve(),logo.decode?logo.decode():Promise.resolve()]);
  // Play the approved globe reveal, then hold the shared header lockup.
@@ -61,7 +63,7 @@
   if(closing)return;
   clearTimeout(failsafe);
   requestAnimationFrame(()=>{
-   if(closing)return;splash.classList.add('startup-playing');
+   if(closing)return;fitBrand();splash.classList.add('startup-playing');
    if(play)play();else{brand.style.opacity='1';setTimeout(dismiss,200);}
   });
  }

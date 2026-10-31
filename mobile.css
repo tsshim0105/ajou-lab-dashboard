@@ -1486,3 +1486,6 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 .plot-library-row{flex-wrap:wrap}.plot-library-row>.danger{background:#c73b42;color:white;border:1px solid #c73b42}.plot-library-row>button{white-space:nowrap}@media(max-width:600px){.plot-library-info{flex-basis:calc(100% - 110px)}}
 
 .plot-ratio-presets{grid-column:1 / -1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plot-ratio-presets>span{font-size:12px;margin-right:4px}.plot-ratio-presets button{padding:6px 12px;min-width:50px}.plot-ratio-presets button[aria-pressed=true]{background:#1765e8;border-color:#1765e8;color:white}
+
+/* Approved startup option 2: enlarge the complete final lockup, with mobile fit. */
+.startup-splash .startup-brand{scale:var(--startup-brand-scale,1.5);transform-origin:center center}
