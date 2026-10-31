@@ -1,5 +1,6 @@
 import AppKit
 import WebKit
+import UniformTypeIdentifiers
 
 @MainActor final class QtiPlotBridge: NSObject, WKScriptMessageHandlerWithReply {
     weak var owner: AppDelegate?
@@ -32,7 +33,25 @@ import WebKit
         Task { @MainActor in
             do {
                 try await authorize(web)
-                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":2],nil);return }
+                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":3],nil);return }
+                if action == "export" {
+                    guard let name = body["name"] as? String,["graph.svg","graph-2x.png"].contains(name),
+                          let encoded = body["base64"] as? String,encoded.count <= 48_000_000,
+                          let bytes = Data(base64Encoded:encoded),!bytes.isEmpty else { throw fail("저장할 그래프 파일이 올바르지 않습니다.") }
+                    let png = name.hasSuffix(".png")
+                    if png { guard bytes.starts(with:[137,80,78,71,13,10,26,10]) else { throw fail("PNG 파일 형식이 올바르지 않습니다.") } }
+                    else { guard let svg = String(data:bytes,encoding:.utf8),svg.hasPrefix("<svg "),!svg.lowercased().contains("<script") else { throw fail("SVG 파일 형식이 올바르지 않습니다.") } }
+                    let panel = NSSavePanel();panel.nameFieldStringValue = name
+                    panel.allowedContentTypes = png ? [.png] : [.svg]
+                    panel.canCreateDirectories = true
+                    guard let window = web.window else { throw fail("저장 창을 열 수 없습니다.") }
+                    let response = await withCheckedContinuation { (continuation: CheckedContinuation<NSApplication.ModalResponse,Never>) in
+                        panel.beginSheetModal(for:window) { continuation.resume(returning:$0) }
+                    }
+                    guard response == .OK,let target = panel.url else { replyHandler(["cancelled":true],nil);return }
+                    try bytes.write(to:target,options:.atomic)
+                    replyHandler(["ok":true],nil);return
+                }
                 if action == "reveal" { guard let folder = lastOutput else { throw fail("생성된 결과가 없습니다.") };NSWorkspace.shared.open(folder);replyHandler(["ok":true],nil);return }
                 guard action == "plot" else { throw fail("지원하지 않는 요청입니다.") }
                 guard !busy else { throw fail("이전 그래프 생성이 진행 중입니다.") }
