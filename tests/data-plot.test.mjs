@@ -20,10 +20,10 @@ test('closed frame with inward major and minor ticks on four sides',()=>{
 test('square default and CSP-compatible PNG conversion',()=>{assert.equal(p.defaults.width,p.defaults.height);assert.match(src,/const url=await dataURL\(new Blob\(\[snapshot\]/);assert.match(src,/action:'export',name,base64/);assert.match(src,/document.body.append\(a\)/);});
 test('axis and legend fonts are independent; plot box dimensions never shrink',()=>{
  const data=p.parse('X\tSample\n0\t1\n1\t2');
- assert.equal(p.defaults.font,30);assert.equal(p.defaults.legendFont,15);
+ assert.equal(p.defaults.font,50);assert.equal(p.defaults.legendFont,15);
  const small=p.svg(data,{...p.defaults,font:12}),large=p.svg(data,{...p.defaults,font:60});
  for(const s of [small,large])assert.match(s,/<rect class="plot-axis-frame"[^>]+width="800" height="800"/);
- assert.match(large,/<g class="plot-legend-text" font-size="15">/);
+ assert.match(large,/<g class="plot-legend-text" font-size="15" font-weight="400">/);
  const dimensions=s=>s.match(/<svg[^>]+width="([\d.]+)" height="([\d.]+)"/).slice(1).map(Number);
  assert.ok(dimensions(large)[0]>dimensions(small)[0]);assert.ok(dimensions(large)[1]>dimensions(small)[1]);
  assert.match(src,/c.width=img.naturalWidth\*2;c.height=img.naturalHeight\*2/);

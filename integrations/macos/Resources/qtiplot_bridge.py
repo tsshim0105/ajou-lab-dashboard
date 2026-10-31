@@ -60,7 +60,7 @@ def run():
         optional('기호 크기',lambda symbol=symbol:symbol.setSize(QtCore.QSize(int(s['marker']),int(s['marker']))))
         optional('기호 색상',lambda symbol=symbol,color=color:symbol.setBrush(QtGui.QBrush(color)))
         optional('기호 테두리',lambda symbol=symbol,color=color:symbol.setPen(QtGui.QPen(color)))
-    font = QtGui.QFont('Arial');font.setPixelSize(int(s['font']))
+    font = QtGui.QFont('Arial');font.setPixelSize(int(s['font']));font.setBold(True)
     for axis in [qti.Layer.Bottom,qti.Layer.Left]:
         optional('축 글꼴',lambda axis=axis:l.setAxisFont(axis,font))
         optional('축 제목 글꼴',lambda axis=axis:l.setAxisTitleFont(axis,font))

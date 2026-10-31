@@ -32,7 +32,7 @@ import UniformTypeIdentifiers
               let body = message.body as? [String:Any],let action = body["action"] as? String else { replyHandler(nil,"허용되지 않는 요청입니다.");return }
         Task { @MainActor in
             do {
-                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":5],nil);return }
+                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":6],nil);return }
                 if action == "export" {
                     guard let name = body["name"] as? String,["graph.svg","graph-2x.png"].contains(name),
                           let encoded = body["base64"] as? String,encoded.count <= 48_000_000,
