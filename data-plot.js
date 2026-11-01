@@ -18,7 +18,7 @@ const DataPlot = (()=>{
  }
  function normalize(raw={}){const s={...defaults,...raw,series:Array.isArray(raw.series)?raw.series.map(v=>({...v})):[]};for(const [k,min,max] of [['width',400,2400],['height',300,1800],['line',0.5,12],['font',8,72],['legendFont',8,48],['marker',2,20]]){s[k]=Number(s[k]);if(!Number.isFinite(s[k])||s[k]<min||s[k]>max)throw Error(`${k}: ${min}~${max} 범위로 설정해 주세요.`);}for(const k of ['legendX','legendY'])s[k]=raw[k]!==null&&raw[k]!==undefined&&raw[k]!==''&&Number.isFinite(Number(raw[k]))?Math.max(0,Math.min(1,Number(raw[k]))):null;if(!['lineonly','line','scatter','bar'].includes(s.type))s.type='lineonly';return s;}
  function seriesColumns(parsed){const x2=parsed.x2Index;return parsed.names.map((name,col)=>({name,col,xcol:Number.isInteger(x2)&&col>x2?x2:0,secondary:Number.isInteger(x2)&&col>x2})).filter(v=>v.col!==0&&v.col!==x2);}
- function svg(parsed,raw,onLayout){
+ function svg(parsed,raw,onLayout,interactive=false){
   const s=normalize(raw),{data,names}=parsed,F=s.font,LF=s.legendFont,pw=s.width,ph=s.height;
   const fmt=v=>Number(v.toPrecision(4)).toString(),textWidth=(v,size)=>Array.from(String(v)).reduce((n,c)=>n+(c.charCodeAt(0)>255?1:.65)*size,0);
   const columns=seriesColumns(parsed),dual=Number.isInteger(parsed.x2Index),primary=columns.filter(c=>!c.secondary),secondary=columns.filter(c=>c.secondary);
@@ -60,7 +60,8 @@ const DataPlot = (()=>{
   const legendWidth=Math.min(W-24,Math.max(...columns.map(c=>textWidth(c.name,LF)))+60),legendHeight=columns.length*(LF+8)+16;
   const maxX=Math.max(0,W-legendWidth-12),maxY=Math.max(0,H-legendHeight-12),legendX=s.legendX===null?Math.max(0,Math.min(maxX,L+pw-legendWidth-8)):s.legendX*maxX,legendY=s.legendY===null?Math.max(0,Math.min(maxY,T+8)):s.legendY*maxY;
   onLayout?.({L,T,W,H,pw,ph,legendX,legendY,legendWidth,legendHeight,xa,xb,ya,yb});
-  out+=`<g class="plot-legend-text" font-size="${LF}" font-weight="400" transform="translate(${legendX},${legendY})" data-legend-x="${legendX}" data-legend-y="${legendY}" data-legend-max-x="${maxX}" data-legend-max-y="${maxY}"><rect class="plot-legend-hitbox" width="${legendWidth}" height="${legendHeight}" fill="transparent" pointer-events="all"/>`;
+  out+=`<g class="plot-legend-text" font-size="${LF}" font-weight="400" transform="translate(${legendX},${legendY})" data-legend-x="${legendX}" data-legend-y="${legendY}" data-legend-max-x="${maxX}" data-legend-max-y="${maxY}">`;
+  if(interactive)out+=`<rect class="plot-legend-hitbox" width="${legendWidth}" height="${legendHeight}" fill="#ffffff" fill-opacity="0" pointer-events="all"/>`;
   columns.forEach(({name},j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],xx=12,yy=LF+8+j*(LF+8);out+=line(xx,yy-LF*.3,xx+20,yy-LF*.3,c,s.line)+marks(xx+10,yy-LF*.3,c,s.type==='lineonly'?'none':cfg.shape||'circle')+text(xx+28,yy,name,'start');});out+='</g>';out+='</g></svg>';return out;
  }
  function nativeSettings(settings,count){return settings.type==='lineonly'?{...settings,type:'line',series:Array.from({length:count},(_,i)=>({...settings.series[i],shape:'none'}))}:settings;}
@@ -167,7 +168,7 @@ function mountDataPlot(){
  const read=()=>{root.querySelectorAll('[data-plot]').forEach(el=>settings[el.dataset.plot]=el.type==='checkbox'?el.checked:el.value);settings=DataPlot.normalize(settings);};
  const syncRatio=()=>{root.querySelectorAll('[data-plot-ratio]').forEach(button=>{const [w,h]=button.dataset.plotRatio.split(':').map(Number);button.setAttribute('aria-pressed',String(settings.width*h===settings.height*w));});};
  root.querySelectorAll('[data-plot-ratio]').forEach(button=>button.onclick=()=>{const size=DataPlot.ratioSize(root.querySelector('[data-plot=width]').value,button.dataset.plotRatio);root.querySelector('[data-plot=width]').value=size.width;root.querySelector('[data-plot=height]').value=size.height;draw();});syncRatio();
- const draw=()=>{try{read();syncRatio();if(!parsed)return;output=DataPlot.svg(parsed,settings);$('plotPreview').innerHTML=output;const legend=$('plotPreview').querySelector('.plot-legend-text');legend?.setAttribute('tabindex','0');legend?.setAttribute('aria-label','범례 위치 이동: 드래그 또는 방향키');$('plotSvg').disabled=$('plotPng').disabled=false;status(`${parsed.data.length}행 · ${DataPlot.seriesColumns(parsed).length}개 계열`);$('plotLegend').innerHTML=DataPlot.seriesColumns(parsed).map(({name:n,secondary},i)=>`<span><i style="background:${settings.series[i]?.color||DataPlot.colors[i%6]}"></i>${esc(n)}</span>`).join('');}catch(e){output='';$('plotSvg').disabled=$('plotPng').disabled=true;status(e.message,true);}};
+ const draw=()=>{try{read();syncRatio();if(!parsed)return;output=DataPlot.svg(parsed,settings);$('plotPreview').innerHTML=DataPlot.svg(parsed,settings,undefined,true);const legend=$('plotPreview').querySelector('.plot-legend-text');legend?.setAttribute('tabindex','0');legend?.setAttribute('aria-label','범례 위치 이동: 드래그 또는 방향키');$('plotSvg').disabled=$('plotPng').disabled=false;status(`${parsed.data.length}행 · ${DataPlot.seriesColumns(parsed).length}개 계열`);$('plotLegend').innerHTML=DataPlot.seriesColumns(parsed).map(({name:n,secondary},i)=>`<span><i style="background:${settings.series[i]?.color||DataPlot.colors[i%6]}"></i>${esc(n)}</span>`).join('');}catch(e){output='';$('plotSvg').disabled=$('plotPng').disabled=true;status(e.message,true);}};
  // Use SVG coordinates so zoomed previews and high-resolution exports agree.
  const preview=$('plotPreview');let legendDrag=null,legendSaveQueue=Promise.resolve();
  const saveLegendPosition=()=>{

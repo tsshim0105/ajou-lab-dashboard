@@ -49,6 +49,8 @@ test('legend positions survive export and resize with safe normalized coordinate
  for(const width of [400,800,1600]){const [x,y,mx,my]=get(p.svg(data,{...p.defaults,width,legendX:.25,legendY:.75}));assert.equal(x,mx*.25);assert.equal(y,my*.75);}
  const [x,y,mx]=get(p.svg(data,{...p.defaults,legendX:2,legendY:-1}));assert.equal(x,mx);assert.equal(y,0);
  assert.equal(p.normalize({legendX:'invalid'}).legendX,null);
- assert.match(p.svg(data,p.defaults),/class="plot-legend-hitbox"/);
+ assert.doesNotMatch(p.svg(data,p.defaults),/plot-legend-hitbox|fill="transparent"|pointer-events/);
+ assert.match(p.svg(data,p.defaults,undefined,true),/class="plot-legend-hitbox"/);
+ assert.equal(p.svg(data,p.defaults,undefined,true).replace(/<rect class="plot-legend-hitbox"[^>]*\/>/,''),p.svg(data,p.defaults));
  assert.doesNotMatch(p.svg(data,{...p.defaults,legendX:null}),/NaN/);
 });
