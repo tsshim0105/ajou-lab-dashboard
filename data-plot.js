@@ -57,12 +57,12 @@ const DataPlot = (()=>{
    });if(s.type==='line'||s.type==='lineonly')out+=`<path d="${path}" fill="none" stroke="${c}" stroke-width="${s.line}" stroke-linejoin="round"/>`;out+='</g>';
   });
   out+=frame+ticks;
-  const legendWidth=Math.min(W-24,Math.max(...columns.map(c=>textWidth(c.name,LF)))+60),legendHeight=columns.length*(LF+8)+16;
+  const legendWidth=Math.min(W-24,Math.max(...columns.map(c=>textWidth(c.name,LF)))+80),legendHeight=columns.length*(LF+8)+16;
   const maxX=Math.max(0,W-legendWidth-12),maxY=Math.max(0,H-legendHeight-12),legendX=s.legendX===null?Math.max(0,Math.min(maxX,L+pw-legendWidth-8)):s.legendX*maxX,legendY=s.legendY===null?Math.max(0,Math.min(maxY,T+8)):s.legendY*maxY;
   onLayout?.({L,T,W,H,pw,ph,legendX,legendY,legendWidth,legendHeight,xa,xb,ya,yb});
   out+=`<g class="plot-legend-text" font-size="${LF}" font-weight="400" transform="translate(${legendX},${legendY})" data-legend-x="${legendX}" data-legend-y="${legendY}" data-legend-max-x="${maxX}" data-legend-max-y="${maxY}">`;
   if(interactive)out+=`<rect class="plot-legend-hitbox" width="${legendWidth}" height="${legendHeight}" fill="#ffffff" fill-opacity="0" pointer-events="all"/>`;
-  columns.forEach(({name},j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],xx=12,yy=LF+8+j*(LF+8);out+=line(xx,yy-LF*.3,xx+20,yy-LF*.3,c,s.line)+marks(xx+10,yy-LF*.3,c,s.type==='lineonly'?'none':cfg.shape||'circle')+text(xx+28,yy,name,'start');});out+='</g>';out+='</g></svg>';return out;
+  columns.forEach(({name},j)=>{const cfg=s.series[j]||{},c=/^#[0-9a-f]{6}$/i.test(cfg.color)?cfg.color:colors[j%colors.length],xx=12,yy=LF+8+j*(LF+8);out+=line(xx,yy-LF*.3,xx+40,yy-LF*.3,c,s.line)+marks(xx+20,yy-LF*.3,c,s.type==='lineonly'?'none':cfg.shape||'circle')+text(xx+48,yy,name,'start');});out+='</g>';out+='</g></svg>';return out;
  }
  function nativeSettings(settings,count){return settings.type==='lineonly'?{...settings,type:'line',series:Array.from({length:count},(_,i)=>({...settings.series[i],shape:'none'}))}:settings;}
  function ratioSize(width,ratio){const ratios={'1:1':[1,1],'4:3':[4,3],'16:9':[16,9],'9:16':[9,16]};if(!ratios[ratio])throw Error('지원하지 않는 박스 비율입니다.');const [w,h]=ratios[ratio],scale=Math.max(Math.ceil(Math.max(400/w,300/h)),Math.min(Math.floor(Math.min(2400/w,1800/h)),Math.round((Number(width)||800)/w)));return {width:scale*w,height:scale*h};}
