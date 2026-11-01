@@ -1,15 +1,17 @@
 /* Browser-only scientific plotting. No pasted data is sent to the server. */
 const DataPlot = (()=>{
  const colors=['#2563eb','#dc2626','#059669','#9333ea','#d97706','#0891b2'];
- const palettes={classic:{label:'클래식',colors},paper:{label:'논문 컬러',colors:['#c89ce5','#008de5','#00952c','#f6ad00','#f45383','#6554b5']},nature:{label:'내추럴',colors:['#238a78','#537aaf','#d29162','#a75f87','#84a65a','#b9a24a']},contrast:{label:'선명한 대비',colors:['#0072b2','#e69f00','#009e73','#cc79a7','#d55e00','#56b4e9']}};
- Object.assign(palettes,{
-  lancet:{label:'Lancet',colors:['#00468b','#ed0000','#42b540','#0099b4','#925e9f','#fdaf91','#ad002a','#adb6b6','#1b1919']},
-  auroraJewel:{label:'오로라 쥬얼',colors:['#3677a8','#45a69c','#8c72b5','#d77e9c','#d6aa54']},
-  softBrewer:{label:'소프트 브루어',colors:['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3']},
+ const legacyPalettes={nature:['#238a78','#537aaf','#d29162','#a75f87','#84a65a','#b9a24a'],contrast:['#0072b2','#e69f00','#009e73','#cc79a7','#d55e00','#56b4e9']};
+ const palettes={
+  classic:{label:'클래식',colors},
+  lancet:{label:'클래식2',colors:['#00468b','#ed0000','#42b540','#0099b4','#925e9f','#fdaf91','#ad002a','#adb6b6','#1b1919']},
+  paper:{label:'밝은톤',colors:['#c89ce5','#008de5','#00952c','#f6ad00','#f45383','#6554b5']},
+  auroraJewel:{label:'차분한 톤',colors:['#3677a8','#45a69c','#8c72b5','#d77e9c','#d6aa54']},
+  softBrewer:{label:'연한 톤',colors:['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3']},
   gradientRed:{label:'빨강 그라디언트',colors:['#681e32','#a52d46','#d95467','#ed8e9b','#f6c1c8']},
   gradientGreen:{label:'초록 그라디언트',colors:['#193f35','#176c50','#32976c','#70bd94','#b4dfc4']},
   gradientBlue:{label:'파랑 그라디언트',colors:['#20395e','#075a98','#268ab7','#59bddb','#9edfed']}
- });
+ };
  const colorAt=(s,i)=>{const palette=(palettes[s.palette]||palettes.classic).colors;return /^#[0-9a-f]{6}$/i.test(s.series[i]?.color)?s.series[i].color:palette[i%palette.length];};
  const decimals=v=>{const [a,e='0']=String(v).toLowerCase().split('e');return Math.max(0,(a.split('.')[1]?.length||0)-Number(e));};
  function xFormat(a,b,rawDigits='auto',hints=[]){const values=Array.from({length:6},(_,i)=>a+(b-a)*i/5),scientific=rawDigits==='auto'&&(Math.max(Math.abs(a),Math.abs(b))>=1e7||Math.abs(b-a)<1e-5),digits=rawDigits==='auto'?Math.min(8,Math.max(...values.map(v=>decimals(Number(v.toPrecision(12)))),...hints.map(decimals))):Number(rawDigits);const format=v=>{if(Math.abs(v)<Math.abs(b-a)*1e-12)v=0;return scientific?v.toExponential(3):v.toFixed(digits);};return {format,digits,scientific};}
@@ -30,7 +32,7 @@ const DataPlot = (()=>{
   if(!data.some(r=>r.slice(1).some(v=>v!==null)))throw Error('Y 데이터가 없습니다.');
   return {names,data};
  }
- function normalize(raw={}){const s={...defaults,...raw,series:Array.isArray(raw.series)?raw.series.map(v=>({...v})):[]};for(const [k,min,max] of [['width',400,2400],['height',300,1800],['line',0.5,12],['font',8,72],['legendFont',8,48],['marker',2,20],['barWidth',20,95]]){s[k]=Number(s[k]);if(!Number.isFinite(s[k])||s[k]<min||s[k]>max)throw Error(`${k}: ${min}~${max} 범위로 설정해 주세요.`);}for(const k of ['legendX','legendY'])s[k]=raw[k]!==null&&raw[k]!==undefined&&raw[k]!==''&&Number.isFinite(Number(raw[k]))?Math.max(0,Math.min(1,Number(raw[k]))):null;if(!palettes[s.palette])s.palette='classic';if(!['auto','0','1','2','3','4','5','6','7','8'].includes(String(s.xDecimals)))throw Error('X축 소수 자릿수를 확인해 주세요.');s.xDecimals=String(s.xDecimals);if(!['lineonly','line','scatter','bar'].includes(s.type))s.type='lineonly';return s;}
+ function normalize(raw={}){const s={...defaults,...raw,series:Array.isArray(raw.series)?raw.series.map(v=>({...v})):[]};for(const [k,min,max] of [['width',400,2400],['height',300,1800],['line',0.5,12],['font',8,72],['legendFont',8,48],['marker',2,20],['barWidth',20,95]]){s[k]=Number(s[k]);if(!Number.isFinite(s[k])||s[k]<min||s[k]>max)throw Error(`${k}: ${min}~${max} 범위로 설정해 주세요.`);}for(const k of ['legendX','legendY'])s[k]=raw[k]!==null&&raw[k]!==undefined&&raw[k]!==''&&Number.isFinite(Number(raw[k]))?Math.max(0,Math.min(1,Number(raw[k]))):null;if(legacyPalettes[s.palette]){const old=legacyPalettes[s.palette];s.series=Array.from({length:Math.max(12,s.series.length)},(_,i)=>({...s.series[i],color:/^#[0-9a-f]{6}$/i.test(s.series[i]?.color)?s.series[i].color:old[i%old.length]}));s.palette='classic';}if(!palettes[s.palette])s.palette='classic';if(!['auto','0','1','2','3','4','5','6','7','8'].includes(String(s.xDecimals)))throw Error('X축 소수 자릿수를 확인해 주세요.');s.xDecimals=String(s.xDecimals);if(!['lineonly','line','scatter','bar'].includes(s.type))s.type='lineonly';return s;}
  function seriesColumns(parsed){const x2=parsed.x2Index;return parsed.names.map((name,col)=>({name,col,xcol:Number.isInteger(x2)&&col>x2?x2:0,secondary:Number.isInteger(x2)&&col>x2})).filter(v=>v.col!==0&&v.col!==x2);}
  function svg(input,raw,onLayout,interactive=false){
   const s=normalize(raw),parsed=prepare(input,s.type),{data,names}=parsed,F=s.font,LF=s.legendFont,pw=s.width,ph=s.height;
