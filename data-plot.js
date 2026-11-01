@@ -8,9 +8,9 @@ const DataPlot = (()=>{
   paper:{label:'밝은톤',colors:['#c89ce5','#008de5','#00952c','#f6ad00','#f45383','#6554b5']},
   auroraJewel:{label:'차분한 톤',colors:['#3677a8','#45a69c','#8c72b5','#d77e9c','#d6aa54']},
   softBrewer:{label:'연한 톤',colors:['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3']},
-  gradientRed:{label:'빨강 그라디언트',colors:['#681e32','#a52d46','#d95467','#ed8e9b','#f6c1c8']},
-  gradientGreen:{label:'초록 그라디언트',colors:['#193f35','#176c50','#32976c','#70bd94','#b4dfc4']},
-  gradientBlue:{label:'파랑 그라디언트',colors:['#20395e','#075a98','#268ab7','#59bddb','#9edfed']}
+  gradientRed:{label:'빨강 그라디언트',colors:['#681e32','#91283f','#b63a51','#d95467','#e67b8a','#f09fa9','#f6c1c8']},
+  gradientGreen:{label:'초록 그라디언트',colors:['#193f35','#185d47','#207a59','#32976c','#5bb187','#87c8a4','#b4dfc4']},
+  gradientBlue:{label:'파랑 그라디언트',colors:['#20395e','#104f85','#116da4','#268ab7','#48accf','#73c9e1','#9edfed']}
  };
  const colorAt=(s,i)=>{const palette=(palettes[s.palette]||palettes.classic).colors;return /^#[0-9a-f]{6}$/i.test(s.series[i]?.color)?s.series[i].color:palette[i%palette.length];};
  const decimals=v=>{const [a,e='0']=String(v).toLowerCase().split('e');return Math.max(0,(a.split('.')[1]?.length||0)-Number(e));};
