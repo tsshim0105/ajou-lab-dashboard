@@ -6,6 +6,7 @@ enum Lab {
         !windowVisible || miniaturized || appHidden
     }
     static let home = URL(string: "https://nisml.tsshim.chatgpt.site/dashboard/")!
+    static let dashboardDataURL = URL(string: "api/data", relativeTo: home)!.absoluteURL
     static func isSite(_ url: URL) -> Bool { url.scheme == "https" && [home.host, "nisml.ajou.ac.kr"].contains(url.host) && (url.port == nil || url.port == 443) }
     static func isAuthentication(_ url: URL) -> Bool {
         url.scheme == "https" && (url.port == nil || url.port == 443) && ["auth.openai.com", "auth0.openai.com", "chatgpt.com", "accounts.google.com", "appleid.apple.com", "login.microsoftonline.com"].contains(url.host ?? "")

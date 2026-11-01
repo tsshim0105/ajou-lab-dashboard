@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+const ctx=vm.createContext({TextEncoder,Uint8Array,DataView,Blob});
+for(const f of ['data-export.js','data-table.js','data-plot.js'])vm.runInContext(readFileSync(new URL('../'+f,import.meta.url),'utf8'),ctx);
+const T=vm.runInContext('DataTable',ctx),E=vm.runInContext('DataExport',ctx);
+function zipEntries(bytes){const out={};let i=0;const d=new DataView(bytes.buffer);while(d.getUint32(i,true)===0x04034b50){const n=d.getUint16(i+26,true),extra=d.getUint16(i+28,true),size=d.getUint32(i+18,true),start=i+30+n+extra;out[new TextDecoder().decode(bytes.slice(i+30,i+30+n))]=new TextDecoder().decode(bytes.slice(start,start+size));i=start+size;}return out;}
+test('publication table has exactly three horizontal lines, no body grid, and grouped titles',()=>{const m=T.example(),s=T.svg(m);assert.equal((s.match(/<line /g)||[]).length,3);assert.equal((s.match(/Content \(wt%\)/g)||[]).length,1);assert.match(s,/22,646/);assert.match(s,/gmol⁻¹/);});
+test('paste expands rows and columns, preserves textual numbers and rejects excess',()=>{const m={settings:{headerRows:1},rows:[['A'],['0']]};const p=T.pasted(m,'001\t2.50\nX\t<Y>',1,0);assert.equal(p.rows[1][0],'001');assert.equal(p.rows[2][1],'<Y>');assert.throws(()=>T.pasted(m,Array(13).fill('x').join('\t'),0,0));assert.throws(()=>T.normalize({settings:{headerRows:2},rows:[['A'],['B']]}));});
+test('DOCX contains editable text, merged header cells, repeat headers and only intended borders',()=>{const m=T.example();m.rows[2][0]='한글 <A & B>';const files=zipEntries(T.docx(m)),xml=files['word/document.xml'];assert.ok(files['[Content_Types].xml']);assert.match(files['_rels/.rels'],/word\/document.xml/);assert.match(xml,/한글 &lt;A &amp; B&gt;/);assert.match(xml,/<w:gridSpan w:val="2"/);assert.match(xml,/<w:insideH w:val="nil"/);assert.equal((xml.match(/<w:tblHeader\/>/g)||[]).length,2);assert.equal((xml.match(/<w:tcBorders>/g)||[]).length,5);});
+test('QTI exports numeric data, literal escaped text, dual axes and inward ticks without executable scripts',()=>{const p={names:['Time','A<1','Temp','B'],x2Index:2,data:[[0,1,20,3],[1,2,40,4]]},s=E.qti(p,{});assert.match(s,/<!DOCTYPE qti>/);assert.match(s,/data="0;1;"/);assert.match(s,/xAxis="3" yAxis="1"/);assert.match(s,/maj="3" majl="12" min="3" minl="7"/);assert.match(s,/A&lt;1/);assert.doesNotMatch(s,/<script[ >]/);assert.equal((s.match(/<curve /g)||[]).length,2);});

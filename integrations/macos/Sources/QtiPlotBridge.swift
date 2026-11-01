@@ -16,7 +16,7 @@ import UniformTypeIdentifiers
     }
     func authorize(_ web: WKWebView) async throws {
         guard (try await web.evaluateJavaScript("typeof admin === 'function' && admin()")) as? Bool == true else { throw fail("교수님 계정에서만 사용할 수 있습니다.") }
-        let url = Lab.home.deletingLastPathComponent().appendingPathComponent("api/data")
+        let url = Lab.dashboardDataURL
         var request = URLRequest(url:url); request.cachePolicy = .reloadIgnoringLocalCacheData
         let cookies = await web.configuration.websiteDataStore.httpCookieStore.allCookies()
         for (key,value) in HTTPCookie.requestHeaderFields(with:Lab.matchingCookies(cookies,url:url)) { request.setValue(value,forHTTPHeaderField:key) }
@@ -32,16 +32,18 @@ import UniformTypeIdentifiers
               let body = message.body as? [String:Any],let action = body["action"] as? String else { replyHandler(nil,"허용되지 않는 요청입니다.");return }
         Task { @MainActor in
             do {
-                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":8],nil);return }
+                if action == "status" { replyHandler(["installed":installed() != nil,"bridgeVersion":9],nil);return }
                 if action == "export" {
-                    guard let name = body["name"] as? String,["graph.svg","graph-2x.png"].contains(name),
+                    guard let name = body["name"] as? String,["graph.svg","graph-2x.png","graph.qti","table.png","table.docx"].contains(name),
                           let encoded = body["base64"] as? String,encoded.count <= 48_000_000,
                           let bytes = Data(base64Encoded:encoded),!bytes.isEmpty else { throw fail("저장할 그래프 파일이 올바르지 않습니다.") }
-                    let png = name.hasSuffix(".png")
+                    let png = name.hasSuffix(".png"), docx = name.hasSuffix(".docx"), qti = name.hasSuffix(".qti")
                     if png { guard bytes.starts(with:[137,80,78,71,13,10,26,10]) else { throw fail("PNG 파일 형식이 올바르지 않습니다.") } }
+                    else if docx { guard bytes.starts(with:[80,75,3,4]) else { throw fail("Word 파일 형식이 올바르지 않습니다.") } }
+                    else if qti { guard let xml = String(data:bytes,encoding:.utf8),xml.hasPrefix("<?xml"),xml.contains("<!DOCTYPE qti>"),!xml.contains("<!ENTITY"),!xml.contains("<script") else { throw fail("QTI 파일 형식이 올바르지 않습니다.") } }
                     else { guard let svg = String(data:bytes,encoding:.utf8),svg.hasPrefix("<svg "),!svg.lowercased().contains("<script") else { throw fail("SVG 파일 형식이 올바르지 않습니다.") } }
                     let panel = NSSavePanel();panel.nameFieldStringValue = name
-                    panel.allowedContentTypes = png ? [.png] : [.svg]
+                    panel.allowedContentTypes = png ? [.png] : docx ? [UTType(filenameExtension:"docx") ?? .data] : qti ? [UTType(filenameExtension:"qti") ?? .data] : [.svg]
                     panel.canCreateDirectories = true
                     guard let window = web.window else { throw fail("저장 창을 열 수 없습니다.") }
                     let response = await withCheckedContinuation { (continuation: CheckedContinuation<NSApplication.ModalResponse,Never>) in
@@ -70,7 +72,10 @@ import UniformTypeIdentifiers
                 let script = folder.appendingPathComponent("qtiplot_bridge.py")
                 try FileManager.default.copyItem(at:resource,to:script)
                 let process = Process(); process.executableURL = app.appendingPathComponent("Contents/MacOS/qtiplot")
-                process.arguments = ["-x",script.path,input.path]
+                process.arguments = ["-x",script.path]
+                var environment = ProcessInfo.processInfo.environment
+                environment["NISML_QTI_WORKDIR"] = folder.path
+                process.environment = environment
                 process.currentDirectoryURL = app.appendingPathComponent("Contents/MacOS")
                 process.standardOutput = FileHandle.nullDevice;process.standardError = FileHandle.nullDevice
                 processes.removeAll { !$0.isRunning };processes.append(process)

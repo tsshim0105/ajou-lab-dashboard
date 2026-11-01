@@ -7,7 +7,10 @@ import sys
 import traceback
 import qti
 
-folder = os.path.dirname(os.path.abspath(__file__))
+# QtiPlot's embedded interpreter does not define __file__.
+folder = os.environ.get('NISML_QTI_WORKDIR')
+if not folder:
+    folder = os.path.dirname(os.path.abspath(globals().get('__file__', sys.argv[0])))
 warnings = []
 def optional(label, action):
     try:

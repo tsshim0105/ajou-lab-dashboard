@@ -96,3 +96,8 @@ AAC 24kHz 모노 녹음 원본을 사용자 Application Support/NISML Dashboard/
 ## 0.4.20 QtiPlot 연동
 교수 전용 데이터 생성 탭에서 Mac에 설치된 QtiPlot을 감지해 고정 Python 스크립트로 그래프를 만듭니다. 웹에서 임의 명령/파일 경로/코드를 받지 않고 JSON 데이터와 포맷만 전달합니다. 서버 로그인 역할을 다시 확인합니다. 결과는 Application Support/NISML Hub/QtiPlot의 작업별 폴더에 저장됩니다. 미설치, Python 오류, 60초 결과 미확인을 구분합니다. 별도 QtiPlot 창에서 편집하며 PNG/SVG 출력 크기를 전달합니다. 격자선 등 버전에 따라 적용하지 못한 설정은 경고합니다.
 기본 명령 실행으로 로컬 QtiPlot 1.0.0-rc17/Python 3.8.2의 예시 PNG/SVG 생성은 확인했습니다. 최종 앱 브리지의 실제 실행 검증은 사용자 요청에 따라 보류했습니다.
+
+## 0.5.1 QtiPlot 로그인 확인 수정
+QtiPlot 연동의 교수 계정 확인 주소를 `/dashboard/api/data`로 수정했습니다. 기존 서버 권한 검증과 쿠키 범위 제한은 유지합니다.
+
+QtiPlot 자동 실행 대신 브라우저에서 데이터·그래프를 포함한 QTI 파일을 생성해 다운로드합니다. Mac 저장 패널은 QTI, 테이블 PNG 및 편집 가능한 DOCX를 지원합니다.
