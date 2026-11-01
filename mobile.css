@@ -1508,3 +1508,11 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
  html[data-theme=dark] #tabs .tab:hover{background:#ffffff12}
  html[data-theme=dark] #tabs .tab.active{background:#eef6ff20;color:#eef6ff;box-shadow:inset 0 0 0 1px #d2e5ff40,0 2px 7px #0002}
 }
+
+/* Align the desktop rail with the first dashboard card; keep the header seamless. */
+@media(min-width:761px){
+ html .app>.header-bar{border-bottom:0}
+ html[data-layout=vertical] .app{--desktop-content-top:20px}
+ html[data-layout=vertical] .app>#tabs{margin-top:var(--desktop-content-top);max-height:calc(100% - var(--desktop-content-top));top:var(--desktop-content-top)}
+ html[data-layout=vertical][data-active-tab=home] .app>#panel{padding-top:var(--desktop-content-top)}
+}
