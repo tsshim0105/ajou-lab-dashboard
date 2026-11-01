@@ -1560,3 +1560,10 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 .plot-series-row>span{grid-column:1/-1;grid-row:1}.plot-series-row>.plot-color-swatches{grid-column:1;grid-row:2;align-items:center}.plot-series-row>input[type=color]{grid-column:2;grid-row:2;align-self:center}.plot-series-row>select{grid-column:3;grid-row:2;align-self:center;min-width:0;width:100%}
 
 .plot-sheet-table thead th>div{flex-wrap:nowrap;gap:6px}.plot-sheet-table thead .plot-axis-badge{flex:none;white-space:nowrap}.plot-sheet-table thead input[data-sheet-name]{flex:1;width:0;min-width:0;padding:5px 3px}.plot-sheet-table thead button[data-sheet-remove-col]{flex:none}
+
+/* One ledger and aligned expense inputs */
+.fund-balance-bottom{justify-content:flex-end}
+.fund-quick-entry label{margin:0;align-self:end}
+.fund-quick-entry input,.fund-quick-entry select,.fund-quick-entry button[type=submit]{box-sizing:border-box;height:36px;min-height:36px;margin:0;line-height:20px}
+.fund-quick-entry select{appearance:auto;padding:6px 7px}
+@media(max-width:600px){.fund-quick-entry input,.fund-quick-entry select,.fund-quick-entry button[type=submit]{height:42px;min-height:42px}}
