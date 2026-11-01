@@ -1528,3 +1528,13 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 #plotPreview .plot-legend-text{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 #plotPreview .plot-legend-text.dragging{cursor:grabbing}
 #plotPreview .plot-legend-text:hover .plot-legend-hitbox,#plotPreview .plot-legend-text:focus .plot-legend-hitbox{stroke:#6d97b8;stroke-width:1;stroke-dasharray:5 4}
+
+/* Homepage management follows the Hub heading and compact button rhythm. */
+.homepage-management-heading{justify-content:flex-start;align-items:center;gap:18px}
+.homepage-management-heading h1{font-size:23px;margin:0;padding:0;border:0;white-space:nowrap}
+.homepage-management-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.homepage-management-tabs button{font-size:14px;min-height:34px;padding:6px 12px;border:1px solid #c8d9ed;background:#edf4fc;color:#245b98;border-radius:7px}
+.homepage-management-tabs button[aria-selected=true]{background:#1769e8;border-color:#1769e8;color:white}
+.homepage-management-frame{width:100%;height:calc(100dvh - 190px);min-height:620px;border:0;border-radius:10px;background:white}
+[data-theme=dark] .homepage-management-tabs button:not([aria-selected=true]){background:#293d55;color:#dbeaff;border-color:#4b6480}
+@media(max-width:760px){#panel>.homepage-management-heading{height:auto;flex-wrap:wrap;gap:8px}.homepage-management-heading h1{font-size:20px}.homepage-management-tabs{width:100%;flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}.homepage-management-tabs button{flex:none;font-size:12px;padding:6px 9px}}
