@@ -1487,7 +1487,12 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 .plot-ratio-presets{grid-column:1 / -1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.plot-ratio-presets>span{font-size:12px;margin-right:4px}.plot-ratio-presets button{padding:6px 12px;min-width:50px}.plot-ratio-presets button[aria-pressed=true]{background:#1765e8;border-color:#1765e8;color:white}
 
 /* Approved startup option 2: enlarge the complete final lockup, with mobile fit. */
-.startup-splash .startup-brand{scale:var(--startup-brand-scale,1.5);transform-origin:center center}
+/* Lay out at the final size, rather than magnifying a composited text layer. */
+.startup-splash .startup-brand{scale:none}
+.startup-splash .startup-brand>img{width:calc(var(--hub-symbol)*var(--startup-brand-scale,1.5));height:calc(var(--hub-symbol)*var(--startup-brand-scale,1.5))}
+.startup-splash .startup-name.dashboard-brand{gap:calc(var(--hub-gap)*var(--startup-brand-scale,1.5));padding-left:calc(var(--hub-gap)*var(--startup-brand-scale,1.5))}
+.startup-splash .startup-name .dashboard-lab-name{font-size:calc(var(--hub-lab)*var(--startup-brand-scale,1.5));letter-spacing:calc(-.6px*var(--startup-brand-scale,1.5))}
+.startup-splash .startup-name .dashboard-wordmark{font-size:calc(var(--hub-word)*var(--startup-brand-scale,1.5));padding-left:calc(var(--hub-divider-gap)*var(--startup-brand-scale,1.5));letter-spacing:calc(-.7px*var(--startup-brand-scale,1.5))}
 
 /* Compact graph settings: inline labels and short, uniform controls. */
 .plot-settings-heading{gap:8px}.plot-settings-heading>strong{white-space:nowrap}.plot-settings-heading>.plot-actions{gap:5px;justify-content:flex-end}.plot-settings-heading button{height:30px;min-height:30px;padding:4px 8px;font-size:12px;line-height:20px}.plot-settings-heading .plot-ratio-presets{gap:4px;flex-wrap:nowrap}.plot-settings-heading .plot-ratio-presets button{min-width:40px;padding:4px 6px}.plot-fields{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;margin:12px 0}.plot-fields label{display:grid;grid-template-columns:minmax(0,1fr) 88px;align-items:center;gap:8px;min-height:32px;font-size:12px;line-height:1.3}.plot-fields input:not([type=checkbox]),.plot-fields select{width:88px;height:32px;min-height:32px;padding:4px 7px;font-size:12px;line-height:22px}.plot-fields label:has(input[type=text]),.plot-fields label:has(select){grid-template-columns:minmax(0,1fr) 110px}.plot-fields input[type=text],.plot-fields select{width:110px}.plot-fields input[type=checkbox]{justify-self:end;width:18px;height:18px}.plot-controls{container-type:inline-size}@container(max-width:390px){.plot-fields{grid-template-columns:1fr}.plot-fields label,.plot-fields label:has(input[type=text]),.plot-fields label:has(select){grid-template-columns:minmax(0,1fr) 110px}.plot-fields input:not([type=checkbox]),.plot-fields select{width:110px}}@media(max-width:480px){.plot-settings-heading>.plot-actions{justify-content:flex-start}.plot-settings-heading button{font-size:11px;padding:4px 6px}.plot-settings-heading .plot-ratio-presets button{min-width:36px}}
@@ -1545,3 +1550,7 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 :is(.plot-sheet-table,.table-maker-grid) input.sheet-selected{background:#cfe7ff!important;color:#102d4b;box-shadow:inset 0 0 0 1px #82b7ee}.sheet-dragging{user-select:none}.sheet-range-status{font-size:12px;color:var(--muted,#64748b);padding:5px 0}.table-library-thumb{max-width:260px}.table-library-thumb svg{width:100%;height:auto}.table-library-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--edge,#d7e2ec);flex-wrap:wrap}.table-library-row label{display:grid;gap:5px}.table-library-row small{display:block}.table-library-row .table-library-info{flex:1;min-width:180px}
 
 .table-maker-grid .table-header-row input{font-weight:700}
+
+/* Only the active data-generation view uses the blue primary treatment. */
+.plot-view-tabs button[aria-selected=false]{background:var(--surface,#fff);color:var(--text,#334155);border:1px solid var(--edge,#c8d6e8);box-shadow:none}
+.plot-view-tabs button[aria-selected=true]{background:#1769e8;color:#fff;border:1px solid #1769e8;box-shadow:none}

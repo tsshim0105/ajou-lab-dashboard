@@ -5,7 +5,7 @@
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  const brand=splash.querySelector('.startup-brand'),logo=splash.querySelector('.startup-brand>img');
  let play,closing=false,requested=false;app.inert=true;
- function fitBrand(){if(closing)return;const width=Math.max(brand.scrollWidth||0,brand.offsetWidth||0,1);brand.style.setProperty('--startup-brand-scale',String(Math.min(1.5,Math.max(1,innerWidth-32)/width)));}
+ function fitBrand(){if(closing)return;brand.style.setProperty('--startup-brand-scale','1');const width=Math.max(brand.scrollWidth||0,brand.offsetWidth||0,1);brand.style.setProperty('--startup-brand-scale',String(Math.min(1.5,Math.max(1,innerWidth-32)/width)));}
  addEventListener('resize',fitBrand);
  function dismiss(){if(closing)return;closing=true;removeEventListener('resize',fitBrand);clearTimeout(failsafe);app.inert=false;splash.classList.add('startup-leaving');setTimeout(()=>splash.remove(),reduced?0:360);}
  const loaded=document.readyState==='complete'?Promise.resolve():new Promise(resolve=>addEventListener('load',resolve,{once:true}));
