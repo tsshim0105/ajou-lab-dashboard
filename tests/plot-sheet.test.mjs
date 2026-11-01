@@ -4,5 +4,12 @@ const initial=()=>({names:['X','Y1'],cells:[['',''],['','']]});
 test('paste expands rows and columns with optional headings',()=>{let s=p.apply(initial(),'Time\tA\tB\n0\t1\t2\n1\t3\t4\n2\t5\t6',0,0,true);assert.deepEqual(plain(p.parsed(s)),{names:['Time','A','B'],data:[[0,1,2],[1,3,4],[2,5,6]]});});
 test('paste Y values separately preserves existing X values',()=>{const s={names:['Time','Y'],cells:[['0',''],['1','']]};assert.deepEqual(plain(p.parsed(p.apply(s,'1.5\n2.5',0,1))),{names:['Time','Y'],data:[[0,1.5],[1,2.5]]});assert.equal(s.cells[0][1],'');});
 test('blank Y cells are null and empty trailing rows are omitted',()=>{const s=p.apply({names:['X','A','B'],cells:[['','',''],['','','']]},'0\t1\t\n1\t\t2\n',0,0);assert.deepEqual(plain(p.parsed(s).data),[[0,1,null],[1,null,2]]);});
-test('quoted delimiters and invalid cells retain meaningful errors',()=>{assert.deepEqual(plain(p.clipboard('"Time, s",Value\n0,1')),[['Time, s','Value'],['0','1']]);assert.throws(()=>p.parsed({names:['X','Y'],cells:[['','2']]}),/X/);assert.throws(()=>p.parsed({names:['X','Y'],cells:[['0','abc']]}),/Y1/);assert.throws(()=>p.apply(initial(),'1\t2',0,12),/12/);});
+test('quoted delimiters and invalid cells retain meaningful errors',()=>{assert.deepEqual(plain(p.clipboard('"Time, s",Value\n0,1')),[['Time, s','Value'],['0','1']]);assert.throws(()=>p.parsed({names:['X','Y'],cells:[['','2']]}),/X/);assert.throws(()=>p.parsed({names:['X','Y'],cells:[['0','abc']]}),/Y/);assert.throws(()=>p.apply(initial(),'1\t2',0,12),/12/);});
 test('native export and capability check precede authentication; plotting still requires it',()=>{const s=readFileSync(new URL('../desktop/mac/Sources/QtiPlotBridge.swift',import.meta.url),'utf8');const auth=s.indexOf('try await authorize(web)');assert.ok(s.indexOf('if action == "status"')<auth);assert.ok(s.indexOf('if action == "export"')<auth);assert.ok(s.indexOf('guard action == "plot"')>auth);});
+test('two X groups retain metadata through paste and allow independent lengths',()=>{
+ const s={names:['X','A','X2','B'],x2Index:2,cells:[['0','1','',''],['1','2','',''],['2','3','','']]};
+ const pasted=p.apply(s,'20\t100\n40\t200\n60\t300\n80\t400',0,2);
+ const result=p.parsed(pasted);assert.equal(result.x2Index,2);assert.deepEqual(plain(result.data[3]),[null,null,80,400]);
+ assert.throws(()=>p.parsed({...s,cells:[['0','1','','4']]}),/X2/);
+ assert.throws(()=>p.parsed({...s,cells:[['0','1','3','']]}),/Y/);
+});

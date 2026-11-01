@@ -32,3 +32,14 @@ test('axis and legend fonts are independent; plot box dimensions never shrink',(
 test('default line-only mode omits markers and adapts QtiPlot without changing stored styles',()=>{const data=p.parse('0\t1\n1\t2'),settings={...p.defaults,series:[{shape:'circle',color:'#ff0000'}]};assert.equal(p.defaults.type,'lineonly');const svg=p.svg(data,settings);assert.match(svg,/stroke-linejoin="round"/);assert.doesNotMatch(svg,/<circle/);assert.match(p.svg(data,{...settings,type:'line'}),/<circle/);const native=p.nativeSettings(settings,1);assert.equal(native.type,'line');assert.equal(native.series[0].shape,'none');assert.equal(settings.series[0].shape,'circle');});
 
 test('ratio presets keep exact inner-box proportions within size limits',()=>{for(const ratio of ['1:1','4:3','16:9','9:16'])for(const width of [400,800,2400]){const size=p.ratioSize(width,ratio),[w,h]=ratio.split(':').map(Number);assert.equal(size.width*h,size.height*w);assert.ok(size.width>=400&&size.width<=2400);assert.ok(size.height>=300&&size.height<=1800);const svg=p.svg(p.parse('0\t1\n1\t2'),{...p.defaults,...size});assert.match(svg,new RegExp('class="plot-axis-frame"[^>]+width="'+size.width+'" height="'+size.height+'"'));}assert.equal(p.ratioSize(800,'4:3').height,600);});
+test('independent upper X and right Y axes exclude X2 from plotted series',()=>{
+ const data={names:['Time','Signal','Temperature','Response'],x2Index:2,data:[[0,1,20,100],[1,3,40,300],[2,2,null,null],[null,null,80,500]]};
+ assert.deepEqual(Array.from(p.seriesColumns(data),c=>c.col),[1,3]);
+ const s=p.svg(data,{...p.defaults,xmin:0,xmax:2,ymin:0,ymax:4,x2min:20,x2max:80,y2min:100,y2max:500,x2Label:'Temperature',y2Label:'Response'});
+ assert.match(s,/plot-secondary-axes/);assert.match(s,/data-axis="primary"/);assert.match(s,/data-axis="secondary"/);assert.match(s,/Temperature/);assert.match(s,/Response/);
+ assert.equal((s.match(/class="plot-series-data"/g)||[]).length,2);assert.doesNotMatch(s,/NaN|Infinity/);
+ assert.match(s,/<rect class="plot-axis-frame"[^>]*width="800" height="800"/);
+ assert.throws(()=>p.svg(data,{...p.defaults,x2min:80,x2max:20}));
+ for(const type of ['line','scatter','bar'])assert.doesNotMatch(p.svg(data,{...p.defaults,type}),/NaN|Infinity/);
+ const saved=JSON.parse(JSON.stringify(data));assert.equal(p.svg(saved,p.defaults),p.svg(data,p.defaults));
+});

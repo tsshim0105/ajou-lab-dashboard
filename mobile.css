@@ -1516,3 +1516,10 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
  html[data-layout=vertical] .app>#tabs{margin-top:var(--desktop-content-top);max-height:calc(100% - var(--desktop-content-top));top:var(--desktop-content-top)}
  html[data-layout=vertical][data-active-tab=home] .app>#panel{padding-top:var(--desktop-content-top)}
 }
+
+/* Spreadsheet actions share one compact toolbar above the table. */
+.plot-sheet-tools{flex-wrap:nowrap;gap:7px;overflow-x:auto;padding-bottom:2px}
+.plot-sheet-tools button{height:32px;min-height:32px;font-size:12px;line-height:1.3;padding:5px 10px;flex:none}
+.plot-sheet-tools label{white-space:nowrap;flex:none}
+.plot-sheet-draw-actions{margin-left:auto;display:flex;gap:7px;flex:none}
+.plot-secondary-settings{display:contents}.plot-secondary-settings[hidden]{display:none}
