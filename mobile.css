@@ -1523,3 +1523,8 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 .plot-sheet-tools label{white-space:nowrap;flex:none}
 .plot-sheet-draw-actions{margin-left:auto;display:flex;gap:7px;flex:none}
 .plot-secondary-settings{display:contents}.plot-secondary-settings[hidden]{display:none}
+
+.plot-legend-help{display:block;font-size:12px;color:var(--muted,#60788b);margin:4px 0 8px}
+#plotPreview .plot-legend-text{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#plotPreview .plot-legend-text.dragging{cursor:grabbing}
+#plotPreview .plot-legend-text:hover .plot-legend-hitbox,#plotPreview .plot-legend-text:focus .plot-legend-hitbox{stroke:#6d97b8;stroke-width:1;stroke-dasharray:5 4}

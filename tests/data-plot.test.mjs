@@ -20,10 +20,10 @@ test('closed frame with inward major and minor ticks on four sides',()=>{
 test('square default and CSP-compatible PNG conversion',()=>{assert.equal(p.defaults.width,p.defaults.height);assert.match(src,/const url=await dataURL\(new Blob\(\[snapshot\]/);assert.match(src,/action:'export',name,base64/);assert.match(src,/document.body.append\(a\)/);});
 test('axis and legend fonts are independent; plot box dimensions never shrink',()=>{
  const data=p.parse('X\tSample\n0\t1\n1\t2');
- assert.equal(p.defaults.font,50);assert.equal(p.defaults.legendFont,15);
+ assert.equal(p.defaults.font,50);assert.equal(p.defaults.legendFont,40);
  const small=p.svg(data,{...p.defaults,font:12}),large=p.svg(data,{...p.defaults,font:60});
  for(const s of [small,large])assert.match(s,/<rect class="plot-axis-frame"[^>]+width="800" height="800"/);
- assert.match(large,/<g class="plot-legend-text" font-size="15" font-weight="400">/);
+ assert.match(large,/<g class="plot-legend-text" font-size="40" font-weight="400"/);
  const dimensions=s=>s.match(/<svg[^>]+width="([\d.]+)" height="([\d.]+)"/).slice(1).map(Number);
  assert.ok(dimensions(large)[0]>dimensions(small)[0]);assert.ok(dimensions(large)[1]>dimensions(small)[1]);
  assert.match(src,/c.width=img.naturalWidth\*2;c.height=img.naturalHeight\*2/);
@@ -42,4 +42,13 @@ test('independent upper X and right Y axes exclude X2 from plotted series',()=>{
  assert.throws(()=>p.svg(data,{...p.defaults,x2min:80,x2max:20}));
  for(const type of ['line','scatter','bar'])assert.doesNotMatch(p.svg(data,{...p.defaults,type}),/NaN|Infinity/);
  const saved=JSON.parse(JSON.stringify(data));assert.equal(p.svg(saved,p.defaults),p.svg(data,p.defaults));
+});
+test('legend positions survive export and resize with safe normalized coordinates',()=>{
+ const data=p.parse('X\tA\tB\n0\t1\t2\n1\t2\t3');
+ const get=s=>{const m=s.match(/class="plot-legend-text"[^>]*transform="translate\(([^,]+),([^\)]+)\)"[^>]*data-legend-max-x="([^"]+)" data-legend-max-y="([^"]+)"/);return m.slice(1).map(Number);};
+ for(const width of [400,800,1600]){const [x,y,mx,my]=get(p.svg(data,{...p.defaults,width,legendX:.25,legendY:.75}));assert.equal(x,mx*.25);assert.equal(y,my*.75);}
+ const [x,y,mx]=get(p.svg(data,{...p.defaults,legendX:2,legendY:-1}));assert.equal(x,mx);assert.equal(y,0);
+ assert.equal(p.normalize({legendX:'invalid'}).legendX,null);
+ assert.match(p.svg(data,p.defaults),/class="plot-legend-hitbox"/);
+ assert.doesNotMatch(p.svg(data,{...p.defaults,legendX:null}),/NaN/);
 });
