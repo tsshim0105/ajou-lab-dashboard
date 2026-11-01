@@ -42,11 +42,11 @@ const DataPlot = (()=>{
   for(let i=0;i<=25;i++){
    const major=i%5===0,len=major?12:7,xx=L+pw*i/25,yy=T+ph-ph*i/25;
    if(major&&s.grid)out+=line(xx,T,xx,T+ph,'#e5e7eb')+line(L,yy,L+pw,yy,'#e5e7eb');
-   ticks+=`<g class="plot-${major?'major':'minor'}-ticks">`+line(xx,T+ph,xx,T+ph-len,'#111',2)+line(xx,T,xx,T+len,'#111',2)+line(L,yy,L+len,yy,'#111',2)+line(L+pw,yy,L+pw-len,yy,'#111',2)+'</g>';
+   ticks+=`<g class="plot-${major?'major':'minor'}-ticks">`+line(xx,T+ph,xx,T+ph-len,'#111',4)+line(xx,T,xx,T+len,'#111',4)+line(L,yy,L+len,yy,'#111',4)+line(L+pw,yy,L+pw-len,yy,'#111',4)+'</g>';
    if(major&&dual)out+=text(xx,T-14,fmt(x2a+(x2b-x2a)*i/25))+text(L+pw+12,yy+F*.35,fmt(y2a+(y2b-y2a)*i/25),'start');
    if(major)out+=text(xx,T+ph+F+10,fmt(xa+(xb-xa)*i/25))+text(L-12,yy+F*.35,fmt(ya+(yb-ya)*i/25),'end');
   }
-  const frame=`<rect class="plot-axis-frame" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="none" stroke="#111" stroke-width="1"/>`;
+  const frame=`<rect class="plot-axis-frame" x="${L}" y="${T}" width="${pw}" height="${ph}" fill="none" stroke="#111" stroke-width="4"/>`;
   if(dual)out+=`<g class="plot-secondary-axes">`+text(L+pw/2,T-F-28,s.x2Label)+`<text transform="translate(${L+pw+12+rightWidth+axisTitleGap+F*.2},${T+ph/2}) rotate(90)" text-anchor="middle">${xml(s.y2Label)}</text></g>`;
   out+=text(L+pw/2,dual?T-F*2.3-30:T-F,s.title)+text(L+pw/2,T+ph+F*2+18,s.xLabel)+`<text transform="translate(${L-12-yTickWidth-axisTitleGap-F*.2},${T+ph/2}) rotate(-90)" text-anchor="middle">${xml(s.yLabel)}</text>`;
   const marks=(xx,yy,c,shape)=>{let r=s.marker/2;const attr=`fill="${c}" stroke="${c}" stroke-width="1.5"`;if(shape==='none')return '';if(shape==='square')return `<rect x="${xx-r}" y="${yy-r}" width="${r*2}" height="${r*2}" ${attr}/>`;if(shape==='triangle')return `<path d="M${xx},${yy-r} L${xx+r},${yy+r} L${xx-r},${yy+r} Z" ${attr}/>`;if(shape==='diamond')return `<path d="M${xx},${yy-r} L${xx+r},${yy} L${xx},${yy+r} L${xx-r},${yy} Z" ${attr}/>`;if(shape==='cross')return line(xx-r,yy-r,xx+r,yy+r,c,1.5)+line(xx-r,yy+r,xx+r,yy-r,c,1.5);return `<circle cx="${xx}" cy="${yy}" r="${r}" ${attr}/>`;};
