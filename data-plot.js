@@ -2,7 +2,15 @@
 const DataPlot = (()=>{
  const colors=['#2563eb','#dc2626','#059669','#9333ea','#d97706','#0891b2'];
  const palettes={classic:{label:'클래식',colors},paper:{label:'논문 컬러',colors:['#c89ce5','#008de5','#00952c','#f6ad00','#f45383','#6554b5']},nature:{label:'내추럴',colors:['#238a78','#537aaf','#d29162','#a75f87','#84a65a','#b9a24a']},contrast:{label:'선명한 대비',colors:['#0072b2','#e69f00','#009e73','#cc79a7','#d55e00','#56b4e9']}};
- const colorAt=(s,i)=>/^#[0-9a-f]{6}$/i.test(s.series[i]?.color)?s.series[i].color:(palettes[s.palette]||palettes.classic).colors[i%6];
+ Object.assign(palettes,{
+  lancet:{label:'Lancet',colors:['#00468b','#ed0000','#42b540','#0099b4','#925e9f','#fdaf91','#ad002a','#adb6b6','#1b1919']},
+  auroraJewel:{label:'오로라 쥬얼',colors:['#3677a8','#45a69c','#8c72b5','#d77e9c','#d6aa54']},
+  softBrewer:{label:'소프트 브루어',colors:['#66c2a5','#fc8d62','#8da0cb','#e78ac3','#a6d854','#ffd92f','#e5c494','#b3b3b3']},
+  gradientRed:{label:'빨강 그라디언트',colors:['#681e32','#a52d46','#d95467','#ed8e9b','#f6c1c8']},
+  gradientGreen:{label:'초록 그라디언트',colors:['#193f35','#176c50','#32976c','#70bd94','#b4dfc4']},
+  gradientBlue:{label:'파랑 그라디언트',colors:['#20395e','#075a98','#268ab7','#59bddb','#9edfed']}
+ });
+ const colorAt=(s,i)=>{const palette=(palettes[s.palette]||palettes.classic).colors;return /^#[0-9a-f]{6}$/i.test(s.series[i]?.color)?s.series[i].color:palette[i%palette.length];};
  const decimals=v=>{const [a,e='0']=String(v).toLowerCase().split('e');return Math.max(0,(a.split('.')[1]?.length||0)-Number(e));};
  function xFormat(a,b,rawDigits='auto',hints=[]){const values=Array.from({length:6},(_,i)=>a+(b-a)*i/5),scientific=rawDigits==='auto'&&(Math.max(Math.abs(a),Math.abs(b))>=1e7||Math.abs(b-a)<1e-5),digits=rawDigits==='auto'?Math.min(8,Math.max(...values.map(v=>decimals(Number(v.toPrecision(12)))),...hints.map(decimals))):Number(rawDigits);const format=v=>{if(Math.abs(v)<Math.abs(b-a)*1e-12)v=0;return scientific?v.toExponential(3):v.toFixed(digits);};return {format,digits,scientific};}
  function prepare(parsed,type){const categories={},data=parsed.data.map(r=>r.slice());for(const col of [0,...(Number.isInteger(parsed.x2Index)?[parsed.x2Index]:[])]){if(!data.some(r=>r[col]!=null&&typeof r[col]!=='number'))continue;if(type!=='bar')throw Error('문자형 X값은 막대 그래프에서 사용할 수 있습니다.');const labels=[...new Set(data.filter(r=>r[col]!=null).map(r=>String(r[col])))];categories[col]=labels;const map=new Map(labels.map((v,i)=>[v,i+1]));data.forEach(r=>{if(r[col]!=null)r[col]=map.get(String(r[col]));});}return {...parsed,data,categories};}
