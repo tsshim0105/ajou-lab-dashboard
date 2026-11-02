@@ -118,10 +118,13 @@ html[data-hub-theme=orchestra] .meeting-overview:first-child{--card-art:url("dat
 html[data-hub-theme=orchestra] .meeting-overview:nth-child(2){--card-art:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20stroke%3D%22%23263645%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M17%203v18M28%206v19M17%203l11%203%22%20stroke%3D%22%23b18742%22%2F%3E%3Cellipse%20cx%3D%2211%22%20cy%3D%2223%22%20rx%3D%226%22%20ry%3D%224%22%20fill%3D%22%238e3552%22%2F%3E%3Cellipse%20cx%3D%2222%22%20cy%3D%2227%22%20rx%3D%226%22%20ry%3D%224%22%20fill%3D%22%238e3552%22%2F%3E%3C%2Fsvg%3E")}
 html[data-hub-theme=orchestra] .year-aurora{--card-art:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20stroke%3D%22%23263645%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M4%204h24v24H4z%22%20fill%3D%22%23fff4d6%22%2F%3E%3Cpath%20d%3D%22M10%204v24M16%204v24M22%204v24%22%2F%3E%3Cpath%20d%3D%22M8%204v13h4V4m6%200v13h4V4%22%20fill%3D%22%2368273b%22%2F%3E%3C%2Fsvg%3E")}
 html[data-hub-theme=orchestra] .game-galaxy{--card-art:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20stroke%3D%22%23263645%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m6%2028%2020-24%22%20stroke%3D%22%23e3bc61%22%20stroke-width%3D%224%22%2F%3E%3Cpath%20d%3D%22m24%202%206%204M4%205v7m-4-3h8m17%2013v8m-4-4h8%22%20stroke%3D%22%238d3853%22%2F%3E%3C%2Fsvg%3E")}
-html[data-hub-theme=shinchan] #panel :is(.meeting-overview,.year-aurora,.game-galaxy) h2::before{width:28px;height:40px;background-image:url('__THEME_CAST_CSS__');background-size:168px 56px;background-position:var(--cast-x,0px) center;clip-path:inset(0 2%)}
-html[data-hub-theme=shinchan] .meeting-overview:nth-child(2){--cast-x:-69px}
-html[data-hub-theme=shinchan] .year-aurora{--cast-x:-95px}
-html[data-hub-theme=shinchan] .game-galaxy{--cast-x:-142px}
+/* Individual transparent icons: contain the complete character, never crop a cast strip. */
+html[data-hub-theme=shinchan] #panel :is(.meeting-overview,.year-aurora,.game-galaxy) h2{padding-left:44px}
+html[data-hub-theme=shinchan] #panel :is(.meeting-overview,.year-aurora,.game-galaxy) h2::before{width:40px;height:40px;background-size:contain;background-position:center;background-repeat:no-repeat;clip-path:none;background-image:url('__ICON_SHINCHAN__')}
+html[data-hub-theme=shinchan] #panel .meeting-overview:nth-child(2) h2::before{background-image:url('__ICON_KAZAMA__')}
+html[data-hub-theme=shinchan] #panel .year-aurora h2::before{background-image:url('__ICON_NENE__')}
+html[data-hub-theme=shinchan] #panel .game-galaxy h2::before{background-image:url('__ICON_SHIRO__')}
+
 /* Match Aurora's existing 55% glass dock, without opaque theme patterns. */
 @media(max-width:760px){
  html[data-hub-theme] #tabs{background:rgba(248,252,253,.55)!important;background-image:none!important;backdrop-filter:blur(6px) saturate(125%)!important;-webkit-backdrop-filter:blur(6px) saturate(125%)!important;border-color:rgba(180,202,213,.55)!important;box-shadow:0 4px 18px #16344b14!important}
