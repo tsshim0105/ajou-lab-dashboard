@@ -119,11 +119,11 @@ html[data-hub-theme=orchestra] .meeting-overview:nth-child(2){--card-art:url("da
 html[data-hub-theme=orchestra] .year-aurora{--card-art:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20stroke%3D%22%23263645%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M4%204h24v24H4z%22%20fill%3D%22%23fff4d6%22%2F%3E%3Cpath%20d%3D%22M10%204v24M16%204v24M22%204v24%22%2F%3E%3Cpath%20d%3D%22M8%204v13h4V4m6%200v13h4V4%22%20fill%3D%22%2368273b%22%2F%3E%3C%2Fsvg%3E")}
 html[data-hub-theme=orchestra] .game-galaxy{--card-art:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%20fill%3D%22none%22%20stroke%3D%22%23263645%22%20stroke-width%3D%221.6%22%20stroke-linejoin%3D%22round%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m6%2028%2020-24%22%20stroke%3D%22%23e3bc61%22%20stroke-width%3D%224%22%2F%3E%3Cpath%20d%3D%22m24%202%206%204M4%205v7m-4-3h8m17%2013v8m-4-4h8%22%20stroke%3D%22%238d3853%22%2F%3E%3C%2Fsvg%3E")}
 /* Separate complete characters, sized to the card rather than its heading. */
-html[data-hub-theme=shinchan] #panel :is(.meeting-overview,.year-aurora,.game-galaxy)::after{background-image:url('__ICON_SHINCHAN__');opacity:.18}
-html[data-theme=dark][data-hub-theme=shinchan] #panel :is(.meeting-overview,.year-aurora,.game-galaxy)::after{opacity:.13}
-html[data-hub-theme=shinchan] #panel .meeting-overview:nth-child(2)::after{background-image:url('__ICON_KAZAMA__')}
-html[data-hub-theme=shinchan] #panel .year-aurora::after{background-image:url('__ICON_NENE__')}
-html[data-hub-theme=shinchan] #panel .game-galaxy::after{background-image:url('__ICON_SHIRO__')}
+html[data-hub-theme=shinchan]:not([data-hub-theme=aurora]) #panel :is(.meeting-overview,.year-aurora,.game-galaxy)::after{background-image:url('__ICON_SHINCHAN__');opacity:.18}
+html[data-theme=dark][data-hub-theme=shinchan]:not([data-hub-theme=aurora]) #panel :is(.meeting-overview,.year-aurora,.game-galaxy)::after{opacity:.13}
+html[data-hub-theme=shinchan]:not([data-hub-theme=aurora]) #panel .meeting-overview:nth-child(2)::after{background-image:url('__ICON_KAZAMA__')}
+html[data-hub-theme=shinchan]:not([data-hub-theme=aurora]) #panel .year-aurora::after{background-image:url('__ICON_NENE__')}
+html[data-hub-theme=shinchan]:not([data-hub-theme=aurora]) #panel .game-galaxy::after{background-image:url('__ICON_SHIRO__')}
 
 /* Match Aurora's existing 55% glass dock, without opaque theme patterns. */
 @media(max-width:760px){
