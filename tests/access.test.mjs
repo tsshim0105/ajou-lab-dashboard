@@ -389,15 +389,29 @@ test('fine vertical board positions and a stable grid persist across sessions',a
  assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoardRows:0}),env)).status,400);
 });
 
-test('Hub themes are faculty-only and account-scoped',async()=>{
- const {worker,env}=fixture();
+test('Hub themes are available to approved students and remain account-scoped',async()=>{
+ const {worker,env}=fixture(),student='student@example.test';
+ await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme:'orchestra'}),env);
  for(const hubTheme of ['aurora','pop','shinchan','baseball','orchestra']){
-  assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme}),env)).status,200);
-  assert.equal((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubTheme,hubTheme);
-  assert.equal((await (await worker.fetch(req('student@example.test'),env)).json()).preferences.hubTheme,undefined);
+  assert.equal((await worker.fetch(req(student,'/api/preferences','PUT',{hubTheme}),env)).status,200);
+  assert.equal((await (await worker.fetch(req(student),env)).json()).preferences.hubTheme,hubTheme);
+  assert.equal((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubTheme,'orchestra');
  }
- assert.equal((await worker.fetch(req('student@example.test','/api/preferences','PUT',{hubTheme:'pop'}),env)).status,403);
- assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme:'invalid'}),env)).status,400);
- assert.equal((await worker.fetch(req('student@example.test','/api/preferences','PUT',{theme:'dark'}),env)).status,200);
- assert.equal((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubTheme,'orchestra');
+ await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme:'pop'}),env);
+ assert.equal((await (await worker.fetch(req(student),env)).json()).preferences.hubTheme,'orchestra');
+ for(const email of [OWNER,student])assert.equal((await worker.fetch(req(email,'/api/preferences','PUT',{hubTheme:'invalid'}),env)).status,400);
+ assert.equal((await worker.fetch(req('unapproved@example.test','/api/preferences','PUT',{hubTheme:'shinchan'}),env)).status,403);
+ assert.equal((await worker.fetch(req(null,'/api/preferences','PUT',{hubTheme:'pop'}),env)).status,401);
+ await worker.fetch(req(student,'/api/preferences','PUT',{theme:'dark'}),env);
+ assert.equal((await (await worker.fetch(req(student),env)).json()).preferences.hubTheme,'orchestra');
+});
+test('student account settings expose all five theme choices',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');
+ const source=await readFile(new URL('../app.js',import.meta.url),'utf8');
+ const fn=source.match(/function hubThemeSettings\(\)\{[\s\S]*?\n\}/)[0];
+ const context={admin:()=>false,studentPreview:false,preferences:{hubTheme:'shinchan'}};
+ const html=vm.runInNewContext(fn+';hubThemeSettings()',context);
+ assert.equal((html.match(/name="hubTheme"/g)||[]).length,5);
+ assert.match(html,/value="shinchan" checked/);assert.ok(!html.includes('교수님 전용'));
+ assert.equal(vm.runInNewContext(fn+';hubThemeSettings()',{...context,studentPreview:true}),'');
 });
