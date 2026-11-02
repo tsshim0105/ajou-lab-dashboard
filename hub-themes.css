@@ -1,36 +1,59 @@
 /* Faculty preview themes. Brand images and plotted data are deliberately untouched. */
 .hub-theme-options{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.hub-theme-option{display:grid;grid-template-columns:20px 1fr;gap:8px;align-items:center;border:1px solid var(--edge,#d4dfe8);border-radius:12px;padding:12px;cursor:pointer}.hub-theme-option input{margin:0;accent-color:var(--ht-primary,#1769e8)}.hub-theme-option strong,.hub-theme-option small{grid-column:1/-1}.hub-theme-option small{font-size:12px}.hub-theme-option:has(:checked){outline:2px solid var(--ht-primary,#1769e8);outline-offset:2px}.hub-theme-swatch{height:36px;border-radius:6px;background:linear-gradient(110deg,#dcf0e9,#e9e4f5,#f6e5ee)}[data-palette=pop] .hub-theme-swatch{background:linear-gradient(90deg,#2355da 33%,#ffe15a 33% 66%,#f65692 66%)}[data-palette=shinchan] .hub-theme-swatch{background:linear-gradient(90deg,#ef4746 25%,#ffe780 25% 50%,#8bd2f1 50% 75%,#78c998 75%)}[data-palette=baseball] .hub-theme-swatch{background:linear-gradient(90deg,#1c354b 33%,#f3eddc 33% 66%,#28664e 66%)}[data-palette=orchestra] .hub-theme-swatch{background:linear-gradient(90deg,#762f46 33%,#f5eddf 33% 66%,#c0a56d 66%)}.hub-theme-settings h2 small{font-size:12px;font-weight:400;margin-left:8px}
-html[data-hub-theme=pop]{--ht-primary:#2355ca;--ht-ink:#242337;--ht-soft:#eef0ff;--ht-edge:#4c4b67;--ht-page:#fffbed;--ht-band:linear-gradient(110deg,#ffe883,#ffe6ef);--ht-nav:radial-gradient(#2355ca20 1px,transparent 1.5px) 0 0/9px 9px,#fff4c7}
-html[data-hub-theme=shinchan]{--ht-primary:#cb3437;--ht-ink:#253647;--ht-soft:#fff6d5;--ht-edge:#e8d5a7;--ht-page:#fffdf3;--ht-band:linear-gradient(110deg,#fff0a6,#fff8de);--ht-nav:radial-gradient(circle at 18px 16px,#76bc8b55 3px,transparent 4px) 0 0/68px 52px,linear-gradient(110deg,#ffe78d,#fff2c1)}
-html[data-hub-theme=baseball]{--ht-primary:#244b3b;--ht-ink:#20354a;--ht-soft:#edf3ed;--ht-edge:#c8d5ca;--ht-page:#f7f5ed;--ht-band:linear-gradient(110deg,#e2ebdc,#f4efdd);--ht-nav:repeating-linear-gradient(90deg,transparent 0 17px,#24465a12 17px 18px),#f6f3e8}
-html[data-hub-theme=orchestra]{--ht-primary:#79334b;--ht-ink:#432e36;--ht-soft:#f5ece6;--ht-edge:#d5c5a9;--ht-page:#faf6ef;--ht-band:linear-gradient(110deg,#efe2d2,#f4e6eb);--ht-nav:repeating-linear-gradient(0deg,transparent 0 10px,#b59a6315 10px 11px),#f6efe3}
+/* Each theme owns four distinct card colours; Aurora keeps its existing rules. */
+html[data-hub-theme=pop]{--ht-primary:#2453cc;--ht-ink:#242337;--ht-soft:#fff4be;--ht-edge:#29293a;--ht-page:#faf8f2;--ht-nav:#fff5c9;--ht-c1:#ffe15c;--ht-c2:#cbdfff;--ht-c3:#ffc2da;--ht-c4:#bcebd7;--ht-i1:#252338;--ht-i2:#202c4a;--ht-i3:#48243c;--ht-i4:#163c34;--ht-h1:#dce8ff;--ht-h2:#ffdbe8;--ht-h3:#def4e9;--ht-h4:#fff0a0;--ht-line:#29293a;--ht-pattern:radial-gradient(circle,#28283a35 1.2px,transparent 1.5px);--ht-pattern-size:7px 7px;--ht-shadow:4px 4px 0 #2b2a3c}
+html[data-hub-theme=shinchan]{--ht-primary:#d5393b;--ht-ink:#293947;--ht-soft:#fff4c7;--ht-edge:#e8d7b5;--ht-page:#fffdf5;--ht-nav:#ffe991;--ht-c1:#ffe2e2;--ht-c2:#d7edfc;--ht-c3:#ddf0cf;--ht-c4:#fff0b2;--ht-i1:#563239;--ht-i2:#234966;--ht-i3:#2c5137;--ht-i4:#5a4728;--ht-h1:#ddecfc;--ht-h2:#ffe0e6;--ht-h3:#dceecf;--ht-h4:#fff0ad;--ht-line:#e1bc69;--ht-pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Ccircle cx='17' cy='16' r='5' fill='%237dc095'/%3E%3Cpath d='M49 10L62 25L43 28Z' fill='%23ef8b88'/%3E%3Cpath d='M21 52l12-7 7 12-12 7z' fill='%2384bfe3'/%3E%3C/svg%3E");--ht-pattern-size:80px 80px;--ht-shadow:0 3px 9px #6747260a}
+html[data-hub-theme=baseball]{--ht-primary:#214b3a;--ht-ink:#23394c;--ht-soft:#edf1e5;--ht-edge:#c8d3c5;--ht-page:#f7f6ef;--ht-nav:#f5f1e5;--ht-c1:#213b51;--ht-c2:#f2ead8;--ht-c3:#35644d;--ht-c4:#a54b40;--ht-i1:#fff;--ht-i2:#293f50;--ht-i3:#fff;--ht-i4:#fff;--ht-h1:#e1e8ef;--ht-h2:#f3dfd9;--ht-h3:#e0ebdc;--ht-h4:#e8edc9;--ht-line:#a64e44;--ht-pattern:repeating-linear-gradient(90deg,transparent 0 12px,#97a8ae30 12px 13px);--ht-pattern-size:26px 100%;--ht-shadow:0 3px 9px #2035460a}
+html[data-hub-theme=orchestra]{--ht-primary:#79334b;--ht-ink:#44363b;--ht-soft:#f5eddd;--ht-edge:#d3c0a3;--ht-page:#f9f6f0;--ht-nav:#f2eadb;--ht-c1:#77374b;--ht-c2:#f3e9d6;--ht-c3:#dbe5d8;--ht-c4:#e9cf92;--ht-i1:#fff7e9;--ht-i2:#544534;--ht-i3:#354c40;--ht-i4:#594325;--ht-h1:#f1e3e7;--ht-h2:#e5e9f0;--ht-h3:#e4ecde;--ht-h4:#f3e6c5;--ht-line:#b29a60;--ht-pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='60'%3E%3Cpath d='M0 18H180M0 24H180M0 30H180M0 36H180M0 42H180' fill='none' stroke='%23b59b60' stroke-opacity='.24'/%3E%3C/svg%3E");--ht-pattern-size:180px 60px;--ht-shadow:0 4px 16px #6145290a}
 html[data-hub-theme]:not([data-hub-theme=aurora]){--accent:var(--ht-primary);--edge:var(--ht-edge);--soft:var(--ht-soft);--tint:var(--surface,#fff);--shine:none}
 html[data-hub-theme]:not([data-hub-theme=aurora]) body{background:var(--ht-page)}
 html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.tabs,.mobile-menu,.mobile-bottom-nav,.header-bar){background:var(--ht-nav)!important;color:var(--ht-ink)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.tabs,.header-bar){background-image:var(--ht-pattern)!important;background-size:var(--ht-pattern-size)!important}
 html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.tab.active,button.primary:not(.danger):not(.green),.plot-tabs button.active){background:var(--ht-primary)!important;color:#fff!important;border-color:var(--ht-primary)!important}
 html[data-hub-theme]:not([data-hub-theme=aurora]) button.secondary{color:var(--ht-primary);border-color:var(--ht-edge)}
-html[data-hub-theme]:not([data-hub-theme=aurora]) h1{border-color:var(--ht-primary)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(h1,.panel>h1){border-color:var(--ht-primary)!important}
 html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.badge,.event-date){background:var(--ht-soft);color:var(--ht-ink)}
-html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.fund-balance-head,.fund-budget-summary,.pay-plan-cards article,.pay-rates,.pay-semester>summary,.pay-student-entry,.plot-controls,.table-maker-settings,.hub-unit-head,.hub-score,.mr-voice-script,.mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4){background:var(--ht-band)!important;color:var(--ht-ink)!important;border-color:var(--ht-edge)}
-html[data-hub-theme=pop] :is(.section-card,.pay-plan-cards article,.fund-card){border:1px solid var(--ht-edge);box-shadow:3px 3px 0 #29283b18}
+/* The four main dashboard cards are deliberately different, including dark/light ink. */
+html[data-hub-theme]:not([data-hub-theme=aurora]) .meeting-overview{--card-fill:var(--ht-c1);--card-ink:var(--ht-i1)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .meeting-overview:nth-child(2){--card-fill:var(--ht-c2);--card-ink:var(--ht-i2)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .year-aurora{--card-fill:var(--ht-c3);--card-ink:var(--ht-i3)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .game-galaxy{--card-fill:var(--ht-c4);--card-ink:var(--ht-i4)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.meeting-overview,.year-aurora,.game-galaxy){position:relative;isolation:isolate;overflow:hidden;background:var(--card-fill)!important;color:var(--card-ink)!important;border:1px solid var(--ht-edge);box-shadow:var(--ht-shadow)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.meeting-overview,.year-aurora,.game-galaxy) :is(h2,time,strong,b,span,small,.meeting-overview-details){color:var(--card-ink)!important}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .meeting-overview-kind{background:#ffffff30;color:inherit!important;border:1px solid currentColor}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.meeting-overview,.year-aurora,.game-galaxy)::after{content:'';position:absolute;right:0;top:0;width:76px;height:52px;background-image:var(--ht-pattern);background-size:var(--ht-pattern-size);opacity:.36;pointer-events:none;z-index:-1;transform:none;filter:none;box-shadow:none}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .game-galaxy::before{display:none}
+/* Long-form panels retain white bodies; colour belongs to the headings. */
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.mr-summary-grid>section,.pay-plan-cards article,.fund-budget-summary,.pay-student-entry,.research-year-charts>.section-card,.meeting-memo,.hub-unit){--section-fill:var(--ht-h1)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.mr-summary-grid>section,.pay-plan-cards article,.fund-budget-summary,.pay-student-entry,.research-year-charts>.section-card,.meeting-memo,.hub-unit):nth-child(4n+2){--section-fill:var(--ht-h2)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.mr-summary-grid>section,.pay-plan-cards article,.fund-budget-summary,.pay-student-entry,.research-year-charts>.section-card,.meeting-memo,.hub-unit):nth-child(4n+3){--section-fill:var(--ht-h3)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.mr-summary-grid>section,.pay-plan-cards article,.fund-budget-summary,.pay-student-entry,.research-year-charts>.section-card,.meeting-memo,.hub-unit):nth-child(4n+4){--section-fill:var(--ht-h4)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.fund-budget-summary,.pay-plan-cards article,.pay-student-entry,.research-year-charts>.section-card,.meeting-memo,.meeting-memo.is-paper){background:var(--section-fill)!important;color:var(--ht-ink)!important;border-color:var(--ht-edge);box-shadow:none}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{background:var(--section-fill)!important;color:var(--ht-ink)!important;border-bottom:1px solid var(--ht-edge)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .mr-summary-grid.mr-summary-grid>section:nth-child(4){border-color:var(--ht-line);border-top-width:3px}
+html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.fund-balance-head,.pay-rates,.pay-semester>summary,.plot-controls,.table-maker-settings,.hub-unit-head,.hub-score,.mr-voice-script,.rr-connection,.conference-pass-header,.conference-pass-main,.game-season-memo){background:var(--section-fill,var(--ht-h1))!important;color:var(--ht-ink)!important;border-color:var(--ht-edge)}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .pay-semester:nth-child(even)>summary{background:var(--ht-h3)!important}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .table-maker-settings{background:var(--ht-h3)!important}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .rr-topic.selected{outline:2px solid var(--ht-primary);outline-offset:-2px}
+/* Theme-specific shapes and details, not merely a palette swap. */
+html[data-hub-theme=pop] :is(.meeting-overview,.year-aurora,.game-galaxy){border:2px solid var(--ht-edge);border-radius:10px}
+html[data-hub-theme=pop] :is(.section-card,.pay-plan-cards article,.fund-card){border:1.5px solid var(--ht-edge);box-shadow:3px 3px 0 #29293a25}
 html[data-hub-theme=pop] .tab.active{box-shadow:3px 3px 0 #26233c;border-radius:7px}
-html[data-hub-theme=baseball] :is(.card .value,.pay-plan-cards strong){font-variant-numeric:tabular-nums;letter-spacing:.02em}
-html[data-hub-theme=baseball] .fund-balance-head{border-top:2px dashed #b8685d}
+html[data-hub-theme=pop] .mr-summary-grid>section>h4{border-top:1px solid var(--ht-edge)}
+html[data-hub-theme=shinchan] :is(.meeting-overview,.year-aurora,.game-galaxy){border-radius:18px}
+html[data-hub-theme=baseball] :is(.meeting-overview-date,.year-metrics b){font-family:Arial,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.035em}
+html[data-hub-theme=baseball] :is(.meeting-overview,.year-aurora,.game-galaxy){border-radius:9px;border-bottom:3px solid var(--ht-line)}
+html[data-hub-theme=baseball] .meeting-overview:nth-child(2){background-image:var(--ht-pattern)!important;background-size:var(--ht-pattern-size)!important}
+html[data-hub-theme=baseball] .fund-balance-head{border-bottom:1px dashed var(--ht-line)}
+html[data-hub-theme=orchestra] :is(.meeting-overview,.year-aurora,.game-galaxy){border-radius:8px;border:1px solid #b59a65;box-shadow:inset 0 0 0 4px #ffffff13,0 4px 12px #6145290a}
 html[data-hub-theme=orchestra] :is(.section-card,.pay-plan-cards article){border-color:var(--ht-edge);box-shadow:0 3px 14px #60412708}
 html[data-hub-theme=orchestra] :is(h1,h2){letter-spacing:.025em}
 #hubThemeDecoration{pointer-events:none;display:flex;justify-content:flex-end;padding:8px 24px 0;background:var(--ht-page);overflow:hidden}#hubThemeDecoration img{display:block;width:min(470px,100%);height:auto;max-height:145px;object-fit:contain}
-html[data-theme=dark][data-hub-theme]:not([data-hub-theme=aurora]){--ht-ink:#f0e9e1;--ht-soft:#34333c;--ht-edge:#65565e;--ht-page:#20232b;--ht-band:linear-gradient(110deg,#343b43,#42343d);--ht-nav:linear-gradient(110deg,#303940,#40343b);--ht-primary:#a74d67}
-html[data-theme=dark][data-hub-theme=pop]{--ht-primary:#4264c9}html[data-theme=dark][data-hub-theme=baseball]{--ht-primary:#38765a}html[data-theme=dark][data-hub-theme=shinchan]{--ht-primary:#bf4747}
-@media(max-width:760px){.hub-theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.hub-theme-option{padding:10px}#hubThemeDecoration{padding:6px 14px 0}#hubThemeDecoration img{max-height:95px}}
-@media(prefers-reduced-motion:reduce){.hub-theme-option{transition:none}}
-html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.year-aurora,.meeting-memo,.meeting-memo.is-paper,.research-year-charts>.section-card,.research-year-charts>.section-card:nth-child(2),.rr-connection,.conference-pass-header,.conference-pass-main){background:var(--ht-band)!important;color:var(--ht-ink)!important}
-html[data-hub-theme]:not([data-hub-theme=aurora]) .rr-topic.selected{outline:2px solid var(--ht-primary);outline-offset:-2px}
-html[data-hub-theme]:not([data-hub-theme=aurora]) :is(.meeting-overview,.meeting-overview:nth-child(n),.game-galaxy,.game-season-memo){background:var(--ht-band)!important;color:var(--ht-ink)!important}
-html[data-hub-theme]:not([data-hub-theme=aurora]) .game-galaxy :is(h2,strong,small,span){color:var(--ht-ink)!important}
-html[data-hub-theme]:not([data-hub-theme=aurora]) .panel>h1{border-color:var(--ht-primary)!important}
-html[data-hub-theme=shinchan]:not([data-theme=dark]) .meeting-overview:first-child{--ht-band:linear-gradient(110deg,#fff0bd,#fff9df)}
-html[data-hub-theme=shinchan]:not([data-theme=dark]) .meeting-overview:nth-child(2){--ht-band:linear-gradient(110deg,#e0f2fc,#eff8ff)}
-html[data-hub-theme=shinchan]:not([data-theme=dark]) .year-aurora{--ht-band:linear-gradient(110deg,#e1f1df,#f2f9e8)}
-html[data-hub-theme=shinchan]:not([data-theme=dark]) .game-galaxy{--ht-band:linear-gradient(110deg,#ffe1e3,#fff0e9)}
-html[data-hub-theme=pop]:not([data-theme=dark]) .meeting-overview:nth-child(2){--ht-band:linear-gradient(110deg,#e1e9ff,#e9e1ff)}
-html[data-hub-theme=pop]:not([data-theme=dark]) .game-galaxy{--ht-band:linear-gradient(110deg,#ffd5e9,#ffe6f1)}
+/* Dark appearance keeps distinct colours and readable text rather than collapsing to grey. */
+html[data-theme=dark][data-hub-theme]:not([data-hub-theme=aurora]){--ht-ink:#f0e9e1;--ht-soft:#34333c;--ht-edge:#716a6e;--ht-page:#20232b;--ht-nav:#30343d;--ht-i1:#fff3df;--ht-i2:#e7f1ff;--ht-i3:#fbe7ef;--ht-i4:#e4f7eb;--ht-h1:#303f54;--ht-h2:#513344;--ht-h3:#314c3f;--ht-h4:#51472f;--ht-shadow:0 3px 10px #0003}
+html[data-theme=dark][data-hub-theme=pop]{--ht-primary:#4264c9;--ht-c1:#66551e;--ht-c2:#274a77;--ht-c3:#713851;--ht-c4:#285548}
+html[data-theme=dark][data-hub-theme=shinchan]{--ht-primary:#bf4747;--ht-c1:#5a343e;--ht-c2:#304a62;--ht-c3:#3c5233;--ht-c4:#61502a}
+html[data-theme=dark][data-hub-theme=baseball]{--ht-primary:#38765a;--ht-c1:#23394d;--ht-c2:#4b463a;--ht-c3:#2d503c;--ht-c4:#633d37}
+html[data-theme=dark][data-hub-theme=orchestra]{--ht-primary:#a74d67;--ht-c1:#5b2c40;--ht-c2:#494238;--ht-c3:#354b41;--ht-c4:#58492b}
+@media(max-width:760px){.hub-theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.hub-theme-option{padding:10px}#hubThemeDecoration{padding:6px 14px 0}#hubThemeDecoration img{max-height:95px}html[data-hub-theme=pop] :is(.meeting-overview,.year-aurora,.game-galaxy){box-shadow:2px 2px 0 #2b2a3c}}
+html[data-hub-theme]:not([data-hub-theme=aurora]) .game-stars{display:none}
