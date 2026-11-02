@@ -676,6 +676,7 @@ function applyHubTheme(){
  const allowed=['pop','shinchan','baseball','orchestra'];
  const value=admin()&&!studentPreview&&allowed.includes(preferences.hubTheme)?preferences.hubTheme:'aurora';
  document.documentElement.dataset.hubTheme=value;
+ globalThis.HubThemeDesign?.mount(value);
  let decoration=document.getElementById('hubThemeDecoration');
  if(value!=='shinchan'){decoration?.remove();return;}
  if(!decoration){decoration=document.createElement('div');decoration.id='hubThemeDecoration';decoration.setAttribute('aria-hidden','true');decoration.innerHTML='<img src="__NISML_THEME_CAST__" alt="">';document.querySelector('main.app')?.append(decoration);}

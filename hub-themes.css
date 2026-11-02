@@ -58,3 +58,83 @@ html[data-theme=dark][data-hub-theme=orchestra]{--ht-primary:#a74d67;--ht-c1:#5b
 @media(max-width:760px){.hub-theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.hub-theme-option{padding:10px}#hubThemeDecoration{padding:6px 14px 0}#hubThemeDecoration img{max-height:95px}html[data-hub-theme=pop] :is(.meeting-overview,.year-aurora,.game-galaxy){box-shadow:2px 2px 0 #2b2a3c}}
 html[data-hub-theme]:not([data-hub-theme=aurora]) .game-stars{display:none}
 html[data-theme=dark][data-hub-theme]:not([data-hub-theme=aurora]) button.secondary{color:#e8edf7;border-color:#8c8d9a}
+/* Full themed compositions, matched to the approved static concepts. */
+#themeDashboardLead{margin:0 0 22px;min-width:0}
+#panel:has(#themeDashboardLead)>.group-meeting-summary,#panel:has(#themeDashboardLead)>.year-game-row{display:none}
+.theme-hero-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.theme-hero-card{position:relative;min-width:0;min-height:210px;overflow:hidden;background:#fff;border-radius:16px;padding:24px;color:#192332;isolation:isolate}
+.theme-card-content{position:relative;z-index:1;min-width:0}.theme-card-content h2{font-size:21px;line-height:1.3;margin:0 0 20px!important;color:inherit!important}
+.theme-hero-number{font-size:clamp(38px,4.6vw,66px);font-weight:800;line-height:1.1;letter-spacing:-.035em;font-variant-numeric:tabular-nums;white-space:nowrap}.theme-hero-number small{font-size:.4em;font-weight:700;line-height:1.2;font-family:inherit;letter-spacing:0;margin-left:5px;color:inherit!important}
+.theme-card-content p{font-size:14px;margin:14px 0 5px;line-height:1.5}.theme-card-note{display:block;font-size:12px;color:#596475;line-height:1.5;overflow-wrap:anywhere}
+.theme-icon-panel{position:absolute;inset:0 auto 0 0;width:29%;display:flex;align-items:center;justify-content:center}.theme-icon-panel svg{width:72%;max-width:80px;height:auto}
+.theme-icon-watermark,.theme-character{display:none}
+.theme-support-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}.theme-support-cards .theme-support-card{min-height:94px!important;padding:12px 18px!important}.theme-support-cards .meeting-overview-date{font-size:24px!important}.theme-support-cards .meeting-overview-main{margin:5px 0!important}.theme-support-cards .meeting-overview-header h2{font-size:14px!important}.theme-support-cards .meeting-overview-presenters{font-size:13px!important}.theme-support-cards .game-facts strong{font-size:18px!important}
+/* Pop Art: blue masthead, hot-pink selection, diagonal colour tabs and ink shadows. */
+html[data-hub-theme=pop]{--ht-primary:#0546ef;--ht-nav:#0546ef;--ht-h1:#ff399b;--ht-h2:#d9e9ff;--ht-h3:#c8efdc;--ht-h4:#ffe727;--ht-page:#f8fbff}
+html[data-hub-theme=pop] :is(.header-bar,.tabs){background-color:#0546ef!important;color:#fff!important;background-image:radial-gradient(#06266f80 2px,transparent 2.5px)!important;background-size:14px 14px!important}
+html[data-hub-theme=pop] .header-bar{padding-top:22px;padding-bottom:22px}
+html[data-hub-theme=pop] .header-bar>.dashboard-brand{background:#fff;border-radius:10px;padding:7px 12px;box-shadow:4px 4px 0 #ffe727}
+html[data-hub-theme=pop] .header-clock{color:#fff!important}
+html[data-hub-theme=pop] .tabs .tab{color:#fff!important;font-weight:750}
+html[data-hub-theme=pop] #tabs .tab.active{background:#ff319a!important;border:2px solid #171723!important;box-shadow:4px 4px 0 #111;color:#fff!important}
+html[data-hub-theme=pop] .theme-hero-card{--hero-accent:#ffe727;--hero-dots:#e4c12a;border:2.5px solid #11121d;box-shadow:7px 7px 0 var(--hero-accent);padding-left:34%;background:#fff!important;color:#111827!important}
+html[data-hub-theme=pop] .theme-hero-paper{--hero-accent:#0085ff;--hero-dots:#8bc8ff}
+html[data-hub-theme=pop] .theme-hero-chart{--hero-accent:#ff319a;--hero-dots:#f5a1cd}
+html[data-hub-theme=pop] .theme-icon-panel{background:var(--hero-accent);clip-path:polygon(0 0,100% 0,75% 100%,0 100%);color:#11121d;padding-right:10px}
+html[data-hub-theme=pop] .theme-icon-panel svg{filter:drop-shadow(4px 4px 0 #000);transform:rotate(-7deg)}
+html[data-hub-theme=pop] .theme-hero-number{color:#0546ef}
+html[data-hub-theme=pop] .theme-hero-card::after{content:'';position:absolute;bottom:0;right:0;width:88px;height:130px;background:radial-gradient(var(--hero-dots) 2px,transparent 2.5px) 0 0/11px 11px;clip-path:polygon(100% 0,100% 100%,0 100%);opacity:.7;z-index:0;pointer-events:none}
+html[data-hub-theme=pop] #recentMeetings{border:2.5px solid #11121d!important;border-radius:16px;padding:0 18px 18px;box-shadow:7px 7px 0 #0785ff;background:#fff!important;overflow:hidden}
+html[data-hub-theme=pop] #recentMeetings>h2{margin:0 -18px 18px!important;padding:21px 25px;background:#0546ef;color:#fff!important;font-size:27px;background-image:radial-gradient(#06266f80 2px,transparent 2.5px);background-size:14px 14px}
+html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n){border:0!important;border-radius:12px;box-shadow:none}
+html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{font-size:19px!important;font-weight:800;border:0!important;color:#151525!important;padding:14px!important}
+html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>ul{padding:8px 18px 8px 30px}.mr-summary-grid li{overflow-wrap:anywhere}
+/* Orchestra: concert programme typography, round seals, gold rules, hall banner. */
+html[data-hub-theme=orchestra]{--ht-primary:#601828;--ht-nav:#faf6ed;--ht-page:#f8f3ea;--ht-h1:#fffaf2;--ht-h2:#fffaf2;--ht-h3:#fffaf2;--ht-h4:#fffaf2;--ht-ink:#531b27}
+html[data-hub-theme=orchestra] :is(.header-bar,.tabs){background-color:#faf6ed!important;border-bottom:1px solid #c8a96a}
+html[data-hub-theme=orchestra] .theme-hero-card{padding:25px;background:#fffdf8!important;color:#601828!important;border:1px solid #e1cfb4;border-radius:13px;box-shadow:0 5px 15px #84552c10}
+html[data-hub-theme=orchestra] .theme-icon-panel{width:54px;height:54px;inset:22px auto auto 22px;border-radius:50%;background:#601828;color:#fff0d8}
+html[data-hub-theme=orchestra] .theme-icon-panel svg{width:34px;stroke-width:2.2}
+html[data-hub-theme=orchestra] .theme-icon-panel svg [fill]{fill:none}
+html[data-hub-theme=orchestra] .theme-card-content h2{margin:4px 0 30px 70px!important;font-family:Georgia,'Batang',serif;font-size:23px;min-height:38px;position:relative}
+html[data-hub-theme=orchestra] .theme-card-content h2::after{content:'';display:block;width:100px;border-bottom:1px solid #b79655;margin-top:12px}
+html[data-hub-theme=orchestra] .theme-hero-number{font-family:Georgia,'Times New Roman',serif;font-weight:500;font-size:60px;color:#601828}
+html[data-hub-theme=orchestra] .theme-card-content p{color:#414046}.theme-card-note{max-width:95%}
+html[data-hub-theme=orchestra] .theme-icon-watermark{display:block;position:absolute;width:90px;right:16px;top:85px;color:#bda279;opacity:.18}
+html[data-hub-theme=orchestra] .theme-icon-watermark svg [fill]{fill:currentColor}
+html[data-hub-theme=orchestra] #recentMeetings{padding:0 22px 20px!important;border:1px solid #dfccb2;border-radius:12px;overflow:hidden;background:#fffdf8!important;box-shadow:0 4px 14px #68412b0b}
+html[data-hub-theme=orchestra] #recentMeetings>h2{margin:0 -22px 20px!important;padding:24px 28px;color:#fff8e6!important;background:#501421 url('__THEME_HALL_CSS__') center right/cover no-repeat;font:700 28px/1.4 Georgia,'Batang',serif;border-bottom:1px solid #b89a65}
+html[data-hub-theme=orchestra] #recentMeetings>h2::before{content:'♫';color:#d5b875;margin-right:14px}
+html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n){background:#fffdf8!important;border:0!important;border-radius:0}
+html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{background:#fffdf8!important;color:#601828!important;border-bottom:1px solid #b8995e!important;font-family:Georgia,'Batang',serif;font-size:20px!important;padding:12px!important}
+html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>ul{background:#fffdf8!important}
+/* Shin-chan: character stickers in the cards, not a footer-only illustration. */
+html[data-hub-theme=shinchan]{--ht-page:#f4fbff;--ht-nav:#fff0ac}
+html[data-hub-theme=shinchan] .theme-hero-card{--character-position:0%;background:#fff1f1!important;border:2px solid #f2a5a2;border-radius:23px;box-shadow:0 3px 12px #775b3620;color:#263c4f;padding-right:100px}
+html[data-hub-theme=shinchan] .theme-hero-paper{--character-position:16.666%;background:#f0f9ff!important;border-color:#92cdea}
+html[data-hub-theme=shinchan] .theme-hero-chart{--character-position:33.333%;background:#eff9e8!important;border-color:#b2d59f}
+html[data-hub-theme=shinchan] .theme-icon-panel{position:static;display:inline-flex;width:38px;height:38px;margin-bottom:12px;float:left;margin-right:10px;color:#de5550}
+html[data-hub-theme=shinchan] .theme-icon-panel svg{width:100%;height:100%}
+html[data-hub-theme=shinchan] .theme-card-content h2{font-size:20px;min-height:38px;margin-bottom:15px!important;padding-top:6px}
+html[data-hub-theme=shinchan] .theme-hero-number{font-size:56px;color:#243c4c}
+html[data-hub-theme=shinchan] .theme-character{display:block;position:absolute;right:5px;bottom:8px;width:100px;height:150px;background-image:url('__THEME_CAST_CSS__');background-repeat:no-repeat;background-size:600px auto;background-position:0 center;pointer-events:none}
+html[data-hub-theme=shinchan] #recentMeetings{border:2px solid #acd8b7;padding:0 20px 20px;border-radius:22px;background:#fff!important;overflow:hidden}
+html[data-hub-theme=shinchan] #recentMeetings>h2{padding:20px 22px!important;margin:0 -20px 16px!important;background:#fff6c9;color:#243c4c!important;font-size:25px;border-bottom:1px solid #e9d78e}
+html[data-hub-theme=shinchan] .mr-summary-grid.mr-summary-grid>section:nth-child(n){border-radius:16px;border:1px solid #e4e8ed}
+html[data-hub-theme=shinchan] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{font-size:19px!important;padding:14px!important}
+html[data-hub-theme=shinchan] #hubThemeDecoration{justify-content:center;background:transparent;padding-top:15px}
+/* Keep dense research content readable and retain the existing single-column records. */
+@media(min-width:1000px){html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid.mr-summary-grid{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:18px}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid>section:nth-child(4){order:-2}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid>section:nth-child(1){order:-1}}
+@media(max-width:1100px){.theme-hero-cards{gap:12px}.theme-hero-card{padding:18px;min-height:190px}.theme-card-content h2{font-size:17px}.theme-hero-number{font-size:42px}html[data-hub-theme=shinchan] .theme-hero-card{padding-right:75px}.theme-character{max-width:75px}html[data-hub-theme=orchestra] .theme-card-content h2{font-size:18px;margin-left:60px!important}}
+@media(max-width:760px){.theme-hero-cards{grid-template-columns:1fr;gap:14px}.theme-hero-card{min-height:155px;padding:20px}.theme-card-content h2{font-size:19px;margin-bottom:12px!important}.theme-hero-number{font-size:48px}.theme-card-content p{margin-top:10px}.theme-support-cards{grid-template-columns:1fr;gap:10px}.theme-support-cards .theme-support-card{min-height:84px!important}html[data-hub-theme=orchestra] .theme-hero-card{min-height:185px}html[data-hub-theme=orchestra] .theme-hero-number{font-size:49px}html[data-hub-theme=shinchan] .theme-hero-card{padding-right:100px}.theme-character{max-width:none}html[data-hub-theme=pop] .header-bar>.dashboard-brand{padding:4px 6px}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) #recentMeetings>h2{font-size:22px}}
+/* Light paper surfaces remain legible even when the surrounding app is dark. */
+html[data-theme=dark] .theme-hero-card :is(p,.theme-card-note){color:#535d6c!important}
+html[data-theme=dark][data-hub-theme=pop] #recentMeetings,html[data-theme=dark][data-hub-theme=shinchan] #recentMeetings,html[data-theme=dark][data-hub-theme=orchestra] #recentMeetings{color:#243c4c!important}
+html[data-theme=dark][data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{color:#fff!important}
+
+html[data-hub-theme=shinchan] .theme-character-1{width:90px;background-position:-247px center}
+html[data-hub-theme=shinchan] .theme-character-2{width:94px;background-position:-340px center}
+
+html[data-hub-theme=shinchan] .theme-character-0{clip-path:inset(0 6% 0 0)}
+html[data-hub-theme=shinchan] .theme-character-1{clip-path:inset(0 3% 0 8%)}
+html[data-hub-theme=shinchan] .theme-character-2{clip-path:inset(0 8% 0 0)}
