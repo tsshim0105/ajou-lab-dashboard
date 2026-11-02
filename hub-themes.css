@@ -57,3 +57,4 @@ html[data-theme=dark][data-hub-theme=baseball]{--ht-primary:#38765a;--ht-c1:#233
 html[data-theme=dark][data-hub-theme=orchestra]{--ht-primary:#a74d67;--ht-c1:#5b2c40;--ht-c2:#494238;--ht-c3:#354b41;--ht-c4:#58492b}
 @media(max-width:760px){.hub-theme-options{grid-template-columns:repeat(2,minmax(0,1fr))}.hub-theme-option{padding:10px}#hubThemeDecoration{padding:6px 14px 0}#hubThemeDecoration img{max-height:95px}html[data-hub-theme=pop] :is(.meeting-overview,.year-aurora,.game-galaxy){box-shadow:2px 2px 0 #2b2a3c}}
 html[data-hub-theme]:not([data-hub-theme=aurora]) .game-stars{display:none}
+html[data-theme=dark][data-hub-theme]:not([data-hub-theme=aurora]) button.secondary{color:#e8edf7;border-color:#8c8d9a}
