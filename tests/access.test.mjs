@@ -388,3 +388,16 @@ test('fine vertical board positions and a stable grid persist across sessions',a
  assert.deepEqual(p.hubBoard,hubBoard);assert.equal(p.hubBoardRows,12);
  assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubBoardRows:0}),env)).status,400);
 });
+
+test('Hub themes are faculty-only and account-scoped',async()=>{
+ const {worker,env}=fixture();
+ for(const hubTheme of ['aurora','pop','shinchan','baseball','orchestra']){
+  assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme}),env)).status,200);
+  assert.equal((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubTheme,hubTheme);
+  assert.equal((await (await worker.fetch(req('student@example.test'),env)).json()).preferences.hubTheme,undefined);
+ }
+ assert.equal((await worker.fetch(req('student@example.test','/api/preferences','PUT',{hubTheme:'pop'}),env)).status,403);
+ assert.equal((await worker.fetch(req(OWNER,'/api/preferences','PUT',{hubTheme:'invalid'}),env)).status,400);
+ assert.equal((await worker.fetch(req('student@example.test','/api/preferences','PUT',{theme:'dark'}),env)).status,200);
+ assert.equal((await (await worker.fetch(req(OWNER),env)).json()).preferences.hubTheme,'orchestra');
+});
