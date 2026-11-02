@@ -85,7 +85,7 @@ html[data-hub-theme=pop] .theme-icon-panel svg{filter:drop-shadow(4px 4px 0 #000
 html[data-hub-theme=pop] .theme-hero-number{color:#0546ef}
 html[data-hub-theme=pop] .theme-hero-card::after{content:'';position:absolute;bottom:0;right:0;width:88px;height:130px;background:radial-gradient(var(--hero-dots) 2px,transparent 2.5px) 0 0/11px 11px;clip-path:polygon(100% 0,100% 100%,0 100%);opacity:.7;z-index:0;pointer-events:none}
 html[data-hub-theme=pop] #recentMeetings{border:2.5px solid #11121d!important;border-radius:16px;padding:0 18px 18px;box-shadow:7px 7px 0 #0785ff;background:#fff!important;overflow:hidden}
-html[data-hub-theme=pop] #recentMeetings>h2{margin:0 -18px 18px!important;padding:21px 25px;background:#0546ef;color:#fff!important;font-size:27px;background-image:radial-gradient(#06266f80 2px,transparent 2.5px);background-size:14px 14px}
+html[data-hub-theme=pop] #recentMeetings>:is(h2,.recent-meetings-heading){margin:0 -18px 18px!important;padding:21px 25px;background:#0546ef;color:#fff!important;font-size:27px;background-image:radial-gradient(#06266f80 2px,transparent 2.5px);background-size:14px 14px}
 html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n){border:0!important;border-radius:12px;box-shadow:none}
 html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{font-size:19px!important;font-weight:800;border:0!important;color:#151525!important;padding:14px!important}
 html[data-hub-theme=pop] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>ul{padding:8px 18px 8px 30px}.mr-summary-grid li{overflow-wrap:anywhere}
@@ -103,8 +103,8 @@ html[data-hub-theme=orchestra] .theme-card-content p{color:#414046}.theme-card-n
 html[data-hub-theme=orchestra] .theme-icon-watermark{display:block;position:absolute;width:90px;right:16px;top:85px;color:#bda279;opacity:.18}
 html[data-hub-theme=orchestra] .theme-icon-watermark svg [fill]{fill:currentColor}
 html[data-hub-theme=orchestra] #recentMeetings{padding:0 22px 20px!important;border:1px solid #dfccb2;border-radius:12px;overflow:hidden;background:#fffdf8!important;box-shadow:0 4px 14px #68412b0b}
-html[data-hub-theme=orchestra] #recentMeetings>h2{margin:0 -22px 20px!important;padding:24px 28px;color:#fff8e6!important;background:#501421 url('__THEME_HALL_CSS__') center right/cover no-repeat;font:700 28px/1.4 Georgia,'Batang',serif;border-bottom:1px solid #b89a65}
-html[data-hub-theme=orchestra] #recentMeetings>h2::before{content:'♫';color:#d5b875;margin-right:14px}
+html[data-hub-theme=orchestra] #recentMeetings>:is(h2,.recent-meetings-heading){margin:0 -22px 20px!important;padding:24px 28px;color:#fff8e6!important;background:#501421 url('__THEME_HALL_CSS__') center right/cover no-repeat;font:700 28px/1.4 Georgia,'Batang',serif;border-bottom:1px solid #b89a65}
+html[data-hub-theme=orchestra] #recentMeetings>:is(h2,.recent-meetings-heading)::before{content:'♫';color:#d5b875;margin-right:14px}
 html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n){background:#fffdf8!important;border:0!important;border-radius:0}
 html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{background:#fffdf8!important;color:#601828!important;border-bottom:1px solid #b8995e!important;font-family:Georgia,'Batang',serif;font-size:20px!important;padding:12px!important}
 html[data-hub-theme=orchestra] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>ul{background:#fffdf8!important}
@@ -119,14 +119,14 @@ html[data-hub-theme=shinchan] .theme-card-content h2{font-size:20px;min-height:3
 html[data-hub-theme=shinchan] .theme-hero-number{font-size:56px;color:#243c4c}
 html[data-hub-theme=shinchan] .theme-character{display:block;position:absolute;right:5px;bottom:8px;width:100px;height:150px;background-image:url('__THEME_CAST_CSS__');background-repeat:no-repeat;background-size:600px auto;background-position:0 center;pointer-events:none}
 html[data-hub-theme=shinchan] #recentMeetings{border:2px solid #acd8b7;padding:0 20px 20px;border-radius:22px;background:#fff!important;overflow:hidden}
-html[data-hub-theme=shinchan] #recentMeetings>h2{padding:20px 22px!important;margin:0 -20px 16px!important;background:#fff6c9;color:#243c4c!important;font-size:25px;border-bottom:1px solid #e9d78e}
+html[data-hub-theme=shinchan] #recentMeetings>:is(h2,.recent-meetings-heading){padding:20px 22px!important;margin:0 -20px 16px!important;background:#fff6c9;color:#243c4c!important;font-size:25px;border-bottom:1px solid #e9d78e}
 html[data-hub-theme=shinchan] .mr-summary-grid.mr-summary-grid>section:nth-child(n){border-radius:16px;border:1px solid #e4e8ed}
 html[data-hub-theme=shinchan] .mr-summary-grid.mr-summary-grid>section:nth-child(n)>h4{font-size:19px!important;padding:14px!important}
 html[data-hub-theme=shinchan] #hubThemeDecoration{justify-content:center;background:transparent;padding-top:15px}
 /* Keep dense research content readable and retain the existing single-column records. */
 @media(min-width:1000px){html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid.mr-summary-grid{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:18px}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid>section:nth-child(4){order:-2}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) .recent-meetings .mr-summary-grid>section:nth-child(1){order:-1}}
 @media(max-width:1100px){.theme-hero-cards{gap:12px}.theme-hero-card{padding:18px;min-height:190px}.theme-card-content h2{font-size:17px}.theme-hero-number{font-size:42px}html[data-hub-theme=shinchan] .theme-hero-card{padding-right:75px}.theme-character{max-width:75px}html[data-hub-theme=orchestra] .theme-card-content h2{font-size:18px;margin-left:60px!important}}
-@media(max-width:760px){.theme-hero-cards{grid-template-columns:1fr;gap:14px}.theme-hero-card{min-height:155px;padding:20px}.theme-card-content h2{font-size:19px;margin-bottom:12px!important}.theme-hero-number{font-size:48px}.theme-card-content p{margin-top:10px}.theme-support-cards{grid-template-columns:1fr;gap:10px}.theme-support-cards .theme-support-card{min-height:84px!important}html[data-hub-theme=orchestra] .theme-hero-card{min-height:185px}html[data-hub-theme=orchestra] .theme-hero-number{font-size:49px}html[data-hub-theme=shinchan] .theme-hero-card{padding-right:100px}.theme-character{max-width:none}html[data-hub-theme=pop] .header-bar>.dashboard-brand{padding:4px 6px}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) #recentMeetings>h2{font-size:22px}}
+@media(max-width:760px){.theme-hero-cards{grid-template-columns:1fr;gap:14px}.theme-hero-card{min-height:155px;padding:20px}.theme-card-content h2{font-size:19px;margin-bottom:12px!important}.theme-hero-number{font-size:48px}.theme-card-content p{margin-top:10px}.theme-support-cards{grid-template-columns:1fr;gap:10px}.theme-support-cards .theme-support-card{min-height:84px!important}html[data-hub-theme=orchestra] .theme-hero-card{min-height:185px}html[data-hub-theme=orchestra] .theme-hero-number{font-size:49px}html[data-hub-theme=shinchan] .theme-hero-card{padding-right:100px}.theme-character{max-width:none}html[data-hub-theme=pop] .header-bar>.dashboard-brand{padding:4px 6px}html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) #recentMeetings>:is(h2,.recent-meetings-heading){font-size:22px}}
 /* Light paper surfaces remain legible even when the surrounding app is dark. */
 html[data-theme=dark] .theme-hero-card :is(p,.theme-card-note){color:#535d6c!important}
 html[data-theme=dark][data-hub-theme=pop] #recentMeetings,html[data-theme=dark][data-hub-theme=shinchan] #recentMeetings,html[data-theme=dark][data-hub-theme=orchestra] #recentMeetings{color:#243c4c!important}
@@ -138,3 +138,6 @@ html[data-hub-theme=shinchan] .theme-character-2{width:94px;background-position:
 html[data-hub-theme=shinchan] .theme-character-0{clip-path:inset(0 6% 0 0)}
 html[data-hub-theme=shinchan] .theme-character-1{clip-path:inset(0 3% 0 8%)}
 html[data-hub-theme=shinchan] .theme-character-2{clip-path:inset(0 8% 0 0)}
+
+html:is([data-hub-theme=pop],[data-hub-theme=orchestra],[data-hub-theme=shinchan]) #recentMeetings>.recent-meetings-heading h2{margin:0!important;font:inherit!important;color:inherit!important}
+html:is([data-hub-theme=pop],[data-hub-theme=orchestra]) #recentMeetings>.recent-meetings-heading .muted{color:#fff6e8!important}
