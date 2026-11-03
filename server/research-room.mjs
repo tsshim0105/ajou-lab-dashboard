@@ -70,8 +70,7 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
    const records=await db.prepare("SELECT json_extract(payload,'$.id') AS id,json_extract(payload,'$.created') AS created,json_extract(payload,'$.summary') AS summary FROM research_records WHERE id LIKE 'recording:%' AND COALESCE(json_extract(payload,'$.status'),'') != 'cancelled'").all();
    const entries=[];
    for(const row of records.results){if(!Number.isFinite(Date.parse(row.created)))continue;const summary=JSON.parse(row.summary||'{}');for(const t of topics){const item=summary[t.id];if(!item?.content?.trim())continue;entries.push({topic:{id:t.id,title:t.title,cover:t.cover,...(actor.admin?{archived:!!t.archived}:{})},recording:row.id,created:row.created,content:item.content,status:item.status,rolesChanged:!!item.rolesChanged,registeredAt:item.registeredAt||item.notificationAt||item.updated||row.created,day:new Date(Date.parse(row.created)+9*3600000).toISOString().slice(0,10)});}}
-   entries.sort((a,b)=>b.created.localeCompare(a.created)||a.topic.id.localeCompare(b.topic.id));const day=entries[0]?.day||null,seen=new Set();
-   if(actor.admin){const week=meetingWeekRange();return reply({day:null,week,meetings:entries.filter(e=>e.registeredAt>=week.start&&e.registeredAt<week.end)});}
+   entries.sort((a,b)=>Date.parse(b.created)-Date.parse(a.created)||a.topic.id.localeCompare(b.topic.id));const day=entries[0]?.day||null,seen=new Set();
    return reply({day,meetings:entries.filter(e=>{if(e.day!==day||seen.has(e.topic.id))return false;seen.add(e.topic.id);return true;})});
   }
   if(action==='bootstrap'){

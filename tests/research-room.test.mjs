@@ -205,14 +205,22 @@ test('professor preview scopes research reads to the selected student and refuse
  const owner=await(await f.call('rooms')).json();assert.equal(owner.topics.length,2);
 });
 
-test('professor weekly meetings include completed summaries by registration date within Korean week',async()=>{
- const f=fixture();await f.call('topic',topic());const {meetingWeekRange}=await import('../server/research-room.mjs');const week=meetingWeekRange();
- const insert=(id,date,content='summary',status='ended')=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created:'2025-01-01T00:00:00Z',status,summary:{'topic-0001':{content,status:'reviewed',registeredAt:date}}}));
- insert('at-start',week.start);insert('before-start',new Date(Date.parse(week.start)-1).toISOString());insert('at-end',week.end);insert('near-end',new Date(Date.parse(week.end)-1).toISOString());insert('empty',week.start,' ');insert('cancelled',week.start,'summary','cancelled');
- const result=await (await f.call('latest-meetings')).json();assert.equal(result.pending,undefined);assert.equal(result.week.start,week.start);assert.deepEqual(result.meetings.map(x=>x.recording).sort(),['at-start','near-end']);
- assert.deepEqual(meetingWeekRange(new Date('2026-10-25T15:00:00Z')),{start:'2026-10-25T15:00:00.000Z',end:'2026-11-01T15:00:00.000Z'});
- assert.equal(meetingWeekRange(new Date('2026-10-25T14:59:59Z')).start,'2026-10-18T15:00:00.000Z');
+test('professor recent meetings use the latest Korean creation day, regardless of week or later edits',async()=>{
+ const f=fixture();await f.call('topic',topic());await f.call('topic',topic('topic-0002'));
+ const insert=(id,created,topicId='topic-0001',content='summary',status='ended',registeredAt=created)=>f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify({id,created,status,summary:{[topicId]:{content,status:'reviewed',registeredAt}}}));
+ insert('old','2025-01-01T00:00:00Z','topic-0001','summary','ended','2026-11-03T00:00:00Z');
+ insert('before-midnight','2025-01-02T14:59:59Z');
+ insert('latest-topic1','2025-01-02T15:00:00Z');
+ insert('earlier-topic1','2025-01-03T00:00:00+09:00');
+ insert('latest-topic2','2025-01-03T08:00:00+09:00','topic-0002');
+ insert('empty','2026-01-01T00:00:00Z','topic-0001',' ');
+ insert('cancelled','2026-01-01T00:00:00Z','topic-0001','summary','cancelled');
+ const result=await (await f.call('latest-meetings')).json();
+ assert.equal(result.day,'2025-01-03');assert.equal(result.week,undefined);
+ assert.equal(result.meetings.length,2);assert.equal(result.meetings[0].recording,'latest-topic2');
+ assert.ok(result.meetings.every(r=>r.day==='2025-01-03'));assert.equal(new Set(result.meetings.map(r=>r.topic.id)).size,2);
 });
+
 
 test('participant summary edits are scoped, versioned, and never return private recording data',async()=>{
  const f=fixture(),email='student@example.test';await f.call('topic',{...topic(),viewers:[email]});await f.call('topic',topic('topic-0002'));
