@@ -136,7 +136,7 @@ test('floating quick switch follows last classified participants and keeps uncla
  assert.deepEqual(read().topics.filter(t=>t.quick==='true').map(t=>t.id),['__unclassified__']);
 });
 
-test('five-minute live queue survives capture updates, isolates next meeting, deletes audio only after final transcript',async()=>{
+test('five-minute live queue survives capture updates, isolates next meeting, retains latest-day audio after final transcript',async()=>{
  const f=fixture();await create(f);f.env.OPENAI_API_KEY='test-secret';const deleted=[];
  f.env.BUCKET.delete=async keys=>{deleted.push(...keys);};
  const parts=[{first:0,count:1,start:0,end:8,mime:'audio/webm'},{first:1,count:1,start:8,end:300,mime:'audio/webm'}];
@@ -155,7 +155,7 @@ test('five-minute live queue survives capture updates, isolates next meeting, de
   assert.equal((await f.call('recording-audio',{id,index:2,base64:btoa('last')})).status,200);
   s=await(await f.call('recording-detail?id='+id)).json();r=await f.call('recording-save',{...s,status:'ended',audioCount:3,audioParts:[...parts,{first:2,count:1,start:300,end:450,mime:'audio/webm'}]});assert.equal(r.status,200);
   await f.call('recording-create',{id:'next-meeting-001',markers:[markers[0]],mime:'audio/webm'});
-  await f.call('recording-enqueue',{id});s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.status,'completed');assert.ok(s.audioDeletedAt);assert.equal(deleted.length,3);
+  await f.call('recording-enqueue',{id});s=await(await f.call('recording-work',{id})).json();assert.equal(s.transcription.status,'completed');assert.equal(s.audioDeletedAt,undefined);assert.equal(deleted.length,0);
   assert.equal((await(await f.call('recording-detail?id=next-meeting-001')).json()).status,'recording');
   for(let i=0;i<5&&s.processing.status!=='completed';i++)s=await(await f.call('recording-work',{id})).json();assert.equal(s.processing.status,'completed');assert.equal(calls,3);assert.ok(s.summary['topic-0001']);assert.ok(s.summary['topic-0002']);
   assert.equal((await f.call('recording-audio',{id,index:3,base64:btoa('unexpected')})).status,409);
@@ -179,6 +179,7 @@ test('browser rotation starts replacement before stopping old recorder and never
 });
 test('failed AI calls retain audio; successful transcript cleanup retries after storage outage',async()=>{
  const f=fixture();await create(f);await f.call('recording-audio',{id,index:0,base64:btoa('audio')});await f.call('recording-save',{...snap,segments:[]});f.env.OPENAI_API_KEY='test-secret';let deleteAttempts=0,deleted=false,failAPI=true;
+ f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:later-completed',JSON.stringify({created:'2099-01-01T00:00:00Z',status:'ended',transcription:{status:'completed'},audioCount:1}));
  f.env.BUCKET.delete=async()=>{deleteAttempts++;if(deleteAttempts===1)throw Error('storage offline');deleted=true;};
  const old=globalThis.fetch;globalThis.fetch=async url=>url.includes('/models/')?Response.json({}):failAPI?new Response('',{status:400}):Response.json({segments:[{speaker:'A',start:0,end:2,text:'hello'}]});
  try{await f.call('recording-enqueue',{id});let s=await(await f.call('recording-work',{id})).json();assert.equal(s.processing.status,'failed');assert.equal(deleteAttempts,0);assert.equal((await(await f.call('recording-enqueue',{id})).json()).processing.status,'failed');
@@ -378,4 +379,17 @@ test('manually selected professor and students use registered voices from the fi
  f.env.OPENAI_API_KEY='test-secret';const old=globalThis.fetch;let calls=0;
  globalThis.fetch=async(url,options)=>{if(url.includes('/models/'))return Response.json({});calls++;assert.deepEqual(options.body.getAll('known_speaker_names[]'),['voice0','voice1','voice2']);assert.equal(options.body.getAll('known_speaker_references[]').length,3);return Response.json({segments:[{speaker:'voice1',start:0,end:2,text:'학생 발언'},{speaker:'voice0',start:2,end:4,text:'교수 발언'},{speaker:'other',start:4,end:5,text:'불명확'},{speaker:'voice2',start:5,end:7,text:'다른 학생 발언'}]});};
  try{for(let i=0;i<2;i++){const r=await f.call('recording-transcribe',{id});assert.equal(r.status,200);const m=await r.json();assert.deepEqual(m.segments.slice(i*4).map(s=>s.speaker),['voice-'+voices[1].id,'voice-'+voices[0].id,'speaker-unmatched','voice-'+voices[2].id]);assert.equal(m.speakers['voice-'+voices[0].id],'홍길동 · 교수님');}assert.equal(calls,2);}finally{globalThis.fetch=old;}
+});
+
+
+test('audio retention protects all latest Korean-day meetings and incomplete newer meetings do not evict them',async()=>{
+ const {purgeMeetingAudio}=await import('../server/meeting-recording.mjs');const f=fixture(),deleted=[];f.env.BUCKET.delete=async keys=>deleted.push(...keys);
+ const save=(id,created,extra={})=>{const m={id,created,status:'ended',transcription:{status:'completed'},audioCount:1,...extra};f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:'+id,JSON.stringify(m));return m;};
+ const older=save('older','2026-11-03T14:59:00Z'),first=save('first','2026-11-03T15:01:00Z'),second=save('second','2026-11-04T10:00:00Z');
+ save('unfinished','2026-11-05T03:00:00Z',{status:'recording',transcription:{status:'partial'}});
+ const cancelled=save('cancelled','2026-11-06T03:00:00Z',{status:'cancelled'});
+ await purgeMeetingAudio(f.env,first);await purgeMeetingAudio(f.env,second);assert.deepEqual(deleted,[]);
+ await purgeMeetingAudio(f.env,older);assert.deepEqual(deleted,['meeting-audio/older/0']);
+ await purgeMeetingAudio(f.env,cancelled);assert.ok(deleted.includes('meeting-audio/cancelled/0'));
+ assert.equal(JSON.parse(f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:first').payload).audioDeletedAt,undefined);
 });

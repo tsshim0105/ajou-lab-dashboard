@@ -257,6 +257,15 @@ async function meetingAudioBlob(env,id,part){const chunks=[];let size=0;for(let 
 export async function purgeMeetingAudio(env,current){
  if((current.transcription?.status!=='completed'&&current.status!=='cancelled')||current.audioDeletedAt)return;
  if(!env.BUCKET?.delete)return;
+ if(current.status!=='cancelled'){
+  // Keep every recording from the most recent completed recording day (Korea time).
+  // A new unfinished or cancelled recording must not evict the previous day's originals.
+  const date=Date.parse(current.created);
+  if(!Number.isFinite(date))return;
+  const day=new Date(date+9*3600000).toISOString().slice(0,10);
+  const latest=await env.DB.prepare("SELECT MAX(date(json_extract(payload,'$.created'),'+9 hours')) AS day FROM research_records WHERE id LIKE 'recording:%' AND json_extract(payload,'$.status') IN ('ended','interrupted') AND json_extract(payload,'$.transcription.status')='completed' AND COALESCE(json_extract(payload,'$.audioCount'),0)>0 AND json_extract(payload,'$.audioDeletedAt') IS NULL").first();
+  if(!latest?.day||day>=latest.day)return;
+ }
  // The transcript has been committed before deletion. Deletion is idempotent and retryable.
  try{for(let i=0;i<(current.audioCount||0);i+=100)await env.BUCKET.delete(Array.from({length:Math.min(100,current.audioCount-i)},(_,n)=>'meeting-audio/'+current.id+'/'+(i+n)));
  await env.DB.prepare("UPDATE research_records SET payload=json_set(payload,'$.audioDeletedAt',?),version=version+1 WHERE id=? AND (json_extract(payload,'$.transcription.status')='completed' OR json_extract(payload,'$.status')='cancelled')").bind(new Date().toISOString(),'recording:'+current.id).run();
