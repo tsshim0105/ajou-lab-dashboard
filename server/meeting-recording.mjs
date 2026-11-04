@@ -17,6 +17,19 @@ export function validateMeetingSnapshot(b){
  const names={};for(const [k,v] of Object.entries(b.speakers||{}).slice(0,30))if(/^(speaker-(\d+|unmatched)|voice-[-\w]{8,100})$/.test(k))names[k]=String(v).slice(0,60);
  return {duration:b.duration,markers,segments,speakers:names,status:['recording','paused','ended','interrupted'].includes(b.status)?b.status:'interrupted'};
 }
+export function meetingStartParticipants(input,catalog){
+ if(input===undefined)return null; // Older clients retain the existing roll-call flow.
+ if(!Array.isArray(input)||!input.length||input.length>50)throw mrFail('참여 연구자를 선택해주세요.');
+ const seen=new Set();const attendees=input.map(p=>{
+  if(!p||typeof p.name!=='string'||!p.name.trim()||p.name.length>100||!['professor','student'].includes(p.role)||p.email!==undefined&&(typeof p.email!=='string'||p.email.length>254))throw mrFail('참여 연구자 정보를 확인해주세요.');
+  const name=p.name.trim(),email=p.email?.trim().toLowerCase(),key=email||name;if(seen.has(key))throw mrFail('참여 연구자가 중복되었습니다.');seen.add(key);
+  const voice=p.voiceId?catalog.find(v=>v.id===p.voiceId):null;if(p.voiceId&&(!voice||voice.role!==p.role))throw mrFail('등록 음성이 변경되었습니다. 참여자를 다시 선택해주세요.');
+  return {name,role:p.role,...(email?{email}:{}),...(voice?{voiceId:voice.id}:{})};
+ });
+ const selected=catalog.filter(v=>attendees.some(p=>p.voiceId===v.id));
+ const useVoices=selected.length>0&&selected.length<=4&&selected.filter(v=>v.role==='professor').length===1;
+ return {attendees,voiceEnrollment:useVoices,voiceCatalog:catalog,voiceParticipants:useVoices?selected:[],voiceSelection:{status:useVoices?'ready':'disabled',source:'manual',participants:useVoices?selected:[]}};
+}
 export async function meetingRecordingRequest(req,env,actor,helpers={}){
  const url=new URL(req.url),action=url.pathname.split('/').at(-1),reply=(b,status=200)=>Response.json(b,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});
  if(!actor.admin)return reply({error:'교수님 전용 회의 기록입니다.'},403);
@@ -43,8 +56,8 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
  }
  const id=mrId(b.id),key='recording:'+id;
  if(action==='recording-create'){
-  const snapshot=validateMeetingSnapshot({...b,duration:0,segments:[],status:'recording'});const voiceCatalog=(await mrVoiceList(db)).map(({id,name,role})=>({id,name,role}));
-  await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},...(voiceCatalog.length?{voiceEnrollment:true,voiceCatalog,voiceSelection:{status:'pending'},voiceParticipants:[]}:{}),mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
+  const snapshot=validateMeetingSnapshot({...b,duration:0,segments:[],status:'recording'});const voiceCatalog=(await mrVoiceList(db)).map(({id,name,role})=>({id,name,role}));const participants=meetingStartParticipants(b.attendees,voiceCatalog);
+  await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},...(participants|| (voiceCatalog.length?{voiceEnrollment:true,voiceCatalog,voiceSelection:{status:'pending'},voiceParticipants:[]}:{})),mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
  }
  const current=await read(id);
  if(action==='recording-cancel'){
@@ -188,7 +201,7 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
     const previous=partIndex?latest.segments:[],speakers=new Map();let nextSpeaker=Math.max(0,...previous.map(x=>Number(x.speaker.replace('speaker-',''))||0))+1;
     let segments=data.segments.map((segment,i)=>{const raw=String(segment.speaker??'unknown');if(!speakers.has(raw))speakers.set(raw,raw==='professor'||(!partIndex&&!speakers.size)?'speaker-0':'speaker-'+nextSpeaker++);const start=part.start+Math.max(0,Number(segment.start)||0),end=part.start+Math.max(Number(segment.start)||0,Number(segment.end)||0);return {id:'stt-'+partIndex+'-'+i,start:Math.min(start,part.end),end:Math.min(end,part.end),text:String(segment.text||''),speaker:speakers.get(raw)};});
     if(current.voiceEnrollment){
-     if(partIndex===0){const selection=matchMeetingVoices(data.segments.map(s=>s.text).join(' '),current.voiceCatalog||[]);updated.voiceSelection=selection;updated.voiceParticipants=selection.participants;
+     if(partIndex===0){const selection=current.voiceSelection?.source==='manual'&&current.voiceSelection.status==='ready'?current.voiceSelection:matchMeetingVoices(data.segments.map(s=>s.text).join(' '),current.voiceCatalog||[]);updated.voiceSelection=selection;updated.voiceParticipants=selection.participants;
       // Roll call is spoken by the professor; do not treat a called name as that speaker's voice.
       const professor=selection.participants.filter(p=>p.role==='professor');segments=segments.map(x=>({...x,speaker:professor.length===1?'voice-'+professor[0].id:'speaker-unmatched'}));
      }else segments=labelKnownMeetingSegments(data,current.voiceParticipants,part,partIndex);

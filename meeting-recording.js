@@ -10,7 +10,7 @@ function mrQuickTopics(){
  const basisID=m.active?[...(m.session?.markers||[])].reverse().find(x=>x.topic)?.topic||m.selected:mrTopic();
  const basis=topics.find(t=>t.id===basisID),normalize=x=>String(x||'').trim().toLowerCase();
  const students=t=>[...new Set((t?.viewers||[]).map(normalize).filter(x=>x&&x!==normalize(user.email)))];
- const people=students(basis),names=people.map(email=>{const member=(rooms.members||[]).find(x=>normalize(x.email)===email);return member?.name&&member.name!==email?member.name:'연구실 구성원';});
+ const people=m.active&&m.session?.attendees?m.session.attendees.filter(p=>p.email&&p.role!=='professor').map(p=>normalize(p.email)):students(basis),names=people.map(email=>{const member=(rooms.members||[]).find(x=>normalize(x.email)===email);return member?.name&&member.name!==email?member.name:'연구실 구성원';});
  const quick=topics.filter(t=>t.id===basisID||students(t).some(x=>people.includes(x)));
  const other=topics.filter(t=>!quick.includes(t));
  const item=(t,priority)=>({id:t.id,title:t.title,cover:rrCoverURL(t),quick:priority?'true':'false',participants:students(t).map(email=>{const member=(rooms.members||[]).find(x=>normalize(x.email)===email);return member?.name&&member.name!==email?member.name:'연구실 구성원';}).join(' · ')});
@@ -26,7 +26,7 @@ window.nismlRecorderCommand=async function(command){
  if(command.action==='start'){
   if(m.active)throw Error('이미 녹음 중입니다.');
   if(m.syncing||m.processing||m.dirty||m.pendingAudio.length||m.session?.nativePending)throw Error('이전 회의 업로드가 완료되면 새 녹음을 시작할 수 있습니다.');
-  await mrStart();if(!m.active)throw Error(m.message||'녹음을 시작하지 못했습니다.');return true;
+  await mrStart();if(!m.active&&m.message==='녹음 시작을 취소했습니다.')return false;if(!m.active)throw Error(m.message||'녹음을 시작하지 못했습니다.');return true;
  }
  if(command.action==='cancel')return await mrCancel();
  if(command.action==='pause'||command.action==='stop'||command.action==='summary'){
@@ -52,8 +52,8 @@ async function mrNativeUpload(){
  }
  if(!m.active&&!wasActive&&result.duration>=m.clockBase-.1){s.nativePending=false;s.nativeUploaded=true;await mrChanged();}
 }
-async function mrNativeStart(){
- const m=meetingRecorder;const capabilities=await mrNative('capabilities').catch(()=>({}));if(!capabilities.segmentedRecording)throw Error('5분 단위 전사를 사용하려면 트레이의 업데이트 확인에서 Mac 앱 0.4.5 이상으로 업데이트해주세요.');const created=await researchFetch('recording-create',{id:crypto.randomUUID(),mime:'audio/mp4',markers:[{at:0,topic:mrTopic(),title:mrTopicName(mrTopic())}]});
+async function mrNativeStart(attendees){
+ const m=meetingRecorder;const capabilities=await mrNative('capabilities').catch(()=>({}));if(!capabilities.segmentedRecording)throw Error('5분 단위 전사를 사용하려면 트레이의 업데이트 확인에서 Mac 앱 0.4.5 이상으로 업데이트해주세요.');const created=await researchFetch('recording-create',{id:crypto.randomUUID(),mime:'audio/mp4',attendees,markers:[{at:0,topic:mrTopic(),title:mrTopicName(mrTopic())}]});
  Object.assign(m,{session:{...created,nativeCapture:true,segmentedCapture:true,audioParts:[],nativeUploaded:false},version:created.version,clockBase:0,selected:mrTopic(),pendingAudio:[],audioIndex:0,native:true});
  await mrNative('start',{id:created.id});m.clockStarted=performance.now();m.active=true;m.paused=false;m.session.status='recording';m.message='Mac 앱에서 녹음 중 · 창을 닫아도 플로팅 패널로 조작할 수 있습니다.';await mrChanged();rrDraw();
 }
@@ -82,14 +82,31 @@ async function mrChanged(){const m=meetingRecorder;if(!m.session)return;m.dirty=
 function mrSync(){const m=meetingRecorder;if(m.syncPromise)return m.syncPromise;m.syncPromise=mrSyncRun().finally(()=>m.syncPromise=null);return m.syncPromise;}
 async function mrSyncRun(){const m=meetingRecorder;if(m.syncing||m.converting||m.discarding||m.cancelPending||!m.session||!admin())return;m.syncing=true;mrPaint();try{await mrNativeUpload();while(m.pendingAudio.length){const item=m.pendingAudio[0];const bytes=new Uint8Array(await item.blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));await researchFetch('recording-audio',{id:m.session.id,index:item.index,base64:btoa(binary)});m.pendingAudio.shift();await mrLocal(user.email+':audio:'+m.session.id+':'+item.index,undefined,true);}if(m.dirty){const revision=m.revision;let r;try{r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}catch(error){const latest=await researchFetch('recording-detail?id='+encodeURIComponent(m.session.id));m.version=latest.version;mrMergeTranscript(latest);r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}m.version=r.version;if(m.revision===revision)m.dirty=false;await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});}if(m.session.nativeUploaded&&!m.dirty){await mrNative('uploaded',{id:m.session.id}).catch(()=>{});}}catch(e){m.message='서버 저장 대기: '+e.message;}finally{m.syncing=false;mrPaint();}if(!m.discarding&&!m.cancelPending&&!m.dirty&&!m.pendingAudio.length&&!['completed','failed','attention','participants-required'].includes(m.session.processing?.status)&&m.session.audioParts?.length&&(m.session.audioParts.at(-1).end>=300||m.session.voiceEnrollment||!m.active))mrEnqueue(m.session.id).catch(e=>{m.message=e.message;mrPaint();});}
 async function mrQueueAudio(blob){if(!blob.size)return;if(blob.size>500000){for(let at=0;at<blob.size;at+=500000)await mrQueueAudio(blob.slice(at,at+500000,blob.type));return;}const m=meetingRecorder,index=m.audioIndex++;const item={index,blob};m.pendingAudio.push(item);try{await mrLocal(user.email+':audio:'+m.session.id+':'+index,blob);}catch{m.message='기기 저장 공간이 부족합니다. 녹음을 종료하고 파일을 보관해주세요.';}await mrChanged();}
+async function mrSelectStartParticipants(){
+ const [rooms,{voices}]=await Promise.all([researchFetch('rooms'),researchFetch('recording-voices')]);
+ const normalize=x=>String(x||'').trim().toLowerCase(),ownerVoice=voices.find(v=>v.role==='professor');
+ const people=[{name:ownerVoice?.name||user.name||'교수님',email:user.email,role:'professor',...(ownerVoice?{voiceId:ownerVoice.id}:{})}];
+ for(const member of rooms.members||[]){if(normalize(member.email)===normalize(user.email))continue;const voice=voices.find(v=>v.role!=='professor'&&normalize(v.name)===normalize(member.name));people.push({name:member.name||member.email,email:member.email,role:'student',...(voice?{voiceId:voice.id}:{})});}
+ for(const voice of voices){if(people.some(p=>p.voiceId===voice.id))continue;people.push({name:voice.name,role:voice.role,voiceId:voice.id});}
+ return await new Promise(resolve=>{
+  let accepted=false;
+  const d=rrDialog('회의 참여 연구자 선택','<p>이번 회의에 참여하는 연구자를 선택해주세요. 선택을 마친 뒤 녹음을 시작합니다.</p><fieldset><legend>참여 연구자</legend>'+people.map((p,i)=>'<label class="rr-check"><input type="checkbox" name="startParticipant" value="'+i+'" '+(i===0?'checked':'')+'>'+esc(p.name)+' · '+(p.role==='professor'?'교수님':'연구자')+'</label>').join('')+'</fieldset>',async()=>{
+   const selected=[...d.querySelectorAll('[name=startParticipant]:checked')].map(el=>people[Number(el.value)]);
+   if(!selected.length)throw Error('참여 연구자를 한 명 이상 선택해주세요.');
+   accepted=true;resolve(selected);
+  },'선택한 참여자로 녹음 시작');
+  d.addEventListener('close',()=>{if(!accepted)resolve(null);},{once:true});
+ });
+}
 async function mrStart(){const m=meetingRecorder;if(m.discarding||m.active||m.busy||m.processing||m.syncing||m.stopping||m.converting)return;m.busy=true;mrUpdateControls();try{
  if(m.pendingAudio.length||m.dirty||m.session?.nativePending){await mrSync();if(m.pendingAudio.length||m.dirty||m.session?.nativePending)throw Error('이전 회의를 먼저 서버에 저장해주세요.');}
  const draft=await mrLocal(mrDraftKey());if(draft?.session&&(['recording','paused','interrupted'].includes(draft.session.status)||draft.session.nativePending)&&draft.session.id!==m.session?.id){await mrRestore(draft);throw Error('이전에 중단된 회의를 복구했습니다. 내용을 확인한 뒤 새 녹음을 시작해주세요.');}
- if(mrNativeAvailable()){await mrNativeStart();return;}m.native=false;
+ const attendees=await mrSelectStartParticipants();if(!attendees){m.message='녹음 시작을 취소했습니다.';return;}
+ if(mrNativeAvailable()){await mrNativeStart(attendees);return;}m.native=false;
  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('이 브라우저에서는 녹음할 수 없습니다. 최신 Chrome 또는 Safari를 사용해주세요.');
  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});m.stream=stream;
  const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(x=>MediaRecorder.isTypeSupported(x));if(!mime)throw Error('지원되는 녹음 형식이 없습니다.');
- const created=await researchFetch('recording-create',{id:crypto.randomUUID(),mime,markers:[{at:0,topic:mrTopic(),title:mrTopicName(mrTopic())}]});m.session=created;m.version=created.version;m.clockBase=0;m.selected=mrTopic();m.pendingAudio=[];m.audioIndex=0;m.chunks=[];m.audioChain=Promise.resolve();m.group=[];m.groupBytes=0;m.totalBytes=0;
+ const created=await researchFetch('recording-create',{id:crypto.randomUUID(),mime,attendees,markers:[{at:0,topic:mrTopic(),title:mrTopicName(mrTopic())}]});m.session=created;m.version=created.version;m.clockBase=0;m.selected=mrTopic();m.pendingAudio=[];m.audioIndex=0;m.chunks=[];m.audioChain=Promise.resolve();m.group=[];m.groupBytes=0;m.totalBytes=0;
  m.session.audioParts=[];m.clockStarted=performance.now();m.active=true;m.paused=false;m.session.status='recording';mrBeginPart(0);
  stream.getAudioTracks().forEach(track=>track.onended=()=>{if(m.active){m.message='마이크 연결이 끊어졌습니다. 저장된 구간을 확인해주세요.';mrStop('interrupted');}});
  m.message='녹음 중 · 5분마다 자동 전사합니다. 처음 8초는 교수님 혼자 참여자 이름을 말씀해주세요.';await mrChanged();rrDraw();
@@ -336,7 +353,7 @@ async function mrVoices(){
  const close=d.onclose;d.onclose=()=>{closed=true;generation++;capture?.cancel();capture=null;if(objectURL)URL.revokeObjectURL(objectURL);close();};
  d.querySelectorAll('[data-voice-delete]').forEach(button=>button.onclick=async()=>{const profile=voices.find(p=>p.id===button.dataset.voiceDelete);if(!confirm(profile.name+'님의 등록 음성을 삭제할까요? 다음 회의에는 사용되지 않습니다.'))return;button.disabled=true;try{await researchFetch('recording-voice-delete',{id:profile.id,version:profile.version});d.close();await mrVoices();}catch(e){d.querySelector('.rr-dialog-status').textContent=e.message;button.disabled=false;}});
 }
-function mrVoiceStatus(s){if(!s?.voiceEnrollment)return '';const names=(s.voiceParticipants||[]).map(p=>p.name+' · '+(p.role==='professor'?'교수님':'학생')).join(', '),review=s.voiceSelection?.status==='review';return `<div class="mr-voice-status"><strong>${review?'참여자 확인 필요':names?'등록 음성 연결':'참여자 호명 대기'}</strong><span>${esc(names||'처음 8초 동안 교수님 혼자 참여자 이름을 말씀해주세요.')}</span>${review?`<p>${esc(s.voiceSelection.reason)}</p>`:''}${s.transcription?.completedParts===1?'<button class="secondary" data-mr="participants">참여자 확인</button>':''}</div>`;}
+function mrVoiceStatus(s){if(s?.attendees?.length)return '<div class="mr-voice-status"><strong>선택한 참여자</strong><span>'+esc(s.attendees.map(p=>p.name).join(' · '))+'</span></div>';if(!s?.voiceEnrollment)return '';const names=(s.voiceParticipants||[]).map(p=>p.name+' · '+(p.role==='professor'?'교수님':'학생')).join(', '),review=s.voiceSelection?.status==='review';return `<div class="mr-voice-status"><strong>${review?'참여자 확인 필요':names?'등록 음성 연결':'참여자 호명 대기'}</strong><span>${esc(names||'처음 8초 동안 교수님 혼자 참여자 이름을 말씀해주세요.')}</span>${review?`<p>${esc(s.voiceSelection.reason)}</p>`:''}${s.transcription?.completedParts===1?'<button class="secondary" data-mr="participants">참여자 확인</button>':''}</div>`;}
 async function mrParticipants(){
  const m=meetingRecorder;if(!admin()||!m.session)return;const s=await researchFetch('recording-detail?id='+encodeURIComponent(m.session.id));if(!s.voiceEnrollment)throw Error('음성을 등록한 뒤 새 회의부터 사용할 수 있습니다.');
  const d=rrDialog('회의 참여자 확인',`<p>등록된 음성을 최대 4명까지 선택합니다. 녹음은 계속되며, 확인이 필요한 동안 다음 구간 전사만 대기합니다.</p>${s.voiceSelection?.heard?`<p>시작 발언: ${esc(s.voiceSelection.heard)}</p>`:''}<fieldset><legend>참여자</legend>${(s.voiceCatalog||[]).map(p=>`<label class="rr-check"><input type="checkbox" name="participant" value="${esc(p.id)}" ${(s.voiceParticipants||[]).some(q=>q.id===p.id)?'checked':''}>${esc(p.name)} · ${p.role==='professor'?'교수님':'학생'}</label>`).join('')}</fieldset>`,async()=>{const selected=[...d.querySelectorAll('[name=participant]:checked')].map(x=>x.value);const fresh=await researchFetch('recording-detail?id='+encodeURIComponent(s.id));const result=await researchFetch('recording-participants',{id:s.id,version:fresh.version,participants:selected});mrMergeTranscript(result);mrQueue.last=0;mrPump();},'참여자 적용');

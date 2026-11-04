@@ -343,3 +343,26 @@ test('edited summary retrieval is relevant, topic scoped, latest only and exclud
 import {meetingVoiceResponse} from '../server/meeting-recording.mjs';
 test('voice playback supplies finite length and Safari byte ranges',async()=>{const bytes=voiceWav();const make=(range,method='GET')=>meetingVoiceResponse(new Request('https://test/voice',{method,headers:range?{Range:range}:{}}),bytes);let r=make();assert.equal(r.headers.get('Content-Length'),String(bytes.length));assert.deepEqual(new Uint8Array(await r.arrayBuffer()),bytes);r=make('bytes=0-1');assert.equal(r.status,206);assert.equal(r.headers.get('Content-Range'),'bytes 0-1/'+bytes.length);assert.equal((await r.arrayBuffer()).byteLength,2);r=make('bytes=-8');assert.equal((await r.arrayBuffer()).byteLength,8);assert.equal(make('bytes=999999-').status,416);assert.equal(make('bytes=-0').status,416);assert.equal(make('bytes=0-1,4-5').status,416);assert.equal((await make(null,'HEAD').arrayBuffer()).byteLength,0);});
 test('speaker uncertainty becomes one visible tag and preserves prose',()=>{const c=vm.createContext({setInterval(){},window:{addEventListener(){}},esc:x=>String(x)});vm.runInContext(readFileSync(new URL('../meeting-recording.js',import.meta.url),'utf8'),c);for(const marker of ['화자 확인 필요','화자확인필요','(화자 확인 필요)']){c.sample='- '+marker+': 20 nm 입자를 비교한다.';const out=vm.runInContext('mrSummaryItems(sample,0)',c);assert.equal((out.match(/>화자확인필요</g)||[]).length,1);assert.match(out,/20 nm/);assert.doesNotMatch(out,/>화자 확인 필요/);}});
+
+test('recording start stores explicitly selected attendees privately and preserves them on save',async()=>{
+ const f=fixture(),attendees=[{name:'Professor',role:'professor',email:'owner@example.test'},{name:'Student',role:'student',email:'student@example.test'}];
+ assert.equal((await f.call('recording-create',{id,markers:[markers[0]],mime:'audio/webm',attendees},STUDENT)).status,403);
+ const created=await (await f.call('recording-create',{id,markers:[markers[0]],mime:'audio/webm',attendees})).json();
+ assert.deepEqual(created.attendees,attendees);assert.equal(created.voiceEnrollment,false);
+ assert.equal((await f.call('recording-save',snap)).status,200);
+ assert.deepEqual((await (await f.call('recording-detail?id='+id)).json()).attendees,attendees);
+});
+test('manual participant selection validates input and connects only selected registered voices',async()=>{
+ const {meetingStartParticipants}=await import('../server/meeting-recording.mjs');
+ const catalog=[{id:'voice-prof',name:'Professor',role:'professor'},{id:'voice-student',name:'Student',role:'student'}];
+ const result=meetingStartParticipants([{name:'Professor',role:'professor',voiceId:'voice-prof'}],catalog);
+ assert.equal(result.voiceSelection.status,'ready');assert.equal(result.voiceSelection.source,'manual');assert.deepEqual(result.voiceParticipants,[catalog[0]]);
+ assert.equal(meetingStartParticipants(undefined,catalog),null);
+ for(const input of [[],[{name:'',role:'student'}],[{name:'Student',role:'student',voiceId:'missing'}],[{name:'Student',role:'student',voiceId:'voice-prof'}]])assert.throws(()=>meetingStartParticipants(input,catalog));
+});
+test('cancelling the start participant popup never requests microphone or creates a recording',async()=>{
+ const {readFile}=await import('node:fs/promises'),vm=await import('node:vm');const source=await readFile(new URL('../meeting-recording.js',import.meta.url),'utf8');
+ const fn=source.slice(source.indexOf('async function mrStart(){'),source.indexOf('async function mrPause(){'));
+ let captures=0;const m={pendingAudio:[]};const ctx={meetingRecorder:m,mrUpdateControls(){},mrLocal:async()=>null,mrDraftKey:()=>'',mrSelectStartParticipants:async()=>null,mrNativeAvailable:()=>true,mrNativeStart:async()=>{captures++;},researchFetch:async()=>{captures++;},navigator:{mediaDevices:{getUserMedia:async()=>{captures++;}}}};
+ await vm.runInNewContext(fn+';mrStart()',ctx);assert.equal(captures,0);assert.equal(m.busy,false);assert.equal(m.active,undefined);assert.match(m.message,/취소/);
+});

@@ -198,6 +198,7 @@ final class FloatingPanel: NSPanel {
         guard !commandPending,let web=owner?.web, let url=web.url,Lab.isDashboard(url) else { model.message="대시보드를 다시 열어주세요.";return }
         if action == "cancel" { let box=NSAlert();box.messageText="현재 회의를 취소할까요?";box.informativeText="녹음을 멈추고 이 회의의 전사·요약을 폐기합니다. 이미 처리된 API 비용은 취소되지 않습니다. 다른 회의는 유지됩니다.";box.addButton(withTitle:"회의 취소");box.addButton(withTitle:"계속 녹음");guard box.runModal() == .alertFirstButtonReturn else{return} }
         if action == "stop" && confirm { let box=NSAlert();box.messageText="녹음을 저장하고 종료할까요?";box.addButton(withTitle:"저장 후 종료");box.addButton(withTitle:"계속 녹음");guard box.runModal() == .alertFirstButtonReturn else{return} }
+        if action == "start" { owner?.showDashboard() }
         let payload:[String:Any]=["action":action,"topic":topic ?? ""]
         commandPending=true;model.working=true
         Task { @MainActor in
