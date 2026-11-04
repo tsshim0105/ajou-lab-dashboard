@@ -154,6 +154,15 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   if(!env.OPENAI_API_KEY)throw mrFail('서버 OpenAI 키가 등록되지 않았습니다.',503);
   if(action==='recording-summarize'&&!['ended','interrupted'].includes(current.status))throw mrFail('회의 종료 후 요약할 수 있습니다.',409);
   const transcribe=action==='recording-transcribe';
+  if(!transcribe&&b.regenerate===true&&current.summary?.[b.topic||'unclassified']&&!current.summary[b.topic||'unclassified'].rolesChanged){
+   const topic=b.topic||'unclassified';
+   if(b.version!==current.version)throw mrFail('회의 기록이 변경되었습니다. 다시 열어주세요.',409);
+   const next={...current,summary:{...current.summary,[topic]:{...current.summary[topic],rolesChanged:true}},summaryProgress:{...current.summaryProgress},summaryEpoch:(current.summaryEpoch||0)+1};delete next.version;delete next.summaryProgress[topic];
+   const changed=await db.prepare("UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=? AND NOT EXISTS(SELECT 1 FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain'))").bind(JSON.stringify(next),key,current.version,key).run();
+   if(!changed.meta?.changes)throw mrFail('요약 처리 중이거나 기록이 변경되었습니다.',409);
+   return meetingRecordingRequest(new Request(req.url,{method:'POST',body:JSON.stringify({...b,version:current.version+1})}),env,actor,helpers);
+  }
+
   if(transcribe&&current.audioDeletedAt&&current.transcription?.status!=='completed')throw mrFail('전사 완료 후 녹음 원본이 삭제되어 다시 전사할 수 없습니다.',410);
   const parts=current.audioParts?.length?current.audioParts:[{start:0,end:current.duration,first:0,count:current.audioCount||0,mime:current.mime}];
   const partIndex=(current.transcription?.completedParts||0),part=parts[partIndex];

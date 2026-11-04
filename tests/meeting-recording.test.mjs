@@ -393,3 +393,10 @@ test('audio retention protects all latest Korean-day meetings and incomplete new
  await purgeMeetingAudio(f.env,cancelled);assert.ok(deleted.includes('meeting-audio/cancelled/0'));
  assert.equal(JSON.parse(f.sql.prepare('SELECT payload FROM research_records WHERE id=?').get('recording:first').payload).audioDeletedAt,undefined);
 });
+
+
+test('explicit summary regeneration uses current rules, keeps history and rejects stale requests',async()=>{
+ const f=fixture();await create(f);await f.call('recording-save',snap);await f.call('recording-summary-save',{id,version:1,topic:'topic-0001',content:'Original reviewed'});f.env.OPENAI_API_KEY='test-secret';let calls=0;const old=globalThis.fetch;
+ globalThis.fetch=async(url,options)=>{if(url.includes('/models/'))return Response.json({});calls++;assert.ok(!JSON.parse(options.body).input[0].content.includes('명확한 실행 승인이 없으면'));return Response.json({status:'completed',output:[{content:[{type:'output_text',text:'New summary'}]}]});};
+ try{assert.equal((await f.call('recording-summarize',{id,topic:'topic-0001',regenerate:true,version:0})).status,409);const r=await f.call('recording-summarize',{id,topic:'topic-0001',regenerate:true,version:2});assert.equal(r.status,200);const m=await r.json();assert.equal(m.summary['topic-0001'].content,'New summary');assert.equal(m.summaryHistory.at(-1).content,'Original reviewed');assert.equal(calls,1);assert.equal((await f.call('recording-summarize',{id,topic:'topic-0001',regenerate:true,version:2})).status,409);}finally{globalThis.fetch=old;}
+});
