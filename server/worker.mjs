@@ -1,3 +1,4 @@
+import {librarySharingRequest} from './library-sharing.mjs';
 import {reagentProducts} from './reagent-products.mjs';
 import {receiveResearchImageUpload} from './research-upload.mjs';
 import {researchRoomRequest,researchNotifications} from './research-room.mjs';
@@ -250,6 +251,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    if(!admin||!read||!state.students.includes(selected)||!(['/api/data','/api/notifications'].includes(url.pathname)||url.pathname.startsWith('/api/ai/')))return reply({error:'교수님만 등록된 학생의 읽기 전용 화면을 확인할 수 있습니다.'},403);
    email=selected;id='student-preview:'+selected;admin=false;
   }
+  if(url.pathname.startsWith('/api/library/'))return librarySharingRequest(req,env,{email,name:admin?'교수님':state.studentNames?.[email]||email,members:[{email:env.ADMIN_EMAIL.trim().toLowerCase(),name:'교수님'},...state.students.map(email=>({email,name:state.studentNames?.[email]||email}))]});
   if(url.pathname.startsWith('/api/ai/'))return researchRoomRequest(req,env,{admin,email,id,name:admin?'교수님':state.studentNames?.[email]||email,members:state.students.map(email=>({email,name:state.studentNames?.[email]||email}))});
   if(read&&url.pathname==='/service-worker.js')return new Response(req.method==='HEAD'?null:serviceWorkerSource,{headers:{'Content-Type':'application/javascript; charset=utf-8','Cache-Control':'no-cache','Service-Worker-Allowed':'/','X-Content-Type-Options':'nosniff'}});
   if(url.pathname.startsWith('/api/push/'))return reply({error:'웹 데스크톱알림 기능이 종료되었습니다.'},410);
