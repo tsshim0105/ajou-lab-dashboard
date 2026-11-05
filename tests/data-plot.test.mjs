@@ -67,3 +67,19 @@ test('hide legend preserves plotted data and layout while omitting preview and e
  for(const interactive of [false,true]){const svg=p.svg(input,{hideLegend:true},g=>hidden=g,interactive);assert.doesNotMatch(svg,/plot-legend-text|plot-legend-hitbox|Sample A/);assert.match(svg,/plot-axis-frame/);assert.equal(hidden.W,shown.W);assert.equal(hidden.H,shown.H);}
  assert.match(normal,/plot-legend-text/);assert.equal(p.normalize({hideLegend:true}).hideLegend,true);
 });
+test('X and Y errors expand limits, skip blank errors and are not extra series',()=>{
+ const input={names:['X','A','dX','dY'],data:[[1,10,.5,2],[2,15,null,3]],errors:{2:{axis:'x',target:1},3:{axis:'y',target:1}}};let g;
+ const svg=p.svg(input,{},v=>g=v);assert.equal(p.seriesColumns(input).length,1);assert.equal((svg.match(/class="plot-error-bar"/g)||[]).length,3);assert.ok(g.xa<.5&&g.xb>2);assert.ok(g.ya<8&&g.yb>18);assert.doesNotMatch(svg,/>dX<|>dY</);
+ assert.throws(()=>p.svg({...input,data:[[1,10,-1,2]]},{}),/0 이상/);assert.throws(()=>p.svg({...input,errors:{2:{axis:'y',target:1},3:{axis:'y',target:1}}},{}),/하나만/);
+});
+test('categorical Y errors and secondary-axis errors use their connected series',()=>{
+ const input={names:['X','A','X2','B','dA','dB'],x2Index:2,data:[['one',10,100,1000,2,100],['two',20,200,2000,null,200]],errors:{4:{axis:'y',target:1},5:{axis:'y',target:3}}};let g;const svg=p.svg(input,{},v=>g=v);assert.equal((svg.match(/class="plot-error-bar"/g)||[]).length,3);assert.ok(g.y2b>2200);assert.ok(g.yb>20);assert.throws(()=>p.svg({...input,errors:{4:{axis:'x',target:1}}},{}),/문자 X축/);
+});
+test('grouped bar errors sit at bar centers and use adjustable caps and widths',()=>{
+ const input={names:['X','A','B','dA'],data:[[1,10,20,2],[2,15,25,3]],errors:{3:{axis:'y',target:1}}};const svg=p.svg(input,{type:'bar',errorWidth:3,errorCap:12});const bar=svg.match(/<rect x="([^"]+)" y="[^"]+" width="([^"]+)" height="[^"]+" fill="#2563eb"/);const err=svg.match(/class="plot-error-bar"[^>]*><line x1="([^"]+)"/);assert.ok(Math.abs(+bar[1]+(+bar[2])/2-(+err[1]))<1e-8);assert.match(svg,/stroke-width="3"/);
+});
+test('sheet paste retains error mapping and primary errors may follow the second axis',()=>{
+ const c=vm.createContext({structuredClone});vm.runInContext(src+';globalThis.sheet=PlotSheet;',c);
+ const sheet={names:['X','A','X2','B','dA'],x2Index:2,errors:{4:{axis:'y',target:1}},cells:[['1','10','','','2'],['2','20','100','50','3']]};
+ const next=c.sheet.apply(sheet,'4\n5',0,4);assert.equal(next.errors[4].target,1);const parsed=c.sheet.parsed(next);assert.equal(parsed.data[0][4],4);assert.equal(parsed.data[0][2],null);assert.equal(parsed.errors[4].axis,'y');
+});

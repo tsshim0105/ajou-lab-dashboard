@@ -16,3 +16,6 @@ test('range copy is rectangular in either drag direction and preserves blank cel
 test('QTI preserves categorical labels, bar spacing and numeric X precision',()=>{const P=vm.runInContext('DataPlot',ctx),d=P.parse('Sample\tValue\nPristine\t10\nAA0\t20');const q=E.qti(d,{type:'bar'});assert.match(q,/type="1" table="HubData" col="XLabels0"/);assert.match(q,/data="Pristine;AA0;"/);assert.match(q,/from="0.5" to="2.5" step="1"/);const n=E.qti(P.parse('0\t1\n5\t2'),{xmin:'0.0',xmax:'5.0'});assert.match(n,/<axis id="2" on="1" type="0" format="1" prec="1"/);});
 
 test('QTI uses centered horizontal category labels for lines',()=>{const P=vm.runInContext('DataPlot',ctx),q=E.qti(P.parse('Sample\tValue\n감자\t10\n고구마\t20'),{type:'lineonly'});assert.match(q,/type="1" table="HubData" col="XLabels0"/);assert.match(q,/<labels space="2"[^>]+align="0"\/>/);assert.doesNotMatch(q,/rot="-45"/);});
+test('QTI preserves error bars as explicit editable lines without adding legend entries',()=>{
+ const data={names:['X','A','dY'],data:[[1,10,2],[2,20,null]],errors:{2:{axis:'y',target:1}}};const q=E.qti(data,{});assert.match(q,/name="HubErrors"/);assert.equal((q.match(/<curve /g)||[]).length,4);assert.match(q,/from="4" to="5"/);const legend=q.match(/<item type="2"[^>]*text="([^"]*)"/)[1];assert.doesNotMatch(legend,/dY/);assert.match(legend,/A/);
+});
