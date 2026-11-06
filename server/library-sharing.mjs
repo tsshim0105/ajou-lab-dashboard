@@ -10,7 +10,7 @@ function lsSettings(raw,kind){
   for(const k of ['xmin','xmax','ymin','ymax','x2min','x2max','y2min','y2max'])if(raw[k]!==undefined){if(raw[k]!==''&&!Number.isFinite(Number(raw[k])))lsFail('축 범위를 확인해 주세요.');out[k]=raw[k]===''?'':Number(raw[k]);}
   for(const k of ['grid','hideLegend'])if(raw[k]!==undefined)out[k]=raw[k]===true;
   out.titlePositions={};for(const k of ['x','y','x2','y2']){const p=raw.titlePositions?.[k];if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=1&&p.y>=0&&p.y<=1)out.titlePositions[k]={x:p.x,y:p.y};}
-  out.formatVersion=6;out.series=(Array.isArray(raw.series)?raw.series:[]).slice(0,39).map(s=>({...(typeof s?.color==='string'&&/^#[\da-f]{6}$/i.test(s.color)?{color:s.color}:{}),...(['circle','square','diamond','triangle','cross','none'].includes(s?.shape)?{shape:s.shape}:{}),...(['fill','hollow'].includes(s?.fill)?{fill:s.fill}:{})}));
+  out.formatVersion=6;out.series=(Array.isArray(raw.series)?raw.series:[]).slice(0,39).map(s=>({...(typeof s?.color==='string'&&/^#[\da-f]{6}$/i.test(s.color)?{color:s.color}:{}),...(['circle','square','diamond','triangle','triangleDown','triangleLeft','triangleRight','cross','none'].includes(s?.shape)?{shape:s.shape}:{}),...(['fill','hollow'].includes(s?.fill)?{fill:s.fill}:{})}));
  }
  return out;
 }

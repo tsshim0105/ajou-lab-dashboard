@@ -112,3 +112,5 @@ test('axis title positions preserve canvas proportions and rotation for all axes
  const d={names:['X','Y','X2','Y2'],x2Index:2,data:[[1,2,3,4],[2,3,4,5]]};const pos={x:{x:.5,y:.8},y:{x:.2,y:.5},x2:{x:.6,y:.15},y2:{x:.8,y:.4}};
  for(const width of [400,800]){let g;const svg=p.svg(d,{width,titlePositions:pos},v=>g=v);for(const k of Object.keys(pos)){assert.ok(Math.abs(g.titleGeometry[k].x-pos[k].x*g.W)<1e-8);assert.ok(Math.abs(g.titleGeometry[k].y-pos[k].y*g.H)<1e-8);}assert.equal(g.titleGeometry.y.angle,-90);assert.equal(g.titleGeometry.y2.angle,90);assert.doesNotMatch(svg,/tabindex|pointer-events/);}
 });
+
+test('three directional triangle markers support filled and hollow in data and legend',()=>{for(const shape of ['triangleDown','triangleLeft','triangleRight'])for(const fill of ['fill','hollow']){const svg=p.svg(p.parse('1\t2\n2\t3'),{type:'scatter',series:[{shape,fill,color:'#123456'}]});assert.equal((svg.match(/<polygon /g)||[]).length,3);assert.match(svg,new RegExp('fill="'+(fill==='hollow'?'#ffffff':'#123456')+'" stroke="#123456"'));}});

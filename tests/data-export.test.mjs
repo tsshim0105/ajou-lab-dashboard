@@ -31,3 +31,5 @@ test('QTI logarithmic axes and dragged legend retain the SVG geometry',()=>{
 });
 
 test('QTI hollow symbols preserve white interiors and colored outlines',()=>{const P=vm.runInContext('DataPlot',ctx),q=E.qti(P.parse('1\t2\n2\t3'),{type:'scatter',series:[{color:'#ff0000',fill:'hollow'}]});assert.match(q,/<symbol [^>]*lc="#ff0000"[^>]*brc="#ffffff"/);});
+
+test('QTI preserves the three directional triangle symbols',()=>{const P=vm.runInContext('DataPlot',ctx);for(const [shape,style] of [['triangleDown',5],['triangleLeft',6],['triangleRight',7]])assert.match(E.qti(P.parse('1\t2\n2\t3'),{type:'scatter',series:[{shape,fill:'hollow'}]}),new RegExp('<symbol style="'+style+'"[^>]*brc="#ffffff"'));});
