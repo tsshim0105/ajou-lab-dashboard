@@ -4,7 +4,7 @@ export async function gatewayRequest(req,env){
  const reject=()=>new Response('Forbidden',{status:403,headers:{'Cache-Control':'no-store'}});
  if(req.method!=='POST'||!env.NISML_GATEWAY_SECRET||req.headers.get('Authorization')!=='Bearer '+env.NISML_GATEWAY_SECRET)return reject();
  let input;try{const raw=await req.text();if(raw.length>2500000)return reject();input=JSON.parse(raw);}catch{return reject();}
- if(!['GET','HEAD','PUT','POST','DELETE'].includes(input.method)||typeof input.path!=='string'||!/^\/(?:api\/[a-z/-]+|service-worker\.js|notification-icon\.png|index\.html|_mobile-preview)?(?:\?[^#]*)?$/.test(input.path)||typeof input.email!=='string'||!/^\S+@\S+\.\S+$/.test(input.email)||typeof input.id!=='string'||!input.id||input.id.length>300)return reject();
+ if(!['GET','HEAD','PUT','POST','DELETE'].includes(input.method)||typeof input.path!=='string'||!/^\/(?:api\/library\/(?:graph|table)\/shared_[a-f0-9-]{36}|api\/[a-z/-]+|service-worker\.js|notification-icon\.png|index\.html|_mobile-preview)?(?:\?[^#]*)?$/.test(input.path)||typeof input.email!=='string'||!/^\S+@\S+\.\S+$/.test(input.email)||typeof input.id!=='string'||!input.id||input.id.length>300)return reject();
  if(!['https://nisml.ajou.ac.kr','https://nisml.tsshim.chatgpt.site'].includes(input.origin))return reject();
  const headers=new Headers({'oai-authenticated-user-email':input.email,'oai-authenticated-user-id':'homepage:'+input.id,'X-NISML-Mounted':'1'});
  const read=['GET','HEAD'].includes(input.method);

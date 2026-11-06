@@ -1,6 +1,6 @@
 /* Share only an explicitly selected snapshot; ordinary personal files remain local. */
 const SharedArtifactLibrary=(()=>{
- const api=async(path,method='GET',body)=>{if(typeof studentPreview!=='undefined'&&studentPreview)throw Error('학생 미리보기에서는 공유 보관함을 사용할 수 없습니다.');const response=await fetch('/api/library/'+path,{method,cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-Lab-Request':'1'},...(body?{body:JSON.stringify(body)}:{})});let result;try{result=await response.json();}catch{throw Error('공유 저장소에 연결하지 못했습니다. 로그인 상태를 확인해 주세요.');}if(!response.ok)throw Error(result.error||'공유 요청에 실패했습니다.');return result;};
+ const api=async(path,method='GET',body)=>{if(typeof studentPreview!=='undefined'&&studentPreview)throw Error('학생 미리보기에서는 공유 보관함을 사용할 수 없습니다.');const response=await fetch('/api/library/'+path,{method,cache:'no-store',headers:method==='GET'?{}:{'Content-Type':'application/json','X-Lab-Request':'1'},...(body?{body:JSON.stringify(body)}:{})});let result;try{result=await response.json();}catch{throw Error(response.status===401?'로그인이 만료되었습니다. 다시 로그인해 주세요.':response.status===404?'공유 항목의 저장 경로를 찾지 못했습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.':`공유 저장소 응답을 읽지 못했습니다 (HTTP ${response.status}). 잠시 후 다시 시도해 주세요.`);}if(!response.ok)throw Error(result.error||'공유 요청에 실패했습니다.');return result;};
  const payload=(kind,a)=>kind==='graph'?{name:a.name,parsed:a.parsed,settings:a.settings}:{name:a.name,model:a.model};
  function wrap(kind,local){return {
   lastError:'',
