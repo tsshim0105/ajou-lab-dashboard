@@ -51,7 +51,7 @@ test('legend positions survive export and resize with safe normalized coordinate
  assert.equal(p.normalize({legendX:'invalid'}).legendX,null);
  assert.doesNotMatch(p.svg(data,p.defaults),/plot-legend-hitbox|fill="transparent"|pointer-events/);
  assert.match(p.svg(data,p.defaults,undefined,true),/class="plot-legend-hitbox"/);
- assert.equal(p.svg(data,p.defaults,undefined,true).replace(/<rect class="plot-legend-hitbox"[^>]*\/>/,''),p.svg(data,p.defaults));
+ assert.equal(p.svg(data,p.defaults,undefined,true).replace(/<rect class="plot-legend-hitbox"[^>]*\/>/,'').replace(/ tabindex="0" aria-label="[^"]*"/g,'').replace(/<rect x="[^"]*" y="[^"]*" width="[^"]*" height="[^"]*" fill="#ffffff" fill-opacity="0" pointer-events="all"\/>/g,''),p.svg(data,p.defaults));
  assert.doesNotMatch(p.svg(data,{...p.defaults,legendX:null}),/NaN/);
 });
 
@@ -103,3 +103,12 @@ test('sheet paste retains error mapping and primary errors may follow the second
  const d={names:['X','A','err','X2','B'],x2Index:3,errors:{2:{axis:'x',target:1}},data:[[1,2,.1,10,20],[10,20,1,100,200]]};
  for(const type of ['lineonly','line','scatter','bar'])assert.doesNotMatch(p.svg(d,{type,xScale:'log',yScale:'log'}),/NaN|Infinity/);
  });
+
+test('hollow markers retain colored outlines and paint after lines and errors',()=>{
+ const d=p.parse('1\t2\n2\t4');for(const shape of ['circle','square','triangle','diamond']){const svg=p.svg(d,{type:'line',series:[{shape,fill:'hollow',color:'#ff0000'}]});assert.match(svg,/fill="#ffffff" stroke="#ff0000"/);assert.ok(svg.indexOf('class="plot-markers"')>svg.indexOf('stroke-linejoin="round"'));}
+ assert.equal(p.normalize({series:[{}]}).series[0].fill,'fill');
+});
+test('axis title positions preserve canvas proportions and rotation for all axes',()=>{
+ const d={names:['X','Y','X2','Y2'],x2Index:2,data:[[1,2,3,4],[2,3,4,5]]};const pos={x:{x:.5,y:.8},y:{x:.2,y:.5},x2:{x:.6,y:.15},y2:{x:.8,y:.4}};
+ for(const width of [400,800]){let g;const svg=p.svg(d,{width,titlePositions:pos},v=>g=v);for(const k of Object.keys(pos)){assert.ok(Math.abs(g.titleGeometry[k].x-pos[k].x*g.W)<1e-8);assert.ok(Math.abs(g.titleGeometry[k].y-pos[k].y*g.H)<1e-8);}assert.equal(g.titleGeometry.y.angle,-90);assert.equal(g.titleGeometry.y2.angle,90);assert.doesNotMatch(svg,/tabindex|pointer-events/);}
+});

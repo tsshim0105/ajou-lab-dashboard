@@ -29,3 +29,5 @@ test('QTI logarithmic axes and dragged legend retain the SVG geometry',()=>{
  assert.equal((q.match(/<div [^>]*type="1"/g)||[]).length,(xScale==='log'?2:0)+(yScale==='log'?2:0));
  }
 });
+
+test('QTI hollow symbols preserve white interiors and colored outlines',()=>{const P=vm.runInContext('DataPlot',ctx),q=E.qti(P.parse('1\t2\n2\t3'),{type:'scatter',series:[{color:'#ff0000',fill:'hollow'}]});assert.match(q,/<symbol [^>]*lc="#ff0000"[^>]*brc="#ffffff"/);});
