@@ -5,7 +5,7 @@ function lsSettings(raw,kind){
  if(!raw||typeof raw!=='object'||Array.isArray(raw))lsFail('설정 형식을 확인해 주세요.');const out={};
  const ranges=kind==='graph'?{width:[200,2400],height:[150,1800],line:[.5,12],font:[8,72],legendFont:[8,48],marker:[2,20],barWidth:[20,95],errorWidth:[.5,12],errorCap:[0,40],legendX:[0,1],legendY:[0,1]}:{width:[400,1800],font:[12,48],padding:[4,30],line:[1,6],headerRows:[1,6]};
  for(const [k,[lo,hi]] of Object.entries(ranges)){if(raw[k]===undefined)continue;if(raw[k]===null&&['legendX','legendY'].includes(k)){out[k]=null;continue;}if(typeof raw[k]!=='number'||!Number.isFinite(raw[k])||raw[k]<lo||raw[k]>hi)lsFail('설정 범위를 확인해 주세요.');out[k]=raw[k];}
- for(const k of kind==='graph'?['title','xLabel','yLabel','x2Label','y2Label','palette','type','xDecimals']:['title','face'])if(raw[k]!==undefined)out[k]=lsText(raw[k],300);
+ for(const k of kind==='graph'?['title','xLabel','yLabel','x2Label','y2Label','palette','type','xDecimals','xScale','yScale']:['title','face'])if(raw[k]!==undefined)out[k]=lsText(raw[k],300);
  if(kind==='graph'){
   for(const k of ['xmin','xmax','ymin','ymax','x2min','x2max','y2min','y2max'])if(raw[k]!==undefined){if(raw[k]!==''&&!Number.isFinite(Number(raw[k])))lsFail('축 범위를 확인해 주세요.');out[k]=raw[k]===''?'':Number(raw[k]);}
   for(const k of ['grid','hideLegend'])if(raw[k]!==undefined)out[k]=raw[k]===true;
@@ -28,7 +28,7 @@ export function validateSharedArtifact(kind,input){
  const ycols=names.map((_,c)=>c).filter(c=>c!==0&&c!==x2&&!errors[c]);
  for(const xc of x2===undefined?[0]:[0,x2]){const cols=ycols.filter(c=>xc===0?(x2===undefined||c<x2):c>x2);if(!cols.length||!data.some(r=>r[xc]!==null&&cols.some(c=>r[c]!==null)))lsFail('각 X축에 연결된 Y 데이터가 필요합니다.');}
  for(const e of Object.values(errors))if(e.axis==='x'){const xc=x2!==undefined&&e.target>x2?x2:0;if(data.some(r=>typeof r[xc]==='string'))lsFail('문자 X축에는 X 오차를 적용할 수 없습니다.');}
- const settings=lsSettings(input.settings,kind);if(settings.xDecimals!==undefined&&!['auto','0','1','2','3','4','5','6','7','8'].includes(settings.xDecimals))lsFail('소수 자릿수를 확인해 주세요.');
+ const settings=lsSettings(input.settings,kind);for(const key of ['xScale','yScale'])if(settings[key]!==undefined&&!['linear','log'].includes(settings[key]))lsFail('축 스케일을 확인해 주세요.');if(settings.xDecimals!==undefined&&!['auto','0','1','2','3','4','5','6','7','8'].includes(settings.xDecimals))lsFail('소수 자릿수를 확인해 주세요.');
  for(const prefix of ['x','y','x2','y2']){const lo=settings[prefix+'min'],hi=settings[prefix+'max'];if(lo!==undefined&&hi!==undefined&&lo!==''&&hi!==''&&lo>=hi)lsFail('축 최솟값은 최댓값보다 작아야 합니다.');}
  return {name,parsed:{names,data,errors,...(x2===undefined?{}:{x2Index:x2})},settings};
 }

@@ -83,3 +83,23 @@ test('sheet paste retains error mapping and primary errors may follow the second
  const sheet={names:['X','A','X2','B','dA'],x2Index:2,errors:{4:{axis:'y',target:1}},cells:[['1','10','','','2'],['2','20','100','50','3']]};
  const next=c.sheet.apply(sheet,'4\n5',0,4);assert.equal(next.errors[4].target,1);const parsed=c.sheet.parsed(next);assert.equal(parsed.data[0][4],4);assert.equal(parsed.data[0][2],null);assert.equal(parsed.errors[4].axis,'y');
 });
+
+ test('independent logarithmic axes map decades equally and preserve linear defaults',()=>{
+ assert.equal(p.normalize({}).xScale,'linear'); assert.equal(p.normalize({}).yScale,'linear');
+ for(const xScale of ['linear','log'])for(const yScale of ['linear','log']){
+ let g; const svg=p.svg(p.parse('X\tA\n1\t1\n10\t10\n100\t100'),{xScale,yScale,xmin:1,xmax:100,ymin:1,ymax:100},v=>g=v);
+ assert.doesNotMatch(svg,/NaN|Infinity/);assert.ok(g);
+ assert.equal(p.fraction(10,1,100,'log'),.5);assert.equal(p.valueAt(.5,1,100,'log'),10);
+ }
+ const ticks=Array.from(p.logTicks(1,100));assert.deepEqual(ticks.filter(t=>t.major).map(t=>t.v),[1,10,100]);assert.ok(ticks.some(t=>t.v===2&&!t.major));
+ });
+ test('log axes reject zero, negative values, categorical X and error bars crossing zero',()=>{
+ for(const scale of ['x','y'])assert.throws(()=>p.svg(p.parse('0\t0\n1\t1'),{[scale+'Scale']:'log'}),/0보다/);
+ assert.throws(()=>p.svg(p.parse('A\t2\nB\t3'),{xScale:'log'}),/문자/);
+ assert.throws(()=>p.svg({names:['X','Y','err'],data:[[1,1,2]],errors:{2:{axis:'y',target:1}}},{yScale:'log'}),/0보다/);
+ assert.throws(()=>p.svg(p.parse('1\t2\n3\t4'),{xScale:'log',xmin:0}),/0보다/);
+ });
+ test('logarithmic dual axes, bars and positive error bars remain finite',()=>{
+ const d={names:['X','A','err','X2','B'],x2Index:3,errors:{2:{axis:'x',target:1}},data:[[1,2,.1,10,20],[10,20,1,100,200]]};
+ for(const type of ['lineonly','line','scatter','bar'])assert.doesNotMatch(p.svg(d,{type,xScale:'log',yScale:'log'}),/NaN|Infinity/);
+ });

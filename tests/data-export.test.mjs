@@ -19,3 +19,13 @@ test('QTI uses centered horizontal category labels for lines',()=>{const P=vm.ru
 test('QTI preserves error bars as explicit editable lines without adding legend entries',()=>{
  const data={names:['X','A','dY'],data:[[1,10,2],[2,20,null]],errors:{2:{axis:'y',target:1}}};const q=E.qti(data,{});assert.match(q,/name="HubErrors"/);assert.equal((q.match(/<curve /g)||[]).length,4);assert.match(q,/from="4" to="5"/);const legend=q.match(/<item type="2"[^>]*text="([^"]*)"/)[1];assert.doesNotMatch(legend,/dY/);assert.match(legend,/A/);
 });
+
+test('QTI logarithmic axes and dragged legend retain the SVG geometry',()=>{
+ const P=vm.runInContext('DataPlot',ctx),d=P.parse('1\t2\n10\t20\n100\t200');
+ for(const xScale of ['linear','log'])for(const yScale of ['linear','log']){
+ const s={xScale,yScale,legendX:.7,legendY:.2};let g;P.svg(d,s,v=>g=v);const q=E.qti(d,s),m=q.match(/<item type="2" x="([^"]+)" y="([^"]+)"/);
+ assert.ok(Math.abs(g.L+P.fraction(+m[1],g.xa,g.xb,xScale)*g.pw-g.legendX)<1e-7);
+ assert.ok(Math.abs(g.T+(1-P.fraction(+m[2],g.ya,g.yb,yScale))*g.ph-g.legendY)<1e-7);
+ assert.equal((q.match(/<div [^>]*type="1"/g)||[]).length,(xScale==='log'?2:0)+(yScale==='log'?2:0));
+ }
+});
