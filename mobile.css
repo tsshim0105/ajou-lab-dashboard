@@ -1586,3 +1586,15 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 .plot-series-row>select[data-fill]{grid-column:4;grid-row:2}
 .plot-preview .plot-axis-title{cursor:grab;touch-action:none;user-select:none}.plot-preview .plot-axis-title:active{cursor:grabbing}.plot-preview .plot-axis-title:focus{outline:none}.plot-preview .plot-axis-title:focus-visible text{fill:#2563eb}
 @media(max-width:600px){.plot-series .plot-series-row{grid-template-columns:minmax(0,1fr) 42px 78px 116px}.plot-series-row>.plot-color-swatches{grid-column:1/-1;grid-row:3}}
+
+/* One toolbar, shared live DOM inside a resizable spreadsheet dialog. */
+.plot-sheet-expand{display:inline-flex;align-items:center;justify-content:center;width:34px;padding:5px!important}
+.plot-sheet-table{min-width:0}.plot-sheet-table thead th,.plot-sheet-table thead th:has([data-sheet-role]),.plot-sheet-table thead th:has([data-sheet-target]){width:auto;min-width:0;box-sizing:border-box}
+.plot-sheet-table thead th{padding-right:12px}.plot-column-resize{position:absolute;right:0;top:0;bottom:0;width:9px;cursor:col-resize;touch-action:none;z-index:3}.plot-column-resize:hover,.plot-column-resize:focus-visible{background:#bad7ff;outline:1px solid #2166ed}
+.plot-sheet-dialog{box-sizing:border-box;width:94vw;height:80vh;max-width:96vw;max-height:94dvh;min-width:min(560px,94vw);min-height:320px;resize:both;overflow:hidden;border:1px solid #cbd9e9;border-radius:14px;padding:0;background:var(--card,#fff);color:var(--text,#183747);box-shadow:0 20px 70px #12334b44}
+.plot-sheet-dialog[open]{display:flex;flex-direction:column}.plot-sheet-dialog::backdrop{background:#132b4855;backdrop-filter:blur(2px)}
+.plot-sheet-dialog-heading{display:flex;align-items:center;gap:16px;padding:12px 16px;border-bottom:1px solid #d5e1ee;flex:none;background:linear-gradient(100deg,#eaf7f3,#f1eefb)}.plot-sheet-dialog-heading span{font-size:12px;color:#536574}.plot-sheet-dialog-heading button{margin-left:auto;font-size:12px;white-space:nowrap}
+.plot-sheet-dialog-body{flex:1;min-height:0;display:flex;padding:12px}.plot-sheet-dialog .plot-data-panel{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;border:0;padding:0}.plot-sheet-dialog #plotSheet{flex:1;min-height:0;display:flex;flex-direction:column}.plot-sheet-dialog .plot-sheet-scroll{max-height:none;flex:1;min-height:0}.plot-sheet-dialog .plot-sheet-tools{flex:none}.plot-sheet-dialog-status{flex:none;font-size:12px;min-height:18px;padding:0 22px 12px;margin:0}.plot-sheet-dialog .sheet-range-status{flex:none}
+@media(max-width:600px){.plot-sheet-dialog{width:96vw;max-width:96vw;height:90dvh;min-width:0;resize:none}.plot-sheet-dialog-heading{padding:10px;gap:8px}.plot-sheet-dialog-heading span{display:none}.plot-sheet-dialog-body{padding:8px}.plot-sheet-dialog .plot-sheet-tools{flex-wrap:wrap;overflow:visible}.plot-sheet-dialog .plot-sheet-draw-actions{flex-wrap:wrap;margin-left:0;flex:1 1 100%}}
+
+.plot-sheet-table .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
