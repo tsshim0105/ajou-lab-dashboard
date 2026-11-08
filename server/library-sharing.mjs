@@ -48,11 +48,23 @@ export async function librarySharingRequest(req,env,actor){
    for(const recipient of recipients){const key=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([actor.email,requestId,recipient])))),v=>v.toString(16).padStart(2,'0')).join('');statements.push(db.prepare('INSERT OR IGNORE INTO library_copies (id,recipient,kind,sender_name,payload,updated_at,delivery_key) VALUES (?,?,?,?,?,?,?)').bind('shared_'+crypto.randomUUID(),recipient,kind,actor.name,payload,now,key));}
    await db.batch(statements);return reply({ok:true,count:recipients.length});
   }
-  const match=path.match(/^\/api\/library\/(graph|table)(?:\/(shared_[\w-]+))?$/);if(!match)return reply({error:'잘못된 요청입니다.'},404);const [,kind,id]=match;
+  const match=path.match(/^\/api\/library\/(graph|table)(?:\/((?:shared_)?[a-f0-9-]{36}))?$/);if(!match)return reply({error:'잘못된 요청입니다.'},404);const [,kind,id]=match;
+  if(!id&&req.method==='POST'){
+   const body=await lsBody(req),artifact=validateSharedArtifact(kind,body.artifact),newId=body.id;
+   if(typeof newId!=='string'||! /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(newId))return reply({error:'항목 ID를 확인해 주세요.'},400);
+   if(body.owner&&body.owner.toLowerCase()!==actor.email.toLowerCase())return reply({error:'로그인 계정이 변경되었습니다. 페이지를 새로고침해 주세요.'},409);
+   const now=new Date().toISOString(),serialized=JSON.stringify(artifact);
+   const inserted=await db.prepare('INSERT OR IGNORE INTO library_copies (id,recipient,kind,sender_name,payload,updated_at,delivery_key) VALUES (?,?,?,?,?,?,?)').bind(newId,actor.email,kind,'',serialized,now,'personal:'+JSON.stringify([actor.email,kind,newId])).run();
+   const row=await db.prepare('SELECT * FROM library_copies WHERE id=? AND recipient=? AND kind=?').bind(newId,actor.email,kind).first();
+   if(!row)return reply({error:'항목 ID가 중복되었습니다. 보관함을 다시 열어 주세요.'},409);
+   if(body.import===true)return reply({ok:true,revision:row.revision,deleted:!!row.deleted});
+   if(row.deleted||(!inserted.meta?.changes&&row.payload!==serialized))return reply({error:'이미 저장되거나 삭제된 항목입니다. 보관함을 다시 열어 주세요.'},409);
+   return reply({ok:true,revision:row.revision,updatedAt:row.updated_at});
+  }
   if(!id&&read){const cursor=url.searchParams.get('after')||'';const {results}=await db.prepare('SELECT * FROM library_copies WHERE recipient=? AND kind=? AND deleted=0 AND id>? ORDER BY id LIMIT 21').bind(actor.email,kind,cursor).all();const rows=results.slice(0,20);return reply({items:rows.map(r=>({...JSON.parse(r.payload),id:r.id,updatedAt:r.updated_at,sharedBy:r.sender_name,revision:r.revision})),next:results.length>20?rows.at(-1).id:null});}
   if(!id||!['PUT','DELETE'].includes(req.method))return reply({error:'허용되지 않는 요청입니다.'},405);
-  const row=await db.prepare('SELECT * FROM library_copies WHERE id=? AND recipient=? AND kind=? AND deleted=0').bind(id,actor.email,kind).first();if(!row)return reply({error:'내 보관함의 공유 항목을 찾지 못했습니다.'},404);
-  const body=await lsBody(req);if(body.revision!==row.revision)return reply({error:'다른 기기에서 변경되었습니다. 보관함을 다시 열어 주세요.'},409);
+  const row=await db.prepare('SELECT * FROM library_copies WHERE id=? AND recipient=? AND kind=? AND deleted=0').bind(id,actor.email,kind).first();if(!row)return reply({error:'내 보관함의 항목을 찾지 못했습니다.'},404);
+  const body=await lsBody(req);if(body.owner&&body.owner.toLowerCase()!==actor.email.toLowerCase())return reply({error:'로그인 계정이 변경되었습니다. 페이지를 새로고침해 주세요.'},409);if(body.revision!==row.revision)return reply({error:'다른 기기에서 변경되었습니다. 보관함을 다시 열어 주세요.'},409);
   const now=new Date().toISOString(),next=req.method==='PUT'?JSON.stringify(validateSharedArtifact(kind,body.artifact)):row.payload;
   const result=await db.prepare('UPDATE library_copies SET payload=?,updated_at=?,revision=revision+1,deleted=? WHERE id=? AND recipient=? AND revision=?').bind(next,now,req.method==='DELETE'?1:0,id,actor.email,body.revision).run();if(!result.meta?.changes)return reply({error:'다른 기기에서 변경되었습니다. 보관함을 다시 열어 주세요.'},409);return reply({ok:true,revision:row.revision+1});
  }catch(e){return reply({error:e.message||'공유 요청을 처리하지 못했습니다.'},400);}
