@@ -188,7 +188,7 @@ async function saveStudents(){const b=$('saveStudents');b.disabled=true;try{cons
 $('year').onchange=render;$('query').oninput=render;$('reset').onclick=()=>{$('year').value='all';$('query').value='';render();};
 function theme(mode){document.documentElement.dataset.theme=mode;const label=mode==='dark'?'라이트모드로 전환':'다크모드로 전환';$('theme').innerHTML='<span aria-hidden="true">'+(mode==='dark'?'☀':'☾')+'</span>';$('theme').setAttribute('aria-label',label);$('theme').title=label;try{localStorage.setItem('ajou-lab-theme',mode);}catch{}}
 try{theme(localStorage.getItem('ajou-lab-theme')||'light');}catch{theme('light');}$('theme').onclick=()=>{theme(document.documentElement.dataset.theme==='dark'?'light':'dark');preferences.theme=document.documentElement.dataset.theme;savePreferences();};
-(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch(previewURL('/api/data'),{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();closeNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();if(!offline)void rrPrefetch();openPushTarget(location.href,{initial:true});}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
+(async()=>{await Promise.resolve();try{if(offline){data=LAB_PREVIEW;user={email:'',role:'admin'};$('previewNotice').classList.remove('hidden');}else{const res=await fetch(previewURL('/api/data'),{cache:'no-store'}),result=await res.json();if(!res.ok)throw Error(result.error);({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];applyConferenceCatalog(result.conferenceCatalog);notifications=result.notifications||[];preferences=result.preferences||{};theme(preferences.theme||'light');applyAppearance();labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];}retireDesktopNotifications();closeNotifications();renderNotifications();years();const current=String(new Date().getFullYear());if([...$('year').options].some(o=>o.value===current))$('year').value=current;$('userLabel').innerHTML=badge(admin()?'교수님':'연구실 구성원');render();if(!offline)void rrPrefetch();openPushTarget(location.href,{initial:true});}catch(e){$('userLabel').textContent='연결 필요';$('panel').innerHTML=`<div class="note warning">${esc(e.message)}</div>`;}finally{globalThis.DashboardStartup?.finish();}})();
 
 function field(name,label,value='',type='text',extra=''){return `<label style="display:grid;gap:6px">${esc(label)}<input name="${name}" type="${type}" value="${esc(value)}" ${extra} style="width:100%;box-sizing:border-box;padding:10px"></label>`;}
 function editor(title,fields,save,research=false,remove=null,options={}){
@@ -312,6 +312,12 @@ function deadlineList(list){
 function sectionFilterTitle(title,items,selected,attribute){
  return `<div class="research-title section-filter-title"><h1>${esc(title)}</h1><div class="section-filter-buttons" role="group" aria-label="${esc(title)} 구분">${items.map(([key,label])=>`<button type="button" class="${selected===key?'primary':'secondary'}" aria-pressed="${selected===key}" data-${attribute}="${key}">${esc(label)}</button>`).join('')}</div></div>`;
 }
+function applyConferenceCatalog(catalog){
+ if(!catalog||!Array.isArray(catalog.events))return;
+ ConferenceInfo.events=catalog.events;
+ const checked=catalog.checkedAt?new Date(catalog.checkedAt):null;
+ ConferenceInfo.updated=checked&&Number.isFinite(checked.getTime())?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(checked):catalog.updated||ConferenceInfo.updated;
+}
 function conferenceRecentlyChanged(event,items=notifications,now=Date.now()){
  return items.some(n=>n.type==='meetingInfo'&&['등록','수정'].includes(n.action)&&(n.recordId?n.recordId===event.id:n.title===event.name)&&Number.isFinite(Date.parse(n.at))&&now>=Date.parse(n.at)&&now-Date.parse(n.at)<7*86400000);
 }
@@ -404,7 +410,7 @@ $('notificationClose').onclick=()=>{closeNotifications();$('notificationToggle')
 $('notificationClear').onclick=()=>{const p=notificationPrefs();saveNotificationPrefs({read:p.read||[],hidden:[...new Set([...(p.hidden||[]),...notifications.map(n=>n.id)])].slice(-400)});renderNotifications();};
 document.addEventListener('click',e=>{if(!e.target.closest('.notification-anchor'))closeNotifications();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeNotifications();});
-async function refreshNotifications(){const previewScope=studentPreviewEmail;if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch(previewURL('/api/notifications'),{cache:'no-store'});if(!res.ok)return;const result=await res.json();if(previewScope!==studentPreviewEmail)return;notifications=result.notifications||[];renderNotifications();if(typeof rrPaintUnread==='function')rrPaintUnread();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
+async function refreshNotifications(){const previewScope=studentPreviewEmail;if(offline||notificationRefreshPending)return;notificationRefreshPending=true;try{const res=await fetch(previewURL('/api/notifications'),{cache:'no-store'});if(!res.ok)return;const result=await res.json();if(previewScope!==studentPreviewEmail)return;applyConferenceCatalog(result.conferenceCatalog);notifications=result.notifications||[];renderNotifications();if(typeof rrPaintUnread==='function')rrPaintUnread();if(tab==='meetingInfo'&&!busy)render();}catch{}finally{notificationRefreshPending=false;}}
 setInterval(refreshNotifications,30000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshNotifications();});
 
 function studentAccountList(){return students.length?students.map(email=>`<div class="source" style="display:flex;align-items:center;gap:10px"><div style="flex:1;min-width:0;overflow-wrap:anywhere"><strong>${esc(studentNames[email]||'학생')}</strong><div class="muted">${esc(email)}</div></div><button class="secondary" data-remove-student="${esc(email)}" ${offline?'disabled':''} aria-label="${esc(studentNames[email]||email)} 계정 삭제">삭제</button></div>`).join(''):'<p class="muted">등록된 학생 계정이 없습니다.</p>';}
@@ -418,7 +424,7 @@ async function setStudentPreview(enabled,email=''){
  try{
   let result;if(enabled){const response=await fetch('/api/data?previewStudent='+encodeURIComponent(email),{cache:'no-store'});result=await response.json();if(!response.ok)throw Error(result.error||'학생 화면을 불러오지 못했습니다.');}
   if(sequence!==studentPreviewSequence)return;
-  if(enabled){studentPreviewSnapshot??={data,notifications,preferences};data=result.data;notifications=result.notifications||[];preferences=result.preferences||{};studentPreviewEmail=email;}
+  if(enabled){studentPreviewSnapshot??={data,notifications,preferences};data=result.data;applyConferenceCatalog(result.conferenceCatalog);notifications=result.notifications||[];preferences=result.preferences||{};studentPreviewEmail=email;}
   else{if(studentPreviewSnapshot)({data,notifications,preferences}=studentPreviewSnapshot);studentPreviewSnapshot=null;studentPreviewEmail='';}
   studentPreview=enabled;rrEnsureScope();researchRoomState.mobileChatOpen=false;tab=enabled?'home':'settings';years();$('year').value='all';$('query').value='';closeNotifications();renderNotifications();render();window.scrollTo({top:0});if(enabled)void rrPrefetch();
  }catch(e){if(sequence===studentPreviewSequence)alert(e.message);}
@@ -646,7 +652,7 @@ async function refreshDashboardFromPull(){
   const selectedYear=$('year').value;
   if(previewScope!==studentPreviewEmail)return;
   if(studentPreview){data=result.data;}else{({data,user,version,students}=result);studentNames=result.studentNames||{};homepageAdmins=result.homepageAdmins||[];}
-  notifications=result.notifications||[];labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];
+  applyConferenceCatalog(result.conferenceCatalog);notifications=result.notifications||[];labLeadAuthor=result.labLeadAuthor||'';labMemberAuthors=result.labMemberAuthors||[];
   years();if([...$('year').options].some(o=>o.value===selectedYear))$('year').value=selectedYear;
   renderNotifications();render();$('panel').scrollTop=0;
  }catch(error){if(error.name==='AbortError')throw Error('연결이 지연됩니다. 다시 당겨 주세요.');throw error;}

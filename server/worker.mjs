@@ -146,7 +146,7 @@ function notificationView(row,type){return Object.fromEntries(notificationFields
 export function recordNotifications(state,before,after,type,actor='교수님'){
  const key=r=>r.id||r.title||r.name;const old=new Map(before.map(r=>[key(r),r])),next=new Map(after.map(r=>[key(r),r])),events=[];
  for(const [id,r] of next){const previous=old.get(id);if(previous&&JSON.stringify(notificationView(previous,type))===JSON.stringify(notificationView(r,type)))continue;events.push({r,action:previous?'수정':'등록'});}
- for(const [id,r] of old)if(!next.has(id))events.push({r,action:'삭제'});
+ for(const [id,r] of old)if(!next.has(id)&&!(type==='meetingInfo'&&actor==='자동 갱신'))events.push({r,action:'삭제'});
  const label={papers:'논문',conferences:'학회 발표',meetingInfo:'학술대회'}[type];
  const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,recordId:r.id||null,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.kind,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
  state.notifications=[...added.reverse(),...(state.notifications||[])].slice(0,200);
@@ -313,15 +313,19 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   const snapshot=(meetingEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
-   if(meetingEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot)){
-    if(state.meetingNotificationSnapshot)recordNotifications(state,state.meetingNotificationSnapshot,snapshot,'meetingInfo','자동 갱신');
-    state.meetingNotificationSnapshot=snapshot;
+   const catalogEvents=state.conferenceCatalog?.events||meetingEvents;
+   const retainedNotifications=(state.notifications||[]).filter(n=>!(n.type==='meetingInfo'&&n.actor==='자동 갱신'&&n.action==='삭제'));
+   const staleDeletionAlerts=retainedNotifications.length!==(state.notifications||[]).length;
+   const snapshot=(catalogEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
+   if(staleDeletionAlerts||(catalogEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot))){
+    state.notifications=retainedNotifications;
+    if(catalogEvents!==null&&state.meetingNotificationSnapshot)recordNotifications(state,state.meetingNotificationSnapshot,snapshot,'meetingInfo','자동 갱신');
+    if(catalogEvents!==null)state.meetingNotificationSnapshot=snapshot;
     const saved=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
     if(!saved.meta?.changes)return reply({error:'다시 확인 중입니다.'},409);
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
-   if(url.pathname==='/api/notifications')return reply({notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
+   if(url.pathname==='/api/notifications')return reply({conferenceCatalog:state.conferenceCatalog||null,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
   }
   if(read&&url.pathname==='/_mobile-preview'){
    if(!admin)return reply({error:'교수님만 확인할 수 있습니다.'},403);
@@ -339,7 +343,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     if(saved.meta?.changes)break;
    }
   }
-  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,name:admin?'교수님':state.studentNames?.[email]||'',role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[]),data:{...visible(state.data,admin),groupPresentationPapers:groupPaperRows(state,email,admin)},homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
+  if(read&&url.pathname==='/api/data')return reply({version:row.version,user:{email,name:admin?'교수님':state.studentNames?.[email]||'',role:admin?'admin':'student',canManageHomepage:!!env.HOMEPAGE_ADMIN_EMBED&&homepageManagers(state,env.ADMIN_EMAIL).includes(email)},preferences:state.preferences?.[email]||{},labLeadAuthor:env.LAB_LEAD_AUTHOR||'',labMemberAuthors:(env.LAB_MEMBER_AUTHORS||'').split(';').map(s=>s.trim()).filter(Boolean),conferenceCatalog:state.conferenceCatalog||null,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[]),data:{...visible(state.data,admin),groupPresentationPapers:groupPaperRows(state,email,admin)},homepageAdmins:admin?homepageManagers(state,env.ADMIN_EMAIL):[],students:admin?state.students:[],studentNames:admin?(state.studentNames||{}):{}});
   if(req.method==='PUT'&&['/api/data','/api/students','/api/homepage-admins','/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname)){
    if(!admin&&!['/api/research','/api/reagents','/api/shared','/api/group-meetings','/api/game-night','/api/game-nights'].includes(url.pathname))return reply({error:'교수님만 변경할 수 있습니다.'},403);
    const reader=req.body?.getReader();let size=0,parts=[];if(!reader)return reply({error:'자료가 없습니다.'},400);
@@ -376,7 +380,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    recordScheduleDay(state);
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
-   return reply({version:row.version+1,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
+   return reply({version:row.version+1,conferenceCatalog:state.conferenceCatalog||null,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
   }
   return reply({error:'페이지를 찾을 수 없습니다.'},404);
  }catch(e){return reply({error:e instanceof SyntaxError?'자료 형식을 확인해주세요.':e.message||'처리 중 오류가 발생했습니다.'},400);}

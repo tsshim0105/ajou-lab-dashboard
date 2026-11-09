@@ -12,7 +12,7 @@ async function rrBody(req){const reader=req.body?.getReader();if(!reader)throw r
 async function rrConfig(db){const row=await db.prepare("SELECT payload FROM research_records WHERE id='config'").first();return {...researchDefaults(),...(row?JSON.parse(row.payload):{})};}
 async function rrTopic(db,id){const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('topic:'+rrId(id)).first();if(!row)throw rrError('주제를 찾을 수 없습니다.',404);return {...JSON.parse(row.payload),version:row.version};}
 async function rrUpdate(db,id,version,payload){const result=await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(JSON.stringify(payload),id,version).run();if(!result.meta?.changes)throw rrError('다른 화면에서 수정되었습니다. 최신 내용을 확인한 뒤 저장해주세요. 입력은 유지됩니다.',409);}
-export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new URL(req.url),action=url.pathname.split('/').at(-1),reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});if(!actor.admin&&req.method!=='GET'&&!(req.method==='POST'&&action==='meeting-summary-save'))return reply({error:'교수님만 수정할 수 있습니다.'},403);
+export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new URL(req.url),action=url.pathname.split('/').at(-1),reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store','Vary':'Cookie','X-Content-Type-Options':'nosniff'}});if(!actor.admin&&req.method!=='GET'&&!(req.method==='POST'&&['meeting-summary-save','meeting-summary-delete'].includes(action)))return reply({error:'교수님만 수정할 수 있습니다.'},403);
  if(action==='recording-work'&&actor.admin&&req.method==='POST')return researchWorkStream(()=>meetingRecordingRequest(req,env,actor,{reserveResearchJob,settleResearchJob,RESEARCH_MODEL}));
  if(action.startsWith('recording-'))return meetingRecordingRequest(req,env,actor,{reserveResearchJob,settleResearchJob,RESEARCH_MODEL});
  const viewerNames=t=>(t.viewers||[]).map(email=>(actor.members||[]).find(m=>m.email===email)).filter(Boolean).map(m=>m.name===m.email?'연구실 구성원':m.name);
@@ -22,8 +22,8 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
  const readTopic=async id=>{const t=await rrTopic(db,id);if(!canRead(t))throw rrError('이 채팅의 열람 권한이 없습니다.',403);return t;};
  try{
 
- if(req.method==='POST'&&action==='meeting-summary-save'){
-  const b=await rrBody(req),topic=await readTopic(b.topic),id=rrId(b.id);
+ if(req.method==='POST'&&['meeting-summary-save','meeting-summary-delete'].includes(action)){
+  const b=await rrBody(req),topic=actor.admin&&b.topic==='unclassified'&&action==='meeting-summary-delete'?{id:'unclassified'}:await readTopic(b.topic),id=rrId(b.id);
   if(topic.deleted)throw rrError('삭제된 연구의 회의요약은 수정할 수 없습니다.',403);
   const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('recording:'+id).first();
   if(!row)throw rrError('회의요약을 찾을 수 없습니다.',404);
@@ -31,6 +31,14 @@ export async function researchRoomRequest(req,env,actor){const db=env.DB,url=new
   if(record.status==='cancelled'||!prior?.content?.trim())throw rrError('회의요약을 찾을 수 없습니다.',404);
   if(['queued','working'].includes(record.processing?.status))throw rrError('요약 처리가 완료된 뒤 수정해주세요.',409);
   if(!Number.isInteger(b.revision)||b.revision!==(prior.revision||0))throw rrError('다른 사람이 요약을 수정했습니다. 최신 내용을 확인해주세요. 입력 내용은 유지됩니다.',409);
+  if(action==='meeting-summary-delete'){
+   if(['recording','paused'].includes(record.status)||['queued','working','waiting','attention'].includes(record.processing?.status))throw rrError('녹음·요약 처리가 끝난 뒤 삭제해주세요.',409);
+   const busy=await db.prepare("SELECT id FROM research_jobs WHERE topic=? AND status IN ('pending','uncertain') LIMIT 1").bind('recording:'+id).first();if(busy)throw rrError('요약 처리가 끝난 뒤 삭제해주세요.',409);
+   const now=new Date().toISOString(),summary={...record.summary};delete summary[topic.id];
+   const summaryProgress={...record.summaryProgress};delete summaryProgress[topic.id];
+   await rrUpdate(db,'recording:'+id,row.version,{...record,summary,summaryProgress,summaryDeleted:{...record.summaryDeleted,[topic.id]:{at:now,by:actor.email,revision:(prior.revision||0)+1}},summaryHistory:[...(record.summaryHistory||[]),{topic:topic.id,...prior,deletedAt:now,deletedBy:actor.email}].slice(-100)});
+   return reply({ok:true});
+  }
   let content=rrText(b.content,40000);const now=new Date().toISOString();
   let correction=null;
   if(b.correction){
