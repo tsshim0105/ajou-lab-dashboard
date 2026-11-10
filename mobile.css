@@ -1598,3 +1598,18 @@ html[data-theme="dark"] .fund-balance-head{background:linear-gradient(110deg,#29
 @media(max-width:600px){.plot-sheet-dialog{width:96vw;max-width:96vw;height:90dvh;min-width:0;resize:none}.plot-sheet-dialog-heading{padding:10px;gap:8px}.plot-sheet-dialog-heading span{display:none}.plot-sheet-dialog-body{padding:8px}.plot-sheet-dialog .plot-sheet-tools{flex-wrap:wrap;overflow:visible}.plot-sheet-dialog .plot-sheet-draw-actions{flex-wrap:wrap;margin-left:0;flex:1 1 100%}}
 
 .plot-sheet-table .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Compact report summaries with explicitly linked professor feedback. */
+.mr-summary-grid.mr-linked-summary>section[data-summary-kind]{order:0;min-width:0}
+.mr-summary-grid.mr-linked-summary>section[data-summary-kind="3"]{order:-1;border-top:3px solid #80baa6}
+.mr-summary-grid.mr-linked-summary>section[hidden]{display:none}
+.mr-report-list{padding:12px 14px}
+.mr-report-card{border:1px solid var(--edge,#d7e2e9);border-radius:10px;padding:14px;margin-bottom:12px;background:var(--panel,#fff);overflow-wrap:anywhere}
+.mr-report-card:last-child{margin-bottom:0}
+.mr-report-card h5,.mr-legacy-problems h5{margin:0 0 8px;font-size:14px;color:inherit}
+.mr-report-card ul,.mr-linked-feedback ul{margin:0;padding:0;list-style:none}
+.mr-report-card li{padding:4px 0}
+.mr-linked-feedback{margin:12px 0 0 12px;padding:10px 14px;border-left:3px solid #9987bd;border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--panel,#fff) 86%,#9987bd);color:inherit}
+.mr-linked-feedback>strong{font-size:12px}
+.mr-legacy-problems{margin-top:12px}
+@media(max-width:600px){.mr-report-list{padding:10px}.mr-report-card{padding:11px}.mr-linked-feedback{margin-left:3px;padding:10px}}
