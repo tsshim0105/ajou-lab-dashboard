@@ -41,7 +41,7 @@ window.nismlRecorderCommand=async function(command){
  throw Error('지원하지 않는 동작입니다.');
 };
 async function mrNativeUpload(){
- const m=meetingRecorder,s=m.session;if((!s?.nativeCapture&&!s?.nativePending)||m.nativeStopping||s.audioDeletedAt)return;
+ const m=meetingRecorder,s=m.session;if((!s?.nativeCapture&&!s?.nativePending)||m.nativeStopping||s.audioDeletedAt||(!m.active&&s.nativeUploaded&&!s.nativePending))return;
  if(!s.segmentedCapture){if(!s.nativePending||m.active)return;const {size}=await mrNative('recover',{id:s.id});let index=0;for(let offset=0;offset<size;){const part=await mrNative('read',{id:s.id,offset});if(!part.length)throw Error('녹음 파일을 끝까지 읽지 못했습니다.');await researchFetch('recording-audio',{id:s.id,index:index++,base64:part.base64});offset+=part.length;}m.audioIndex=index;s.nativePending=false;s.nativeUploaded=true;await mrChanged();return;}
  const wasActive=m.active,result=await mrNative('parts',{id:s.id});
  if(m.active&&!m.paused){m.clockBase=result.duration;m.clockStarted=performance.now();}else if(!wasActive)m.clockBase=result.duration;
@@ -80,7 +80,31 @@ const mrDraftKey=()=>String(user.email)+':current';
 function mrSnapshot(){const m=meetingRecorder;return {...m.session,duration:mrSeconds(),status:m.active?(m.paused?'paused':'recording'):(m.session?.status||'ended'),audioCount:m.audioIndex};}
 async function mrChanged(){const m=meetingRecorder;if(!m.session)return;m.dirty=true;m.revision=(m.revision||0)+1;try{await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});}catch{m.message='기기 임시 저장에 실패했습니다. 녹음을 내려받아 보관해주세요.';}mrPaint();}
 function mrSync(){const m=meetingRecorder;if(m.syncPromise)return m.syncPromise;m.syncPromise=mrSyncRun().finally(()=>m.syncPromise=null);return m.syncPromise;}
-async function mrSyncRun(){const m=meetingRecorder;if(m.syncing||m.converting||m.discarding||m.cancelPending||!m.session||!admin())return;m.syncing=true;mrPaint();try{await mrNativeUpload();while(m.pendingAudio.length){const item=m.pendingAudio[0];const bytes=new Uint8Array(await item.blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));await researchFetch('recording-audio',{id:m.session.id,index:item.index,base64:btoa(binary)});m.pendingAudio.shift();await mrLocal(user.email+':audio:'+m.session.id+':'+item.index,undefined,true);}if(m.dirty){const revision=m.revision;let r;try{r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}catch(error){const latest=await researchFetch('recording-detail?id='+encodeURIComponent(m.session.id));m.version=latest.version;mrMergeTranscript(latest);r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}m.version=r.version;if(m.revision===revision)m.dirty=false;await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});}if(m.session.nativeUploaded&&!m.dirty){await mrNative('uploaded',{id:m.session.id}).catch(()=>{});}}catch(e){m.message='서버 저장 대기: '+e.message;}finally{m.syncing=false;mrPaint();}if(!m.discarding&&!m.cancelPending&&!m.dirty&&!m.pendingAudio.length&&!['completed','failed','attention','participants-required'].includes(m.session.processing?.status)&&m.session.audioParts?.length&&(m.session.audioParts.at(-1).end>=300||m.session.voiceEnrollment||!m.active))mrEnqueue(m.session.id).catch(e=>{m.message=e.message;mrPaint();});}
+// Clear obsolete local save flags only when the completed server record contains our capture.
+async function mrRecoverCompleted(){
+ const m=meetingRecorder,s=m.session,revision=m.revision;
+ if(!s||m.active||!m.dirty||m.pendingAudio.length||s.nativePending)return false;
+ const latest=await researchFetch('recording-detail?id='+encodeURIComponent(s.id));
+ if(m.session!==s||m.revision!==revision||m.active||m.pendingAudio.length||s.nativePending||latest.processing?.status!=='completed')return false;
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ if(latest.audioCount!==(m.audioIndex||0)||Math.abs(latest.duration-mrSeconds())>.01||!same(latest.markers,s.markers)||!same(latest.audioParts||[],s.audioParts||[]))return false;
+ if(!(s.segments||[]).every(x=>(latest.segments||[]).some(y=>same(x,y)))||!same(latest.speakers||{},s.speakers||{}))return false;
+ m.version=latest.version;m.session={...s,...latest};m.dirty=false;
+ await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});
+ m.message='저장된 최신 회의 요약을 불러왔습니다.';return true;
+}
+async function mrOpenNotificationRecording(id){
+ const m=meetingRecorder;
+ const blocked=()=>m.active||m.busy||m.stopping||m.processing||m.converting||m.discarding||m.cancelPending;
+ if(blocked())throw Error('녹음 또는 현재 작업을 마친 뒤 요약을 열어주세요.');
+ await mrSync();
+ if(blocked()||m.dirty||m.pendingAudio.length||m.session?.nativePending)throw Error(m.message||'회의 업로드가 끝난 뒤 다시 열어주세요.');
+ const previous=m.session,s=await researchFetch('recording-detail?id='+encodeURIComponent(id));
+ if(blocked()||m.session!==previous||m.dirty||m.pendingAudio.length||m.session?.nativePending)throw Error('회의 상태가 바뀌었습니다. 저장 후 다시 열어주세요.');
+ Object.assign(m,{session:s,version:s.version,clockBase:s.duration,audioIndex:s.audioCount||0,dirty:false});
+ await mrLocal(mrDraftKey(),{session:s,version:s.version});mrPaint();
+}
+async function mrSyncRun(){const m=meetingRecorder;if(m.syncing||m.converting||m.discarding||m.cancelPending||!m.session||!admin())return;m.syncing=true;mrPaint();try{if(!await mrRecoverCompleted())await mrNativeUpload();while(m.pendingAudio.length){const item=m.pendingAudio[0];const bytes=new Uint8Array(await item.blob.arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));await researchFetch('recording-audio',{id:m.session.id,index:item.index,base64:btoa(binary)});m.pendingAudio.shift();await mrLocal(user.email+':audio:'+m.session.id+':'+item.index,undefined,true);}if(m.dirty){const revision=m.revision;let r;try{r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}catch(error){const latest=await researchFetch('recording-detail?id='+encodeURIComponent(m.session.id));m.version=latest.version;mrMergeTranscript(latest);r=await researchFetch('recording-save',{...mrSnapshot(),version:m.version});}m.version=r.version;if(m.revision===revision)m.dirty=false;await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});}if(m.session.nativeUploaded&&!m.dirty){await mrNative('uploaded',{id:m.session.id}).catch(()=>{});}}catch(e){m.message='서버 저장 대기: '+e.message;}finally{m.syncing=false;mrPaint();}if(!m.discarding&&!m.cancelPending&&!m.dirty&&!m.pendingAudio.length&&!['completed','failed','attention','participants-required'].includes(m.session.processing?.status)&&m.session.audioParts?.length&&(m.session.audioParts.at(-1).end>=300||m.session.voiceEnrollment||!m.active))mrEnqueue(m.session.id).catch(e=>{m.message=e.message;mrPaint();});}
 async function mrQueueAudio(blob){if(!blob.size)return;if(blob.size>500000){for(let at=0;at<blob.size;at+=500000)await mrQueueAudio(blob.slice(at,at+500000,blob.type));return;}const m=meetingRecorder,index=m.audioIndex++;const item={index,blob};m.pendingAudio.push(item);try{await mrLocal(user.email+':audio:'+m.session.id+':'+index,blob);}catch{m.message='기기 저장 공간이 부족합니다. 녹음을 종료하고 파일을 보관해주세요.';}await mrChanged();}
 async function mrSelectStartParticipants(){
  const [rooms,{voices}]=await Promise.all([researchFetch('rooms'),researchFetch('recording-voices')]);
@@ -306,7 +330,7 @@ function mrCreateTopic(wholeMeeting=false){
    m.session.summary=result.summary;m.session.summaryEpoch=result.summaryEpoch;m.session.conversions=result.conversions;
    delete m.summaryDrafts[s.id+':unclassified'];
    researchRoomState.rooms?.topics.push({id:newTopic,title:b.title.trim(),archived:false,viewers:[]});researchRoomState.selected=newTopic;researchRoomState.archived=false;researchRoomState.mobileChatOpen=true;researchRoomState.view='meeting';
-   mrChooseTopic(newTopic);await mrChanged();m.message='새 연구미팅에 연결했습니다. '+(m.active?'이후 녹음도 이 주제로 기록합니다.':'회의 요약과 전사 원문에서 확인하세요.');
+   mrChooseTopic(newTopic);await mrLocal(mrDraftKey(),{session:mrSnapshot(),version:m.version});m.message='새 연구미팅에 연결했습니다. '+(m.active?'이후 녹음도 이 주제로 기록합니다.':'회의 요약과 전사 원문에서 확인하세요.');
   }finally{m.converting=false;mrUpdateControls();}
   await mrSync();
  },'새 연구미팅 만들기');

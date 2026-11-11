@@ -80,15 +80,16 @@ test('meeting notifications persist, deduplicate imports and respect current top
  assert.ok((await researchNotifications(f.DB,owner)).every(n=>n.topic!=='private'));
 });
 
-test('summary completion notices are owner-only, stable, topic-specific, and skip historical summaries',async()=>{
+test('summary completion notices are owner-only, stable per recording, and skip historical summaries',async()=>{
  const {researchNotifications}=await import('../server/research-room.mjs');const f=fixture();
  for(const id of ['a','b'])f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('topic:'+id,JSON.stringify({id,title:id,created:'2020',viewers:['student@example.test']}));
  const meeting={id:'rec-1',created:'2026-10-22',summary:{a:{notificationAt:'2026-10-22T10:00:00Z',notificationEpoch:0,content:'secret'},b:{notificationAt:'2026-10-22T10:01:00Z',notificationEpoch:0},unclassified:{content:'historical'}}};
  f.sql.prepare('INSERT INTO research_records VALUES(?,0,?)').run('recording:rec-1',JSON.stringify(meeting));
- const owner={admin:true,email:'owner@example.test'};const notices=await researchNotifications(f.DB,owner);assert.equal(notices.length,2);assert.equal(notices[0].label,'신규 회의 요약 완료');assert.equal(notices[0].recording,'rec-1');assert.ok(notices.every(n=>!JSON.stringify(n).includes('secret')));assert.deepEqual(await researchNotifications(f.DB,owner),notices);
+ const owner={admin:true,email:'owner@example.test'};const notices=await researchNotifications(f.DB,owner);assert.equal(notices.length,1);assert.equal(notices[0].label,'신규 회의 요약 완료');assert.equal(notices[0].recording,'rec-1');assert.ok(notices.every(n=>!JSON.stringify(n).includes('secret')));assert.deepEqual(await researchNotifications(f.DB,owner),notices);
  assert.deepEqual(await researchNotifications(f.DB,{admin:false,email:'student@example.test'}),[]);
  meeting.summary.a.status='reviewed';f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(meeting),'recording:rec-1');assert.deepEqual((await researchNotifications(f.DB,owner)).map(n=>n.id),notices.map(n=>n.id));
- delete meeting.summary.a;f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(meeting),'recording:rec-1');assert.equal((await researchNotifications(f.DB,owner)).length,1);
+ meeting.summaryHistory=[{topic:'a',...meeting.summary.a}];delete meeting.summary.a;f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(meeting),'recording:rec-1');assert.deepEqual((await researchNotifications(f.DB,owner)).map(n=>n.id),notices.map(n=>n.id));
+ meeting.summary.b.notificationEpoch=5;meeting.summary.b.notificationAt='2026-11-11T10:00:00Z';f.sql.prepare('UPDATE research_records SET payload=? WHERE id=?').run(JSON.stringify(meeting),'recording:rec-1');assert.deepEqual((await researchNotifications(f.DB,owner)).map(n=>n.id),notices.map(n=>n.id));
 });
 
 test('topic unread state clears only the content actually opened',async()=>{

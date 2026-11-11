@@ -405,3 +405,26 @@ test('explicit summary regeneration uses current rules, keeps history and reject
  const f=fixture();await create(f);await f.call('recording-save',{...snap,markers:[...markers,{at:35,topic:null,title:'미분류'}]});await f.call('recording-summary-save',{id,version:1,topic:'unclassified',content:'Grouped research and professor comments'});
  const before=await (await f.call('recording-detail?id='+id)).json();const r=await f.call('recording-create-topic',{id,version:2,newTopic:'created-topic-all',title:'Saved meeting',markerIndexes:[2,4]});assert.equal(r.status,200);const result=await r.json();assert.equal(result.markers.filter(x=>x.topic===null).length,0);assert.equal(result.summary.unclassified,undefined);assert.equal(result.summary['created-topic-all'].content,'Grouped research and professor comments');assert.equal(result.created,before.created);assert.equal(result.markers[1].topic,'topic-0002');
  });
+
+test('finished native upload does not reopen files or dirty the completed recording',async()=>{
+ const c=nativeContext(async()=>{throw Error('must not read native file');});
+ vm.runInContext("meetingRecorder.session={id:'saved',nativeCapture:true,nativeUploaded:true,nativePending:false};",c);
+ await vm.runInContext('mrNativeUpload()',c);assert.equal(vm.runInContext('meetingRecorder.dirty',c),false);
+});
+test('obsolete save flag recovers only when completed server capture matches',async()=>{
+ const c=nativeContext();const record={id:'saved',duration:12,audioCount:0,markers:[{at:0,topic:null,title:'미분류'}],segments:[],speakers:{},audioParts:[],processing:{status:'completed'},version:9};
+ c.record=record;c.researchFetch=async()=>structuredClone(record);
+ vm.runInContext('Object.assign(meetingRecorder,{session:structuredClone(record),clockBase:12,dirty:true,revision:1});',Object.assign(c,{structuredClone}));
+ assert.equal(await vm.runInContext('mrRecoverCompleted()',c),true);assert.equal(vm.runInContext('meetingRecorder.dirty',c),false);
+ vm.runInContext("meetingRecorder.dirty=true;meetingRecorder.session.markers[0].title='unsaved change';",c);
+ assert.equal(await vm.runInContext('mrRecoverCompleted()',c),false);assert.equal(vm.runInContext('meetingRecorder.dirty',c),true);
+ vm.runInContext('meetingRecorder.session=structuredClone(record);meetingRecorder.session.nativePending=true;',c);
+ assert.equal(await vm.runInContext('mrRecoverCompleted()',c),false);
+});
+test('summary opening saves pending metadata first and never replaces an active recording',async()=>{
+ const c=nativeContext();let fetched=0;c.researchFetch=async()=>{fetched++;return {id:'other',duration:12,version:1};};
+ vm.runInContext("meetingRecorder.dirty=true;mrSync=async()=>{meetingRecorder.dirty=false;};",c);
+ await vm.runInContext("mrOpenNotificationRecording('other')",c);assert.equal(fetched,1);
+ vm.runInContext('meetingRecorder.active=true;',c);
+ await assert.rejects(vm.runInContext("mrOpenNotificationRecording('new')",c),/녹음/);assert.equal(fetched,1);
+});

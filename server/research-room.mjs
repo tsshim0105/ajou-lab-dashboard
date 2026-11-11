@@ -1,4 +1,4 @@
-import {meetingRecordingRequest} from './meeting-recording.mjs';
+import {meetingRecordingRequest,meetingNotificationAnchor} from './meeting-recording.mjs';
 import {prepareResearchImageUpload} from './research-upload.mjs';
 // Topic viewers have read-only access; all mutations remain professor-only.
 export const RESEARCH_MODEL='gpt-6.1-sol';
@@ -282,7 +282,7 @@ export async function researchNotifications(db,actor,existing=[]){
   const topic=JSON.parse(row.payload);
   if(topic.deleted||(!actor.admin&&!(topic.viewers||[]).includes(actor.email)))continue;
   const make=(id,at,action)=>({id,at,actor:'연구미팅',type:'researchRooms',topic:topic.id,archived:!!topic.archived,action,label:'연구미팅 · '+action,title:topic.title,detail:action==='새 채팅'?'새 채팅창이 등록되었습니다.':'새 질문과 답변이 추가되었습니다.'});
-  if(topic.created>=RESEARCH_NOTIFICATION_START)events.push(make('rr-topic:'+topic.id,topic.created,'새 채팅'));
+  if(topic.created>=RESEARCH_NOTIFICATION_START&&!topic.sourceRecording)events.push(make('rr-topic:'+topic.id,topic.created,'새 채팅'));
   const messages=await db.prepare("SELECT id,created,reply_to FROM research_messages WHERE topic=? AND kind='assistant' AND created>=? ORDER BY created DESC LIMIT 200").bind(topic.id,RESEARCH_NOTIFICATION_START).all();
   for(const m of messages.results||[]){
    // The first imported answer is part of the new-chat notification.
@@ -293,10 +293,13 @@ export async function researchNotifications(db,actor,existing=[]){
  if(actor.admin){
   const topics=new Map((rows?.results||[]).map(r=>{const t=JSON.parse(r.payload);return [t.id,t];}));
   const recordings=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'recording:%' ORDER BY json_extract(payload,'$.created') DESC LIMIT 200").all?.();
-  for(const row of recordings?.results||[]){const meeting=JSON.parse(row.payload);for(const [key,summary] of Object.entries(meeting.summary||{})){
-   if(!summary.notificationAt)continue;const topic=key==='unclassified'?{id:'__unclassified__',title:'미분류'}:topics.get(key);if(!topic||topic.deleted)continue;
-   events.push({id:'rr-summary:'+meeting.id+':'+key+':'+(summary.notificationEpoch||0),at:summary.notificationAt,actor:'연구미팅',type:'researchRooms',topic:topic.id,recording:meeting.id,archived:!!topic.archived,action:'요약 완료',label:'신규 회의 요약 완료',title:topic.title,detail:'화자별 전사와 회의 요약 초안이 저장되었습니다.'});
-  }}
+  for(const row of recordings?.results||[]){
+   const meeting=JSON.parse(row.payload),anchor=meetingNotificationAnchor(meeting);
+   const summaries=Object.entries(meeting.summary||{}).filter(([,s])=>s.notificationAt).map(([key])=>key==='unclassified'?{id:'__unclassified__',title:'미분류'}:topics.get(key)).filter(t=>t&&!t.deleted);
+   if(!anchor||!summaries.length||meeting.status==='cancelled')continue;
+   const topic=summaries[0];
+   events.push({...anchor,actor:'연구미팅',type:'researchRooms',topic:topic.id,recording:meeting.id,archived:!!topic.archived,action:'요약 완료',label:'신규 회의 요약 완료',title:topic.title+(summaries.length>1?' 외 '+(summaries.length-1)+'개 연구':''),detail:'회의 요약이 저장되었습니다.'});
+  }
  }
  return [...existing,...events].sort((a,b)=>b.at.localeCompare(a.at)).slice(0,200);
 }

@@ -391,7 +391,7 @@ async function openResearchNotification(n){
  if(busy)return;
  if(!n){$('notificationCenter').classList.remove('hidden');$('notificationToggle').setAttribute('aria-expanded','true');renderNotifications();return;}
  if(n.type==='researchRooms'){
-  if(n.recording){if(!admin())return;if(meetingRecorder.active||meetingRecorder.processing||meetingRecorder.dirty||meetingRecorder.pendingAudio.length){alert('현재 회의 녹음과 저장을 마친 뒤 요약 알림을 열어주세요.');return;}try{const s=await researchFetch('recording-detail?id='+encodeURIComponent(n.recording));Object.assign(meetingRecorder,{session:s,version:s.version,clockBase:s.duration,audioIndex:s.audioCount||0,dirty:false});}catch(e){alert(e.message);return;}}
+  if(n.recording){if(!admin()||meetingRecorder.openingSummary)return;meetingRecorder.openingSummary=true;try{await mrOpenNotificationRecording(n.recording);}catch(e){const list=$('notificationList');list.querySelector('[data-recording-notice]')?.remove();const note=document.createElement('p');note.dataset.recordingNotice='';note.className='note';note.setAttribute('role','status');note.textContent=e.message;list.prepend(note);return;}finally{meetingRecorder.openingSummary=false;}}
   const p=notificationPrefs();saveNotificationPrefs({hidden:p.hidden||[],read:[...new Set([...(p.read||[]),n.id])].slice(-400)});
   researchRoomState.selected=n.topic;researchRoomState.archived=!!n.archived;researchRoomState.mobileChatOpen=true;researchRoomState.view=n.recording?'meeting':'chat';
   tab='researchRooms';closeNotifications();render();renderNotifications();return;
