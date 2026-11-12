@@ -1,10 +1,11 @@
 const briefingStates = ['결과 미연결','진행 중','완료'];
 
 export function briefingSummary(content) {
- const sections = {progress:[],actions:[],feedback:[]};
+ const sections = {progress:[],actions:[],feedback:[],proposals:[]};
  let section = 'progress';
  for (const line of String(content || '').split('\n')) {
   const text = line.replace(/^#+\s*|\*\*/g,'').trim();
+  if (/^(?:새로운 제안|새 제안|신규 제안|추가 제안|제안 사항)\s*[:：]?$/.test(text)) {section='proposals';continue;}
   if (/^해야 할 일\s*[:：]?$/.test(text)) {section='actions';continue;}
   if (/^(교수 의견|개선점)/.test(text) && (/^#/.test(line) || /^(교수 의견|개선점)$/.test(text))) {section='feedback';continue;}
   if (/^연구\s*진행\s*상황$|^문제점/.test(text) && (/^#/.test(line) || !/^[-*•]/.test(line))) {section='progress';continue;}
@@ -24,10 +25,15 @@ async function briefingTaskId(text) {
 export async function buildBriefing(records, saved) {
  const tasks = new Map();
  const recent = [];
+ const proposals = new Map();
  for (const record of records) {
   const summary = briefingSummary(record.content);
   recent.push({id:record.id,date:record.created,status:record.status,...summary});
   if(recent.length>2)recent.shift();
+  for(const text of summary.proposals){
+   const key=text.normalize('NFC').replace(/\s+/g,' ');
+   if(!proposals.has(key))proposals.set(key,{text,date:record.created,source:'회의요약'});
+  }
   for (const text of summary.actions) {
    const id = await briefingTaskId(text);
    if (!tasks.has(id)) tasks.set(id,{id,text,first:record.created,mentions:[]});
@@ -36,6 +42,7 @@ export async function buildBriefing(records, saved) {
   }
  }
  return {latest:recent.at(-1)||null,previous:recent.at(-2)||null,
+  proposals:[...proposals.values(),...(saved.proposals||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))),
   tasks:[...tasks.values()].reverse().map(task=>({...task,state:saved[task.id]?.state||briefingStates[0],
    pinned:saved[task.id]?.pinned===true,updates:saved[task.id]?.updates||[]}))};
 }
@@ -74,12 +81,19 @@ export async function researchBriefingRequest(req, db) {
   try {input=JSON.parse(raw);} catch {return reply({error:'입력 형식을 확인해주세요.'},400);}
   const {taskId,state,pinned,note,meetingId} = input || {};
   if(input?.version!==version || meetingId!==briefing.latest?.id)return reply({error:'회의나 브리핑이 변경되었습니다. 다시 불러와주세요.'},409);
-  if(!briefingStates.includes(state)||typeof pinned!=='boolean'||typeof note!=='string'||note.length>1500||
-   !briefing.tasks.some(task=>task.id===taskId))return reply({error:'후속 실험과 기록 내용을 확인해주세요.'},400);
-  const prior = saved[taskId];
-  const updates = [...(prior?.updates||[])];
-  if(note.trim()||state!==(prior?.state||briefingStates[0]))updates.push({meetingId,date:briefing.latest.date,state,note:note.trim()});
-  saved[taskId]={state,pinned,updates};
+  if(input.kind==='proposal'){
+   const text=typeof input.text==='string'?input.text.trim():'';
+   if(!text||text.length>1500||!briefing.latest)return reply({error:'제안 내용을 확인해주세요.'},400);
+   const existing=saved.proposals||[];
+   if(!briefing.proposals.some(proposal=>proposal.text===text))saved.proposals=[...existing,{text,date:briefing.latest.date,source:'직접 등록'}];
+  }else{
+   if(!briefingStates.includes(state)||typeof pinned!=='boolean'||typeof note!=='string'||note.length>1500||
+    !briefing.tasks.some(task=>task.id===taskId))return reply({error:'후속 실험과 기록 내용을 확인해주세요.'},400);
+   const prior = saved[taskId];
+   const updates = [...(prior?.updates||[])];
+   if(note.trim()||state!==(prior?.state||briefingStates[0]))updates.push({meetingId,date:briefing.latest.date,state,note:note.trim()});
+   saved[taskId]={state,pinned,updates};
+  }
   const payload=JSON.stringify(saved);
   const result = row
    ? await db.prepare('UPDATE research_records SET payload=?,version=version+1 WHERE id=? AND version=?').bind(payload,key,version).run()

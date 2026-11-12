@@ -14,13 +14,13 @@ test('briefing is owner-only and persists open tasks across saved meetings',asyn
  insert.run('topic:hidden-topic',JSON.stringify({title:'Deleted',deleted:true}));
  const add=(id,created,content)=>insert.run('recording:'+id,JSON.stringify({created,status:'ended',summary:{[topic]:{content,status:'reviewed'},other:{content:'private other topic'}}}));
  add('meeting-first','2026-11-04T00:00:00Z','## 연구진행상황\n- 첫 관찰\n## 해야 할 일\n- 후속 실험\n- 미결 실험');
- add('meeting-second','2026-11-11T00:00:00Z','## 연구진행상황\n- 이번 관찰\n## 해야 할 일\n- 후속 실험');
+ add('meeting-second','2026-11-11T00:00:00Z','## 연구진행상황\n- 이번 관찰\n## 해야 할 일\n- 후속 실험\n## 새로운 제안\n- 표면 세정을 추가');
  const DB={prepare(sql){const stmt=sqlite.prepare(sql);const wrap=(args=[])=>({
   bind:(...params)=>wrap(params),first:async()=>stmt.get(...args),all:async()=>({results:stmt.all(...args)}),run:async()=>({meta:stmt.run(...args)})
  });return wrap();}};
  const owner='owner@example.test',student=state.students[0];
  const env={ADMIN_EMAIL:owner,DB};
- const worker=createWorker('<nav class="tabs" id="tabs"></nav>');
+ const worker=createWorker('<nav class="tabs" id="tabs"></nav></body>');
  const api='/api/research-briefing';
  const path=api+'?topic='+topic;
  const call=(email,url,body)=>worker.fetch(new Request('https://lab.example'+url,{method:body?'POST':'GET',headers:{
@@ -32,7 +32,12 @@ test('briefing is owner-only and persists open tasks across saved meetings',asyn
   assert.equal((await call(student,url)).status,403);
  }
  assert.equal((await call(student,path,{})).status,403);
- assert.match(await (await call(owner,'/research-briefing')).text(),/연구브리핑/);
+ const entry=await call(owner,'/research-briefing');
+ assert.equal(entry.status,302);
+ assert.equal(entry.headers.get('Location'),'./?view=researchBriefing');
+ assert.match(await (await call(owner,'/')).text(),/mountResearchBriefing/);
+ assert.doesNotMatch(await (await call(student,'/')).text(),/mountResearchBriefing/);
+ assert.equal((await call(owner,'/visual-meeting')).status,404);
  assert.deepEqual((await (await call(owner,api)).json()).topics.map(x=>x.id),[topic]);
  const before=await (await call(owner,path)).json();
  assert.deepEqual(before.previous.progress,['첫 관찰']);
@@ -43,8 +48,11 @@ test('briefing is owner-only and persists open tasks across saved meetings',asyn
  const saved=await call(owner,path,update);
  assert.equal(saved.status,200);
  assert.equal((await call(owner,path,update)).status,409);
+ const proposal=await call(owner,path,{kind:'proposal',version:1,meetingId:'meeting-second',text:'고습 조건을 비교'});
+ assert.equal(proposal.status,200);
  add('meeting-third','2026-11-18T00:00:00Z','## 연구진행상황\n- 다음 관찰');
  const next=await (await call(owner,path)).json();
+ assert.deepEqual(next.proposals.map(x=>x.text),['표면 세정을 추가','고습 조건을 비교']);
  const finished=next.tasks.find(x=>x.id===update.taskId);
  assert.equal(finished.state,'완료');
  assert.equal(finished.pinned,true);

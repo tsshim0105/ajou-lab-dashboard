@@ -1,6 +1,5 @@
 import {researchBriefingRequest} from './research-briefing.mjs';
-import {researchBriefingPage} from './research-briefing-page.mjs';
-import {visualMeetingPage} from './visual-meeting-page.mjs';
+import {researchBriefingScript} from './research-briefing-page.mjs';
 import {librarySharingRequest} from './library-sharing.mjs';
 import {reagentProducts} from './reagent-products.mjs';
 import {receiveResearchImageUpload} from './research-upload.mjs';
@@ -342,15 +341,10 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
   if(url.pathname==='/research-briefing'){
    if(!admin)return reply({error:'교수님 전용 화면입니다.'},403);
    if(!read)return reply({error:'허용되지 않는 요청입니다.'},405);
-   return reply(researchBriefingPage,200,'text/html; charset=utf-8');
-  }
-  if(url.pathname==='/visual-meeting'){
-   if(!admin)return reply({error:'교수님 전용 화면입니다.'},403);
-   if(!read)return reply({error:'허용되지 않는 요청입니다.'},405);
-   return reply(visualMeetingPage,200,'text/html; charset=utf-8');
+   return new Response(null,{status:302,headers:{...headers,Location:'./?view=researchBriefing'}});
   }
   if(read&&['/','/index.html'].includes(url.pathname)){
-   const page=admin?html.replace('<nav class="tabs"','<nav data-visual-meeting class="tabs"'):html;
+   const page=admin?html.replace('<nav class="tabs"','<nav data-research-briefing class="tabs"').replace('</body>',()=>researchBriefingScript+'</body>'):html;
    return reply(page,200,'text/html; charset=utf-8');
   }
   if(read&&url.pathname==='/api/data'){
