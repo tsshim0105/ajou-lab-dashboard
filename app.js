@@ -45,6 +45,12 @@ function nav(){
   link.href=location.pathname.replace(/(?:\/index\.html|\/$)/,'')+'/visual-meeting';
   link.textContent='AI Visual Meeting';
   link.style.cssText='text-decoration:none;display:grid;place-items:center';
+  const briefing=document.createElement('a');
+  briefing.className=link.className;
+  briefing.href=link.href.replace(/visual-meeting$/,'research-briefing');
+  briefing.textContent='연구브리핑';
+  briefing.style.cssText=link.style.cssText;
+  $('tabs').append(briefing);
   $('tabs').append(link);
  }
  $('tabs').scrollLeft=navScroll;
