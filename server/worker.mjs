@@ -1,3 +1,4 @@
+import {visualMeetingPage} from './visual-meeting-page.mjs';
 import {librarySharingRequest} from './library-sharing.mjs';
 import {reagentProducts} from './reagent-products.mjs';
 import {receiveResearchImageUpload} from './research-upload.mjs';
@@ -332,7 +333,15 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    const width=Math.max(320,Math.min(760,Number(url.searchParams.get('width'))||390)),height=Math.max(500,Math.min(1100,Number(url.searchParams.get('height'))||844));
    return reply(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>모바일 화면 검증</title><style>body{margin:0;background:#edf1f5;display:grid;place-items:start center;padding:20px}iframe{border:0;border-radius:16px;background:white;box-shadow:0 4px 30px #0002}</style></head><body><iframe title="모바일 대시보드" src="/" width="${width}" height="${height}"></iframe></body></html>`,200,'text/html; charset=utf-8');
   }
-  if(read&&['/','/index.html'].includes(url.pathname))return reply(html,200,'text/html; charset=utf-8');
+  if(url.pathname==='/visual-meeting'){
+   if(!admin)return reply({error:'교수님 전용 화면입니다.'},403);
+   if(!read)return reply({error:'허용되지 않는 요청입니다.'},405);
+   return reply(visualMeetingPage,200,'text/html; charset=utf-8');
+  }
+  if(read&&['/','/index.html'].includes(url.pathname)){
+   const page=admin?html.replace('<nav class="tabs"','<nav data-visual-meeting class="tabs"'):html;
+   return reply(page,200,'text/html; charset=utf-8');
+  }
   if(read&&url.pathname==='/api/data'){
    // Each merge starts from the latest snapshot; never overwrite a concurrent save.
    for(let attempt=0;attempt<3;attempt++){

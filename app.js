@@ -39,6 +39,14 @@ function nav(){
  const allowed=menu.filter(([k])=>k==='homepage'?canManageHomepage():admin()||['home','groupMeetings','researchRooms','dataPlot','papers','conferences','meetingInfo','reagents','funds','settings'].includes(k));
  const navLabels={...mobileLabels,researchRooms:['연구미팅','◌'],homepage:['홈페이지','⚒'],funds:['연구비','₩'],payroll:['인건비','▦'],dataPlot:['데이터 생성','⌁'],settings:['관리','⚙']},navScroll=$('tabs').scrollLeft;
  $('tabs').innerHTML=allowed.map(([k,v])=>`<button class="tab ${k===tab?'active':''}" data-tab="${k}" aria-label="${esc(v)}" aria-current="${k===tab?'page':'false'}"><span class="tab-label">${v}</span><span class="tab-icon" aria-hidden="true">${navLabels[k][1]}</span><span class="tab-short" aria-hidden="true">${navLabels[k][0]}</span></button>`).join('');
+ if(admin()&&$('tabs').hasAttribute('data-visual-meeting')){
+  const link=document.createElement('a');
+  link.className='tab';
+  link.href=location.pathname.replace(/(?:\/index\.html|\/$)/,'')+'/visual-meeting';
+  link.textContent='AI Visual Meeting';
+  link.style.cssText='text-decoration:none;display:grid;place-items:center';
+  $('tabs').append(link);
+ }
  $('tabs').scrollLeft=navScroll;
  if(typeof matchMedia==='function'&&matchMedia('(max-width:760px)').matches)requestAnimationFrame(()=>{$('tabs').querySelector('.active')?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'auto'});});
  $('filters').classList.toggle('hidden',!['papers','conferences'].includes(tab));

@@ -1,3 +1,4 @@
+import {analyzeVisualMeeting,latestVisualPilotMeeting} from './visual-meeting.mjs';
 // Professor-private recording ledger; never included in student thread payloads.
 const mrFail=(message,status=400)=>Object.assign(new Error(message),{status});
 const mrId=x=>{if(typeof x!=='string'||!/^[-\w]{8,100}$/.test(x))throw mrFail('회의 ID를 확인해주세요.');return x;};
@@ -44,6 +45,10 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
  try{
  if(['recording-voices','recording-voice-audio','recording-voice-save','recording-voice-delete'].includes(action))return await mrVoiceRequest(req,env,action,url,reply);
  if(req.method==='GET'){
+  if(action==='recording-visual-list'){
+   const meeting=await latestVisualPilotMeeting(db);
+   return reply({meetings:meeting?[meeting]:[]});
+  }
   if(action==='recording-knowledge'){const topic=mrId(url.searchParams.get('topic'));const row=await db.prepare('SELECT payload,version FROM research_records WHERE id=?').bind('knowledge:'+topic).first();const terms=await meetingTermRules(db,topic);return reply({... (row?{...JSON.parse(row.payload),version:row.version}:{topic,entries:[],version:0}),terms});}
   if(action==='recording-status')return reply({transcriptionReady:!!env.OPENAI_API_KEY,summaryReady:!!env.OPENAI_API_KEY,provider:'OpenAI',mode:'five-minute-segments',segmentSeconds:300,maxMinutes:null,segmentedRecording:true,queueMode:'app-assisted'});
   if(action==='recording-queue'){const rows=await db.prepare("SELECT payload FROM research_records WHERE id LIKE 'recording:%' AND json_extract(payload,'$.processing') IS NOT NULL ORDER BY json_extract(payload,'$.created')").all();return reply({meetings:rows.results.map(r=>JSON.parse(r.payload)).map(x=>({id:x.id,created:x.created,processing:x.processing,audioDeletedAt:x.audioDeletedAt,audioCount:x.audioCount}))});}
@@ -66,6 +71,10 @@ export async function meetingRecordingRequest(req,env,actor,helpers={}){
   await db.prepare('INSERT OR IGNORE INTO research_records VALUES(?,0,?)').bind(key,JSON.stringify({id,created:new Date().toISOString(),...snapshot,summary:{},...(participants|| (voiceCatalog.length?{voiceEnrollment:true,voiceCatalog,voiceSelection:{status:'pending'},voiceParticipants:[]}:{})),mime:String(b.mime||'audio/webm').slice(0,80)})).run();return reply(await read(id));
  }
  const current=await read(id);
+ if(action==='recording-visual-analyze'){
+  if((await latestVisualPilotMeeting(db))?.id!==id)throw mrFail('투명광결정 최근 회의 한 건만 분석할 수 있습니다.',404);
+  return reply(await analyzeVisualMeeting(env,actor,helpers,current,read));
+ }
  if(action==='recording-cancel'){
   if(Object.values(current.summary||{}).some(x=>x.status==='reviewed'))throw mrFail('확정된 회의는 취소할 수 없습니다.',409);
   const next={...current,status:'cancelled',processing:null,segments:[],speakers:{},summary:{},summaryProgress:{},cancelledAt:new Date().toISOString()};delete next.version;
