@@ -1,5 +1,7 @@
-function mountResearchBriefing(root) {
- root.innerHTML=briefingMarkup;
+function createResearchBriefing(markup) {
+ let selectedBriefingTopic="";
+ return function mountResearchBriefing(root) {
+ root.innerHTML=markup;
  const picker=root.querySelector('#brief-topic');
  const status=root.querySelector('#brief-status');
  const view=root.querySelector('#brief-view');
@@ -191,6 +193,7 @@ function mountResearchBriefing(root) {
   status.textContent=topics.length?'':'등록된 연구 주제가 없습니다.';
   if(topics.some(topic=>topic.id===selectedBriefingTopic)){picker.value=selectedBriefingTopic;void load();}
  }).catch(error=>{status.textContent=error.message;});
+ };
 }
 
 const briefingMarkup = `<style>
@@ -215,5 +218,7 @@ const briefingMarkup = `<style>
 <p id="brief-status" role="status" class="muted">연구 주제를 불러오는 중…</p>
 <div id="brief-view"></div>`;
 
-export const researchBriefingScript = '<script>let selectedBriefingTopic="";const briefingMarkup='+
- JSON.stringify(briefingMarkup)+';'+mountResearchBriefing.toString()+'</script>';
+// Keep all browser-side state inside the serialized factory so production
+// minification cannot break its references to Worker-side variables.
+export const researchBriefingScript = '<script>globalThis.mountResearchBriefing=('+createResearchBriefing.toString()+')('+
+ JSON.stringify(briefingMarkup)+');</script>';

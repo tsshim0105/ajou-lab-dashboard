@@ -58,8 +58,14 @@ function placePageFooter(){
 function render(){queueMicrotask(applyHubTheme);const pageFooter=document.querySelector('.foot');if(pageFooter)document.querySelector('main.app').append(pageFooter);if(lastRenderedSection!==tab){lastRenderedSection=tab;resetSectionScroll();}const filterFocus=$('filters')?.contains(document.activeElement)?document.activeElement:null,filterSelection=filterFocus?.tagName==='INPUT'?[filterFocus.selectionStart,filterFocus.selectionEnd]:null;if($('filters')?.parentElement===$('panel'))$('panel').before($('filters'));document.documentElement.dataset.activeTab=tab;if(tab==='homepage'&&!canManageHomepage())tab='home';if(tab!=='homepage'&&!admin()&&!['home','groupMeetings','researchRooms','dataPlot','papers','conferences','meetingInfo','reagents','funds','settings'].includes(tab))tab='home';$('userLabel').innerHTML=badge(studentPreview?'학생 화면 미리보기':admin()?'교수님':'연구실 구성원');nav();exportRows=[];const panel=$('panel'),p=tab==='home'?homePeriod(data.papers):filter(data.papers),c=tab==='home'?homePeriod(data.conferences):filter(data.conferences);const title=tab==='home'?'연구실 활동 (2015년~현재)':menu.find(([k])=>k===tab)[1];let html=['papers','conferences'].includes(tab)?`<div class="research-title"><div class="research-title-label"><h1>${title}</h1>${tab==='papers'?'<small class="paper-title-note">연초록: 학생 제1저자·교수 교신저자 · 국문명 검색 가능</small>':''}</div><div class="research-title-actions">${tab==='papers'&&admin()?'<button class="secondary" id="paperAchievements">업적관리</button>':''}${canEditResearch()?`<button class="primary" id="${tab==='papers'?'addPaper':'addConference'}">${tab==='papers'?'논문추가':'발표 내역 추가'}</button>`:''}<button class="secondary" id="csv">CSV 저장</button></div></div>`:['home','groupMeetings','meetingInfo','funds'].includes(tab)?'':`<h1>${title}</h1>`;
  if(tab==='dataPlot'){panel.innerHTML='<div id="dataPlotRoot"></div>';mountDataPlot();placePageFooter();return;}
  if(tab==='researchRooms'){panel.innerHTML='<div id="researchRoomRoot"></div>';mountResearchRooms();placePageFooter();return;}
- if(tab==='researchBriefing'&&admin()&&typeof mountResearchBriefing==='function'){
-  panel.innerHTML='<div id="researchBriefingRoot"></div>';mountResearchBriefing($('researchBriefingRoot'));placePageFooter();return;
+ if(tab==='researchBriefing'){
+  if(admin()&&typeof globalThis.mountResearchBriefing==='function'){
+   panel.innerHTML='<div id="researchBriefingRoot"></div>';
+   globalThis.mountResearchBriefing($('researchBriefingRoot'));
+  }else{
+   panel.innerHTML='<div class="empty" role="status">연구브리핑을 불러오지 못했습니다. 허브를 새로고침해주세요.</div>';
+  }
+  placePageFooter();return;
  }
  if(tab==='homepage'){
   const sections=[['admin-home','메인'],['admin','논문'],['admin-covers','커버'],['admin-research','연구'],['admin-members','멤버'],['admin-news','News · Lab life']];
