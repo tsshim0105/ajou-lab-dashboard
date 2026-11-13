@@ -59,3 +59,10 @@ test('briefing is owner-only and persists open tasks across saved meetings',asyn
  assert.deepEqual(finished.updates.map(x=>[x.meetingId,x.note]),[['meeting-second','비교 결과를 보고함']]);
  assert.equal(next.tasks.find(x=>x.text==='미결 실험').state,'결과 미연결');
 });
+
+import {briefingDiscussion} from '../server/research-briefing.mjs';
+test('discussion suggestions require shared research terms rather than an assignee alone',()=>{
+ const report='필름 광특성 측정을 보고함.';
+ assert.deepEqual(briefingDiscussion('(학생: 오치영) 필름 광특성 측정하기.',[report,'(학생: 오치영) 회의 진행']),[report]);
+ assert.deepEqual(briefingDiscussion('스텐실 두께 재현성 확인',[report]),[]);
+});

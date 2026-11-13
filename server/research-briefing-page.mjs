@@ -82,21 +82,43 @@ function createResearchBriefing(markup) {
   details.append(form);
   return details;
  }
+ function taggedText(text){
+  const line=el('span');
+  const pattern=/\[\[(?:학생|이름|담당자)\s*:\s*([^\]\n]+)\]\]|[（(](?:학생|이름|담당자)\s*[:：]\s*([^）)\n]+)[）)]/g;
+  let cursor=0;
+  for(const match of text.matchAll(pattern)){
+   line.append(document.createTextNode(text.slice(cursor,match.index)));
+   for(const name of (match[1]||match[2]).split(/[,、·]/).map(name=>name.trim()).filter(Boolean))line.append(el('span',name,'person-tag'));
+   cursor=match.index+match[0].length;
+  }
+  line.append(document.createTextNode(text.slice(cursor)));
+  return line;
+ }
+ function taskTitle(task){
+  const line=el('h3');
+  const stamp=new Intl.DateTimeFormat('ko-KR',{month:'numeric',day:'numeric',timeZone:'Asia/Seoul'});
+  if(Number.isFinite(Date.parse(task.first)))line.append(el('time',stamp.format(new Date(task.first)),'date-tag'));
+  line.append(taggedText(task.text));return line;
+ }
  function taskRow(task,brief,topic){
   const item=el('article',null,'task');
   const heading=el('div',null,'task-heading');
-  heading.append(el('h3',task.text),el('span',task.state,task.state==='완료'?'badge state done':'badge state'));
-  item.append(heading,el('p','처음 제안 · '+displayDate(task.first),'muted'));
+  heading.append(taskTitle(task),el('span',task.state,task.state==='완료'?'badge state done':'badge state'));
+  item.append(heading);
   const update=task.updates.filter(entry=>entry.meetingId===brief.latest.id).at(-1);
-  if(update?.note)item.append(el('p',update.note));
-  else if(update)item.append(el('p','이번 회의에 상태를 저장했습니다.','muted'));
-  else item.append(el('p','이번 회의 결과 미연결','muted'));
+  const notes=update?.note?[update.note]:task.discussion||[];
+  if(notes.length){
+   const report=el('div',null,'task-report');
+   report.append(el('strong',update?.note?'이번 회의 결과':'이번 회의 관련 논의'));
+   for(const note of notes){const line=el('p');line.append(taggedText(note));report.append(line);}
+   item.append(report);
+  }
   item.append(editor(task,brief,topic));
   return item;
  }
  function trackingCard(task){
   const item=el('article',null,'track');
-  item.append(el('h3',task.text),el('p',task.state,'muted'));
+  item.append(taskTitle(task),el('p',task.state,'muted'));
   const history=new Map(task.mentions.map(entry=>[entry.id,{date:entry.date,lines:['회의 요약에 후속 실험으로 기록']}]));
   for(const update of task.updates){
    if(!history.has(update.meetingId))history.set(update.meetingId,{date:update.date,lines:[]});
@@ -129,7 +151,7 @@ function createResearchBriefing(markup) {
    if(brief.proposals.length){
     for(const proposal of brief.proposals){
      const item=el('article',null,'task');
-     item.append(el('p',proposal.text),el('p',displayDate(proposal.date)+' · '+proposal.source,'muted'));
+     const line=el('p');line.append(taggedText(proposal.text));item.append(line,el('p',displayDate(proposal.date)+' · '+proposal.source,'muted'));
      proposals.append(item);
     }
    }else proposals.append(el('p','등록된 제안이 없습니다.','muted'));
@@ -151,25 +173,28 @@ function createResearchBriefing(markup) {
   }
   const old=brief.tasks.filter(task=>task.mentions[0].id!==brief.latest.id);
   const fresh=brief.tasks.filter(task=>task.mentions[0].id===brief.latest.id);
-  const carry=brief.tasks.filter(task=>task.state!=='완료');
-  const upcoming=card('다음 회의로 이월 · '+carry.length+'건');
-  upcoming.append(carry.length?list(carry.map(task=>task.text)):el('p','이월할 항목이 없습니다.','muted'));
-  const prior=card('지난 할 일 · 이번 회의 결과');
-  const reviewed=old.filter(task=>task.state!=='완료'||task.updates.some(update=>update.meetingId===brief.latest.id));
+  const reviewed=old.filter(task=>task.updates.some(update=>update.meetingId===brief.latest.id)||task.discussion?.length);
+  const carry=old.filter(task=>task.state!=='완료'&&!reviewed.includes(task));
+  const prior=card('지난 할 일 · 이번 회의 논의');
+  prior.classList.add('briefing-lavender');
   if(reviewed.length)prior.append(...reviewed.map(task=>taskRow(task,brief,topic)));
-  else prior.append(el('p','검토할 이전 후속 실험이 없습니다.','muted'));
+  else prior.append(el('p','이번 회의 요약에서 지난 할 일과 연결된 논의를 찾지 못했습니다.','muted'));
   const next=card('이번 회의에서 정한 할 일');
   if(fresh.length)next.append(...fresh.map(task=>taskRow(task,brief,topic)));
   else next.append(el('p','새로 기록된 후속 실험이 없습니다.','muted'));
-  const overview=el('div',null,'briefing-overview');
-  upcoming.classList.add('briefing-carry');
-  overview.append(prior,upcoming);view.append(overview,next);
-  const completed=old.filter(task=>!reviewed.includes(task));
+  next.classList.add('briefing-mint');
+  view.append(prior,next);
+  const completed=old.filter(task=>task.state==='완료'&&!reviewed.includes(task));
   if(completed.length){
    const archive=el('details',null,'section-card');
    archive.append(el('summary','이전에 완료한 실험 · '+completed.length+'건'),...completed.map(task=>taskRow(task,brief,topic)));
    view.append(archive);
   }
+  const upcoming=card('다음 회의로 이월 · '+carry.length+'건');
+  upcoming.classList.add('briefing-carry');
+  if(carry.length)upcoming.append(...carry.map(task=>taskRow(task,brief,topic)));
+  else upcoming.append(el('p','이번 회의에서 다루지 않은 지난 할 일이 없습니다.','muted'));
+  view.append(upcoming);
  }
  async function load(topic){
   loadController?.abort();
@@ -217,10 +242,22 @@ const briefingMarkup = `<style>
 #researchBriefingRoot .briefing-tabs button{border-radius:8px;border-color:transparent;background:transparent;color:var(--text);font-weight:650}
 #researchBriefingRoot .briefing-tabs button[aria-pressed="true"]{background:var(--menu-bg,#edf4ff);color:var(--brief-accent);border-color:var(--brief-border)}
 #researchBriefingRoot .briefing-date{margin:0;color:var(--text);opacity:.78;font-size:13px}
-#researchBriefingRoot .briefing-overview{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr);align-items:start;gap:14px}
+
 #researchBriefingRoot .briefing-card{min-width:0;padding:16px 18px;border:1px solid var(--brief-border);border-radius:14px;background:var(--surface);overflow-wrap:anywhere}
 #researchBriefingRoot .briefing-card h2{margin:0 0 12px}
-#researchBriefingRoot .briefing-carry{background:var(--brief-tint);border-top:3px solid var(--brief-accent)}
+#researchBriefingRoot .briefing-card:is(.briefing-lavender,.briefing-mint,.briefing-carry){padding-top:0;overflow:hidden}
+#researchBriefingRoot .briefing-card:is(.briefing-lavender,.briefing-mint,.briefing-carry)>h2{margin:0 -18px 12px;padding:8px 18px;border-bottom:1px solid var(--brief-border);font-size:15px;background:var(--brief-heading,var(--brief-tint))}
+#researchBriefingRoot .briefing-lavender{--brief-heading:linear-gradient(105deg,#ede8f8,#e2edf6)}
+#researchBriefingRoot .briefing-mint{--brief-heading:linear-gradient(105deg,#e1eef5,#d8f0e8)}
+#researchBriefingRoot .briefing-carry{--brief-heading:linear-gradient(105deg,#edf5fa,#e4eff4)}
+[data-theme=dark] #researchBriefingRoot .briefing-lavender{--brief-heading:linear-gradient(105deg,#392d50,#243d51)}
+[data-theme=dark] #researchBriefingRoot .briefing-mint{--brief-heading:linear-gradient(105deg,#263e51,#25483f)}
+[data-theme=dark] #researchBriefingRoot .briefing-carry{--brief-heading:linear-gradient(105deg,#25374a,#294555)}
+#researchBriefingRoot .task-report{margin-top:9px;padding-left:10px;border-left:2px solid var(--brief-border)}
+#researchBriefingRoot :is(.date-tag,.person-tag){display:inline-block;margin-right:6px;border:1px solid var(--brief-border);border-radius:999px;padding:1px 7px;font-size:12px;font-weight:650;background:var(--menu-bg,var(--brief-tint));white-space:nowrap}
+#researchBriefingRoot .date-tag{font-variant-numeric:tabular-nums;color:var(--brief-accent)}
+#researchBriefingRoot .briefing-card>.task{border:0;border-top:1px solid var(--brief-border);border-radius:0;background:transparent;margin:0;padding:10px 0}
+#researchBriefingRoot .briefing-card>h2+.task{border-top:0}
 #researchBriefingRoot .briefing-carry ul{padding-inline-start:20px;margin-bottom:0}
 #researchBriefingRoot .briefing-carry li+li{margin-top:7px}
 #researchBriefingRoot .task{background:var(--brief-tint);border:1px solid var(--brief-border);border-radius:11px;padding:12px;margin-top:8px}
@@ -239,7 +276,7 @@ const briefingMarkup = `<style>
 #researchBriefingRoot .track{background:var(--brief-tint);border:1px solid var(--brief-border);border-radius:12px;padding:12px;overflow-wrap:anywhere}
 #researchBriefingRoot .track-row{border-top:1px solid var(--brief-border);padding-top:8px;margin-top:8px}
 #researchBriefingRoot .track-row ul{margin:4px 0;padding-inline-start:20px}
-@media(max-width:680px){#researchBriefingRoot .briefing-overview{grid-template-columns:1fr}#researchBriefingRoot .briefing-card{padding:12px}}
+@media(max-width:680px){#researchBriefingRoot .briefing-card{padding-inline:12px}#researchBriefingRoot .briefing-card:is(.briefing-lavender,.briefing-mint,.briefing-carry)>h2{margin-inline:-12px;padding-inline:12px}}
 </style>
 <header class="briefing-header"><h1>연구브리핑</h1>
 <div id="brief-topics" class="briefing-topics" role="group" aria-label="연구 주제"></div></header>

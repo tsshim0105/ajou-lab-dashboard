@@ -22,6 +22,17 @@ async function briefingTaskId(text) {
  return Array.from(new Uint8Array(hash),byte=>byte.toString(16).padStart(2,'0')).join('');
 }
 
+export function briefingDiscussion(task, reports) {
+ const words=text=>String(text).normalize('NFKC').replace(/\((?:학생|이름|담당자)\s*:[^)]*\)/g,'').toLowerCase().match(/[가-힣a-z0-9]+/g)||[];
+ const generic=new Set(['이번','지난','회의','실험','결과','비교','확인','확인하기','측정','측정하기','진행','실시','조건','학생','제작','대한','관련','하기로','보고','추가']);
+ const keys=[...new Set(words(task).filter(word=>word.length>=2&&!generic.has(word)))];
+ if(keys.length<2)return [];
+ return [...new Set(reports.filter(report=>{
+  const tokens=new Set(words(report));
+  return keys.filter(key=>tokens.has(key)).length>=Math.max(2,Math.ceil(keys.length*.5));
+ }))].slice(0,2);
+}
+
 export async function buildBriefing(records, saved) {
  const tasks = new Map();
  const recent = [];
@@ -44,6 +55,7 @@ export async function buildBriefing(records, saved) {
  return {latest:recent.at(-1)||null,previous:recent.at(-2)||null,
   proposals:[...proposals.values(),...(saved.proposals||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))),
   tasks:[...tasks.values()].reverse().map(task=>({...task,state:saved[task.id]?.state||briefingStates[0],
+   discussion:task.mentions[0].id!==recent.at(-1)?.id?briefingDiscussion(task.text,[...(recent.at(-1)?.progress||[]),...(recent.at(-1)?.feedback||[])]):[],
    pinned:saved[task.id]?.pinned===true,updates:saved[task.id]?.updates||[]}))};
 }
 
