@@ -2,7 +2,7 @@ function createResearchBriefing(markup) {
  let selectedBriefingTopic="";
  return function mountResearchBriefing(root) {
  root.innerHTML=markup;
- const picker=root.querySelector('#brief-topic');
+ const topicList=root.querySelector('#brief-topics');
  const status=root.querySelector('#brief-status');
  const view=root.querySelector('#brief-view');
  const date=new Intl.DateTimeFormat('ko-KR',{year:'numeric',month:'short',day:'numeric',timeZone:'Asia/Seoul'});
@@ -37,13 +37,14 @@ function createResearchBriefing(markup) {
  async function save(brief,topic,form,values,message){
   const button=form.querySelector('button');
   saving=true;
-  button.disabled=picker.disabled=true;
+  button.disabled=true;
+  for(const tag of topicList.children)tag.disabled=true;
   try{
    const next=await request(topic,{...values,version:brief.version,meetingId:brief.latest.id});
    render(next,topic);
    status.textContent=message;
   }catch(error){status.textContent=error.message;}
-  finally{saving=false;button.disabled=picker.disabled=false;}
+  finally{saving=false;button.disabled=false;for(const tag of topicList.children)tag.disabled=false;}
  }
  function editor(task,brief,topic){
   const details=el('details');
@@ -170,11 +171,11 @@ function createResearchBriefing(markup) {
    view.append(archive);
   }
  }
- async function load(){
+ async function load(topic){
   loadController?.abort();
   const controller=new AbortController();
   loadController=controller;
-  const topic=picker.value;
+  for(const tag of topicList.children)tag.setAttribute('aria-pressed',String(tag.dataset.topic===topic));
   view.replaceChildren();
   status.textContent=topic?'연구 브리핑을 불러오는 중…':'';
   selectedBriefingTopic=topic;
@@ -184,31 +185,35 @@ function createResearchBriefing(markup) {
    if(controller.signal.aborted)return;
    status.textContent='';
    render(data,topic);
-  }catch(error){if(!controller.signal.aborted)status.textContent=error.message;}
+  }catch(error){if(!controller.signal.aborted){selectedBriefingTopic='';status.textContent=error.message;}}
  }
- picker.addEventListener('change',load);
  request().then(({topics})=>{
+  if(!root.isConnected)return;
   for(const topic of topics){
-   const option=el('option',topic.title+(topic.archived?' · 보관':''));
-   option.value=topic.id;picker.append(option);
+   const tag=el('button',topic.title+(topic.archived?' · 보관':''),'secondary briefing-tag');
+   tag.type='button';tag.dataset.topic=topic.id;
+   tag.setAttribute('aria-pressed','false');
+   tag.onclick=()=>{if(!saving&&selectedBriefingTopic!==topic.id)void load(topic.id);};
+   topicList.append(tag);
   }
-  picker.disabled=!topics.length;
   status.textContent=topics.length?'':'등록된 연구 주제가 없습니다.';
-  if(topics.some(topic=>topic.id===selectedBriefingTopic)){picker.value=selectedBriefingTopic;void load();}
+  const initial=topics.find(topic=>topic.id===selectedBriefingTopic)||topics[0];
+  if(initial)void load(initial.id);
  }).catch(error=>{status.textContent=error.message;});
  };
 }
 
 const briefingMarkup = `<style>
 #researchBriefingRoot{--brief-accent:var(--menu-ink,#1769e8);--brief-tint:var(--tint,#f5f9ff);--brief-border:var(--edge,#dce4ee);color:var(--text)}
-#researchBriefingRoot .briefing-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding:16px 18px;border:1px solid var(--brief-border);border-radius:14px;background:linear-gradient(115deg,var(--brief-tint),var(--surface));margin-bottom:12px}
-#researchBriefingRoot .briefing-header h1{border:0;margin:0;padding:0;font-size:22px}
-#researchBriefingRoot .briefing-picker{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;font-weight:650;min-width:0}
-#researchBriefingRoot .briefing-picker select{border-radius:10px;max-width:min(310px,100%)}
+#researchBriefingRoot .briefing-header{margin-bottom:14px}
+#researchBriefingRoot .briefing-header h1{border:0;margin:0 0 10px;padding:0;font-size:22px}
+#researchBriefingRoot .briefing-topics{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+#researchBriefingRoot .briefing-tag{border-radius:999px;padding:5px 11px;max-width:100%;overflow-wrap:anywhere}
+#researchBriefingRoot .briefing-tag[aria-pressed="true"]{background:var(--menu-bg,#edf4ff);color:var(--brief-accent);font-weight:700;border-color:var(--brief-accent)}
 #researchBriefingRoot #brief-status:empty{display:none}
 #researchBriefingRoot #brief-view{display:grid;gap:14px}
 #researchBriefingRoot .briefing-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-#researchBriefingRoot .briefing-tabs{display:flex;flex-wrap:wrap;gap:5px;border:1px solid var(--brief-border);background:var(--brief-tint);border-radius:12px;padding:4px}
+#researchBriefingRoot .briefing-tabs{display:flex;flex-wrap:wrap;gap:4px}
 #researchBriefingRoot .briefing-tabs button{border-radius:8px;border-color:transparent;background:transparent;color:var(--text);font-weight:650}
 #researchBriefingRoot .briefing-tabs button[aria-pressed="true"]{background:var(--menu-bg,#edf4ff);color:var(--brief-accent);border-color:var(--brief-border)}
 #researchBriefingRoot .briefing-date{margin:0;color:var(--text);opacity:.78;font-size:13px}
@@ -234,10 +239,10 @@ const briefingMarkup = `<style>
 #researchBriefingRoot .track{background:var(--brief-tint);border:1px solid var(--brief-border);border-radius:12px;padding:12px;overflow-wrap:anywhere}
 #researchBriefingRoot .track-row{border-top:1px solid var(--brief-border);padding-top:8px;margin-top:8px}
 #researchBriefingRoot .track-row ul{margin:4px 0;padding-inline-start:20px}
-@media(max-width:680px){#researchBriefingRoot .briefing-overview{grid-template-columns:1fr}#researchBriefingRoot :is(.briefing-card,.briefing-header){padding:12px}}
+@media(max-width:680px){#researchBriefingRoot .briefing-overview{grid-template-columns:1fr}#researchBriefingRoot .briefing-card{padding:12px}}
 </style>
 <header class="briefing-header"><h1>연구브리핑</h1>
-<label class="briefing-picker" for="brief-topic">연구 주제 <select id="brief-topic" disabled><option value="">연구 주제 선택</option></select></label></header>
+<div id="brief-topics" class="briefing-topics" role="group" aria-label="연구 주제"></div></header>
 <p id="brief-status" role="status" class="muted">연구 주제를 불러오는 중…</p>
 <div id="brief-view"></div>`;
 
