@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import {readFile} from 'node:fs/promises';
 const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
 const source=app.slice(app.indexOf('function mergeSavedData('),app.indexOf('async function saveStudents('));
-function context(extra={}){return vm.createContext({structuredClone,studentPreview:false,user:{role:'student'},version:1,data:{papers:[{id:'a',title:'Old',journal:'J'}]},renderNotifications(){},...extra});}
+function context(extra={}){return vm.createContext({structuredClone,previewURL:x=>x,studentPreview:false,user:{role:'student'},version:1,data:{papers:[{id:'a',title:'Old',journal:'J'}]},renderNotifications(){},...extra});}
 function merge(base,local,remote){const c=context({base,local,remote});vm.runInContext(source,c);return JSON.parse(JSON.stringify(vm.runInContext('mergeSavedData(base,local,remote)',c)));}
 test('merges different records and different fields without losing remote additions',()=>{
  const base={papers:[{id:'a',title:'Old',journal:'J'},{id:'b',title:'B'}]};
@@ -35,4 +35,11 @@ test('failed retry leaves local data/version intact and stops after bounded atte
 test('authorization failures are not retried',async()=>{
  let calls=0;const c=context({fetch:async()=>{calls++;return {ok:false,status:403,json:async()=>({error:'권한 없음'})}}});vm.runInContext(source,c);
  await assert.rejects(vm.runInContext("performPut('/api/data',{data:structuredClone(data)})",c),/권한 없음/);assert.equal(calls,1);
+});
+
+test('save adopts server-reconciled achievement data immediately without a reload',async()=>{
+ const next={papers:[{id:'a',authorCount:6,achievement:{authors:4,engineeringRecorded:120}}]},saved={papers:[{id:'a',authorCount:6,achievement:{}}]};let calls=0;
+ const c=context({user:{role:'admin'},next,fetch:async()=>{calls++;return {ok:true,json:async()=>({version:2,data:saved})};}});
+ vm.runInContext(source,c);await vm.runInContext("performPut('/api/data',{data:next})",c);
+ assert.deepEqual(next,saved);assert.equal(c.next,next);assert.equal(calls,1);assert.equal(c.version,2);
 });

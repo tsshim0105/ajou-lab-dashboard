@@ -181,7 +181,7 @@ async function performPut(path,input){
   if(res.ok){
    version=result.version;
    // Callers retain their next-data reference; update it only after successful persistence.
-   if(canMerge&&payload!==input){for(const key of Object.keys(input.data))delete input.data[key];Object.assign(input.data,payload.data);}
+   if(canMerge&&(result.data||payload!==input)){const saved=result.data||payload.data;for(const key of Object.keys(input.data))delete input.data[key];Object.assign(input.data,saved);}
    if(result.notifications){notifications=result.notifications;renderNotifications();}return;
   }
   if(res.status!==409||!canMerge)throw Error(result.error||'저장하지 못했습니다. 입력 내용을 유지한 채 다시 시도해주세요.');

@@ -400,7 +400,7 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
    recordScheduleDay(state);
    const result=await env.DB.prepare('UPDATE lab_state SET payload=?,version=version+1 WHERE id=1 AND version=?').bind(JSON.stringify(state),row.version).run();
    if(!result.meta?.changes)return reply({error:'자료가 변경되었습니다. 새로고침해주세요.'},409);
-   return reply({version:row.version+1,conferenceCatalog:state.conferenceCatalog||null,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
+   return reply({version:row.version+1,...(['/api/data','/api/shared'].includes(url.pathname)?{data:visible(state.data,admin)}:{}),conferenceCatalog:state.conferenceCatalog||null,notifications:await researchNotifications(env.DB,{admin,email},state.notifications||[])});
   }
   return reply({error:'페이지를 찾을 수 없습니다.'},404);
  }catch(e){return reply({error:e instanceof SyntaxError?'자료 형식을 확인해주세요.':e.message||'처리 중 오류가 발생했습니다.'},400);}

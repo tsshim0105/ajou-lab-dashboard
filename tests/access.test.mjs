@@ -426,3 +426,15 @@ test('automatic conference notices expose only a concise schedule change',async(
  const {conciseConferenceNotice}=await import('../server/worker.mjs');
  for(const [action,label] of [['등록','일정 추가'],['수정','일정 변경']]){const n=conciseConferenceNotice({id:'same',type:'meetingInfo',actor:'자동 갱신',action,title:'ACS',detail:'raw deadline JSON and lengthy explanation'});assert.equal(n.id,'same');assert.equal(n.title,'ACS');assert.equal(n.label,'학술대회 · '+label);assert.doesNotMatch(n.detail,/JSON|deadline/);assert.ok(n.detail.length<20);}
 });
+
+test('save response returns recalculated paper inputs and respects student privacy',async()=>{
+ const {worker,env}=fixture();const d=(await (await worker.fetch(req(OWNER),env)).json()).data;
+ d.papers[0].id='paper-test';d.papers[0].authorCount=4;d.papers[0].achievement={authors:4,engineeringRecorded:120,percentile:null,jcrYear:null,category:'',note:''};
+ let r=await worker.fetch(req(OWNER,'/api/data','PUT',{version:0,data:d}),env);assert.equal(r.status,200,await r.clone().text());
+ const initial=await r.json();initial.data.papers[0].authorCount=6;
+ r=await worker.fetch(req(OWNER,'/api/data','PUT',{version:1,data:initial.data}),env);assert.equal(r.status,200);
+ const saved=await r.json();assert.equal(saved.data.papers[0].authorCount,6);assert.equal(saved.data.papers[0].achievement.authors,undefined);assert.equal(saved.data.papers[0].achievement.engineeringRecorded,undefined);
+ const studentData=(await (await worker.fetch(req('student@example.test'),env)).json()).data;
+ r=await worker.fetch(req('student@example.test','/api/shared','PUT',{version:2,data:studentData}),env);assert.equal(r.status,200);
+ const studentSaved=await r.json();assert.equal(studentSaved.data.papers[0].achievement,undefined);assert.deepEqual(studentSaved.data.payroll,[]);
+});
