@@ -82,3 +82,10 @@ test('new archive papers are automatically scored from bibliographic values',()=
  const a=ctx.paInput(p);assert.equal(ctx.paPeriodIndex(a.year,a.semester),1);assert.equal(a.authors,4);assert.equal(a.role,'lead');assert.equal(ctx.paCalculate(a).engineering,180);assert.equal(ctx.paCalculate(a).university,null);
  assert.equal(ctx.paCalculate(ctx.paInput({...p,achievement:{percentile:10}})).university,225);
 });
+
+test('shared paper numbering persists separately from homepage identity',()=>{
+ const d=fresh().data;d.papers=[{id:'p',title:'Paper',year:2026,journal:'J',firstAuthor:'Author',websiteNumber:12}];
+ const next=applyResearchChanges(d,[{type:'papers',id:'p',action:'edit',values:{archiveNumber:53}}]);
+ assert.equal(next.papers[0].archiveNumber,53);assert.equal(next.papers[0].websiteNumber,12);assert.ok(next.papers[0].paperEditedFields.includes('archiveNumber'));validateData(next);
+ for(const n of [0,-1,1.5,'53'])assert.throws(()=>applyResearchChanges(d,[{type:'papers',id:'p',action:'edit',values:{archiveNumber:n}}]));
+});

@@ -111,12 +111,13 @@ export function validateData(d){
    if(!a||typeof a!=='object'||Array.isArray(a)||Object.keys(a).some(k=>!['year','semester','authors','sci','role','base','engineeringRecorded','percentile','category','jcrYear','include','note'].includes(k))||(a.year!==undefined&&(!Number.isInteger(a.year)||a.year<1900||a.year>2200))||(a.semester!==undefined&&a.semester!==null&&![1,2].includes(a.semester))||(a.authors!==undefined&&(!Number.isInteger(a.authors)||a.authors<1||a.authors>100000))||(a.sci!==undefined&&!['','SCI','other'].includes(a.sci))||(a.role!==undefined&&!['','lead','co'].includes(a.role))||(a.base!==undefined&&a.base!==null&&![300,360,450,600,1000].includes(a.base))||(a.engineeringRecorded!==undefined&&a.engineeringRecorded!==null&&(!Number.isFinite(a.engineeringRecorded)||a.engineeringRecorded<0||a.engineeringRecorded>1000))||(a.authors===1&&a.role==='co')||(a.percentile!==null&&(!Number.isFinite(a.percentile)||a.percentile<0||a.percentile>100))||(a.jcrYear!==null&&(!Number.isInteger(a.jcrYear)||a.jcrYear<1900||a.jcrYear>2200))||(a.include!==undefined&&typeof a.include!=='boolean')||typeof a.category!=='string'||a.category.length>500||typeof a.note!=='string'||a.note.length>2000)throw Error('논문 업적 정보를 확인해주세요.');
   }
 
+  if(p.archiveNumber!==undefined&&(!Number.isInteger(p.archiveNumber)||p.archiveNumber<1||p.archiveNumber>999999))throw Error('논문 순번을 확인해주세요.');
   if(p.sci!==undefined&&!['','Y','N','SCI','KCI','해당사항없음'].includes(p.sci))throw Error('SCI 여부를 확인해주세요.');
   if(p.authorCount!==undefined&&p.authorCount!==null&&(!Number.isInteger(p.authorCount)||p.authorCount<1||p.authorCount>100000))throw Error('총저자수는 1 이상의 정수여야 합니다.');
   for(const k of ['correspondingAuthor','coauthors','volume','issue','pages','articleNumber','doi','publicationUrl','issueDate','onlineDate'])if(p[k]!==undefined&&(typeof p[k]!=='string'||p[k].length>2000))throw Error('논문 출판 정보를 확인해주세요.');
   for(const k of ['issueDate','onlineDate'])if(p[k]&&!partialDateOK(p[k]))throw Error('논문 출판일을 확인해주세요.');
   if(p.publicationUrl&&!/^https:\/\//i.test(p.publicationUrl))throw Error('논문 링크는 https 주소여야 합니다.');
-  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation','sci','authorCount'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
+  if(p.paperEditedFields!==undefined&&(!Array.isArray(p.paperEditedFields)||p.paperEditedFields.length>50||p.paperEditedFields.some(k=>!['archiveNumber','title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','fund','status','citation','sci','authorCount'].includes(k))))throw Error('논문 수정 항목을 확인해주세요.');
   if(p.paperEditedFields?.length&&(!p.title.trim()||p.year<1900||p.year>2200))throw Error('논문 제목과 게재 연도를 확인해주세요.');
  }
  const amountOK=n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000;
@@ -139,8 +140,13 @@ export function validateData(d){
  }
  return d;
 }
+export function conciseConferenceNotice(n){
+ if(n.type!=='meetingInfo'||n.actor!=='자동 갱신')return n;
+ const change=n.action==='등록'||n.action==='추가'?'일정 추가':n.action==='삭제'?'일정 삭제':'일정 변경';
+ return {...n,label:'학술대회 · '+change,detail:change==='일정 추가'?'일정이 추가되었습니다.':change==='일정 삭제'?'일정이 삭제되었습니다.':'일정이 변경되었습니다.'};
+}
 const notificationFields={
- papers:['title','year','journal','firstAuthor','correspondingAuthor','coauthors','authorList','volume','issue','pages','articleNumber','issueDate','onlineDate','sci','authorCount','authors','doi','publicationUrl'],
+ papers:['archiveNumber','title','year','journal','firstAuthor','correspondingAuthor','coauthors','authorList','volume','issue','pages','articleNumber','issueDate','onlineDate','sci','authorCount','authors','doi','publicationUrl'],
  conferences:['title','year','date','presenter','coauthors','conference','scope','city','region','venue','kind','note'],
  meetingInfo:['name','start','end','venue','abstracts','registration','url','note']
 };
@@ -150,10 +156,10 @@ export function recordNotifications(state,before,after,type,actor='교수님'){
  for(const [id,r] of next){const previous=old.get(id);if(previous&&JSON.stringify(notificationView(previous,type))===JSON.stringify(notificationView(r,type)))continue;events.push({r,action:previous?'수정':'등록'});}
  for(const [id,r] of old)if(!next.has(id)&&!(type==='meetingInfo'&&actor==='자동 갱신'))events.push({r,action:'삭제'});
  const label={papers:'논문',conferences:'학회 발표',meetingInfo:'학술대회'}[type];
- const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,recordId:r.id||null,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.kind,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)}));
+ const added=events.map(({r,action})=>({id:crypto.randomUUID(),at:new Date().toISOString(),actor,type,recordId:r.id||null,action,label:label+' '+action,title:String(r.title||r.name||r.conference||'제목 미기재').slice(0,500),detail:String(type==='papers'?r.journal||'':type==='conferences'?[r.presenter,r.conference,r.kind,r.date].filter(Boolean).join(' · '):[r.start,r.venue].filter(Boolean).join(' · ')).slice(0,500)})).map(conciseConferenceNotice);
  state.notifications=[...added.reverse(),...(state.notifications||[])].slice(0,200);
 }
-const researchFields={papers:['title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
+const researchFields={papers:['archiveNumber','title','year','journal','firstAuthor','correspondingAuthor','coauthors','volume','issue','pages','articleNumber','issueDate','onlineDate','doi','publicationUrl','sci','authorCount'],conferences:['date','year','presenter','coauthors','conference','scope','city','venue','title','kind','note']};
 // Archive edits invalidate only the spreadsheet overrides affected by that edit.
 export function syncPaperAchievement(previous,paper){
  if(!previous?.achievement||!paper.achievement)return paper;
@@ -178,7 +184,7 @@ export function applyResearchChanges(data,changes){
   if(!c||!['papers','conferences'].includes(c.type)||!['add','edit'].includes(c.action)||typeof c.id!=='string'||!c.id||c.id.length>200||!c.values||typeof c.values!=='object'||Array.isArray(c.values))throw Error('연구 기록 형식이 올바르지 않습니다.');
   const key=c.type+':'+c.id;if(seen.has(key))throw Error('중복 수정 요청입니다.');seen.add(key);
   const keys=Object.keys(c.values);if(!keys.length||keys.some(k=>!researchFields[c.type].includes(k)))throw Error('허용되지 않는 수정 항목입니다.');
-  for(const k of keys){const v=c.values[k];if(k==='year'){if(!Number.isInteger(v)||v<1900||v>2200)throw Error('연도를 확인해주세요.');}else if(k==='authorCount'){if(v!==null&&(!Number.isInteger(v)||v<1||v>100000))throw Error('총저자수를 확인해주세요.');}else if(typeof v!=='string'||v.length>2000)throw Error('입력값을 확인해주세요.');}
+  for(const k of keys){const v=c.values[k];if(k==='year'){if(!Number.isInteger(v)||v<1900||v>2200)throw Error('연도를 확인해주세요.');}else if(k==='archiveNumber'){if(!Number.isInteger(v)||v<1||v>999999)throw Error('논문 순번을 확인해주세요.');}else if(k==='authorCount'){if(v!==null&&(!Number.isInteger(v)||v<1||v>100000))throw Error('총저자수를 확인해주세요.');}else if(typeof v!=='string'||v.length>2000)throw Error('입력값을 확인해주세요.');}
   const index=next[c.type].findIndex(r=>r.id===c.id);if(c.action==='add'?index>=0:index<0)throw Error('기록이 변경되었습니다. 새로고침해주세요.');
   const old=index>=0?next[c.type][index]:{},r={...old,...c.values,id:c.id};
   if(c.type==='papers'){
@@ -316,8 +322,8 @@ export function createWorker(html,meetingEvents=null,serviceWorkerSource='',noti
     row=await env.DB.prepare('SELECT version,payload FROM lab_state WHERE id=1').first();state=JSON.parse(row.payload);
    }
    const catalogEvents=state.conferenceCatalog?.events||meetingEvents;
-   const retainedNotifications=(state.notifications||[]).filter(n=>!(n.type==='meetingInfo'&&n.actor==='자동 갱신'&&n.action==='삭제'));
-   const staleDeletionAlerts=retainedNotifications.length!==(state.notifications||[]).length;
+   const retainedNotifications=(state.notifications||[]).filter(n=>!(n.type==='meetingInfo'&&n.actor==='자동 갱신'&&n.action==='삭제')).map(conciseConferenceNotice);
+   const staleDeletionAlerts=JSON.stringify(retainedNotifications)!==JSON.stringify(state.notifications||[]);
    const snapshot=(catalogEvents||[]).map(r=>({id:r.id,...notificationView(r,'meetingInfo')}));
    if(staleDeletionAlerts||(catalogEvents!==null&&JSON.stringify(state.meetingNotificationSnapshot)!==JSON.stringify(snapshot))){
     state.notifications=retainedNotifications;
