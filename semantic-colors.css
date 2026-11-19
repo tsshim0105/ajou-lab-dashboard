@@ -1,0 +1,87 @@
+/* UI role colours. Plot/export palettes and lab artwork intentionally have no
+   dependency on these tokens. Every theme defines one action pair per mode. */
+:root {
+ --ui-action:#1769e8;--ui-on-action:#fff;--ui-link:#1458bf;
+ --ui-page:#f4f6f9;--ui-surface:#fff;--ui-soft:#f0f5fa;
+ --ui-text:#203747;--ui-muted:#536779;--ui-border:#c8d6e3;
+ --ui-danger:#b91c1c;--ui-on-danger:#fff;--ui-danger-soft:#fce8e8;
+ --ui-success:#18734d;--ui-on-success:#fff;--ui-success-soft:#e5f4eb;
+ --ui-warning:#795713;--ui-warning-soft:#fff3d5;
+ --ui-section:linear-gradient(110deg,#e0f2ec,#e8e7f7);
+ --ui-glass:rgba(248,252,253,.55);
+}
+html[data-hub-theme=pop]{--ui-action:#1049c9;--ui-link:#1049c9;--ui-page:#f7faff;--ui-soft:#edf3ff;--ui-section:#edf3ff}
+html[data-hub-theme=shinchan]{--ui-action:#bd2d34;--ui-link:#b32630;--ui-page:#fffdf5;--ui-soft:#fff4d4;--ui-section:#fff4d4}
+html[data-hub-theme=baseball]{--ui-action:#214b3a;--ui-link:#214b3a;--ui-page:#f7f6ef;--ui-soft:#edf1e5;--ui-section:#edf1e5}
+html[data-hub-theme=orchestra]{--ui-action:#6c263c;--ui-link:#6c263c;--ui-page:#f9f6f0;--ui-soft:#f5eddd;--ui-section:#f5eddd}
+html[data-theme=dark]{
+ --ui-action:#94beff;--ui-on-action:#10233e;--ui-link:#a9cbff;
+ --ui-page:#111b28;--ui-surface:#1d2b3b;--ui-soft:#2a3b4d;
+ --ui-text:#e8eff6;--ui-muted:#b9cad9;--ui-border:#53697e;
+ --ui-danger:#ffb0b0;--ui-on-danger:#4b131b;--ui-danger-soft:#4b2832;
+ --ui-success:#91d9b2;--ui-on-success:#123c2a;--ui-success-soft:#234537;
+ --ui-warning:#f5d585;--ui-warning-soft:#493e27;
+ --ui-section:linear-gradient(110deg,#29423f,#34344b);--ui-glass:rgba(25,39,52,.55);
+}
+html[data-theme=dark][data-hub-theme=pop]{--ui-action:#a3bdff;--ui-link:#b5caff;--ui-soft:#293a55;--ui-section:#293a55}
+html[data-theme=dark][data-hub-theme=shinchan]{--ui-action:#ffb1b6;--ui-link:#ffbfc3;--ui-soft:#45323d;--ui-section:#45323d}
+html[data-theme=dark][data-hub-theme=baseball]{--ui-action:#9bd2b1;--ui-link:#ace2c1;--ui-soft:#293f37;--ui-section:#293f37}
+html[data-theme=dark][data-hub-theme=orchestra]{--ui-action:#eab0c6;--ui-link:#f0c0d2;--ui-soft:#42323f;--ui-section:#42323f}
+/* Compatibility names now resolve through roles, not another colour palette. */
+html,html[data-theme],html[data-hub-theme][data-hub-theme]{
+ --panel:var(--ui-surface);--surface:var(--ui-surface);--text:var(--ui-text);--muted:var(--ui-muted);
+ --edge:var(--ui-border);--border:var(--ui-border);--soft:var(--ui-soft);--tint:var(--ui-soft);
+ --accent:var(--ui-action);--menu-bg:var(--ui-soft);--menu-ink:var(--ui-link);
+ --ht-primary:var(--ui-action);
+ --ui-hover:color-mix(in srgb,var(--ui-action) 10%,var(--ui-surface));
+ --ui-selected:color-mix(in srgb,var(--ui-action) 18%,var(--ui-surface));
+}
+html body{background:var(--ui-page);color:var(--ui-text)}
+html :is(.app,.section-card,.card,dialog,.notification-center,.notification-item){background-color:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-border)}
+html :is(h1,h2,h3,.record-title){color:inherit}
+html :is(.muted,.label,.foot,.personal-note,.notification-meta){color:var(--ui-muted)}
+html a:not(.dashboard-brand):not(.primary){color:var(--ui-link)}
+html :is(input,select,textarea){background-color:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-border);accent-color:var(--ui-action)}
+html :is(button,a,input,select,textarea):focus-visible{outline-color:var(--ui-action)}
+/* Shared actions include dialogs, mobile menus, graph/table tools and admin UI. */
+html[data-hub-theme] :is(button.primary,.primary,.tab.active,button[aria-pressed=true],button[aria-selected=true],.plot-tabs button.active):not(.danger):not(.green),
+html[data-hub-theme] #tabs .tab.active{background:var(--ui-action)!important;color:var(--ui-on-action)!important;border-color:var(--ui-action)!important}
+html[data-hub-theme] button.secondary:not([aria-pressed=true]):not([aria-selected=true]):not(.active):not(.danger):not(.green){background:var(--ui-surface);color:var(--ui-link);border-color:var(--ui-border)}
+html :is(button.secondary,a.secondary):hover:not(:disabled){background-color:var(--ui-hover)}
+html :is(button.danger,.primary.danger){background:var(--ui-danger)!important;color:var(--ui-on-danger)!important;border-color:var(--ui-danger)!important}
+html :is(button.green,.primary.green){background:var(--ui-success)!important;color:var(--ui-on-success)!important;border-color:var(--ui-success)!important}
+html :is(.error,.table-maker-status.error){color:var(--ui-danger)}
+html :is(.warning,.notice){background:var(--ui-warning-soft);color:var(--ui-warning)}
+html :is(.data-table th,.plot-sheet-table thead th,.plot-sheet-table th:first-child,.table-maker-grid th){background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-border)}
+html :is(.plot-sheet-table td,.table-maker-grid td){background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-border)}
+html :is(.plot-sheet-table,.table-maker-grid) input.sheet-selected{background:var(--ui-selected)!important;color:var(--ui-text);box-shadow:inset 0 0 0 1px var(--ui-action)}
+html :is(.plot-sheet-table,.table-maker-grid) input:focus{background:var(--ui-hover);outline-color:var(--ui-action)}
+html[data-hub-theme] :is(.plot-controls,.table-maker-settings){background:var(--ui-section)!important;color:var(--ui-text)!important}
+html[data-hub-theme] :is(.plot-controls,.table-maker-settings,.fund-balance-head,.fund-budget-summary,.pay-plan-cards article,.pay-student-entry,.pay-rates,.pay-semester>summary,.research-year-charts>.section-card,.meeting-memo,.hub-score) .muted{color:var(--ui-muted)!important}
+/* Summaries remain readable in dark mode, including the old forced white rules. */
+html[data-theme] .mr-summary-grid.mr-summary-grid>section>ul,
+html[data-theme] .mr-summary-grid :is(textarea,ul li,ul li::marker,.mr-word-form,.mr-word-form input,.mr-word-form select){background-color:var(--ui-surface);color:var(--ui-text);color-scheme:inherit}
+html .mr-person-tag{background:var(--ui-soft);color:var(--ui-link);border-color:var(--ui-border)}
+html[data-theme=dark] :is(.mr-topic-card,.mr-research-topic,.mr-thread-card){background:var(--ui-surface);color:var(--ui-text)}
+/* Preserve the requested white masthead and unchanged lab branding in all modes.
+   Only action tokens are locally adapted to retain contrast on that white bar. */
+html .app>.header-bar :is(button.secondary,a.secondary){background:#fff!important;color:#345269!important;border-color:#cbd8e2!important}
+@media(max-width:760px){
+ html[data-hub-theme] #tabs{background:var(--ui-glass)!important;border-color:var(--ui-border)!important}
+ html[data-hub-theme] #tabs .tab:not(.active){color:var(--ui-text)!important}
+}
+
+html #notificationCount{background:var(--ui-danger);color:var(--ui-on-danger)}
+html .badge,html .event-date{background:var(--ui-soft);color:var(--ui-link)}
+html .note{background:var(--ui-soft);color:var(--ui-text);border-color:var(--ui-border)}
+html .note.warning{background:var(--ui-warning-soft);color:var(--ui-warning)}
+html .rr-student-chips .rr-lead,html .conference-new{background:var(--ui-action);color:var(--ui-on-action)}
+html .pa-promotion-tag.green{background:var(--ui-success);color:var(--ui-on-success)}
+html .pa-promotion-tag.gold{background:var(--ui-warning-soft);color:var(--ui-warning)}
+html .mr-linked-feedback{border-left-color:var(--ui-action);background:var(--ui-soft);color:var(--ui-text)}
+html .mr-linked-summary .mr-report-card li{background:transparent;color:inherit}
+
+/* Feature containers consume the same surface roles in every view. */
+html[data-hub-theme][data-theme] :is(.paper-archive,.paper-mobile-compact,.conference-log-card,.rr-connection,.rr-settings-note,.rr-usage>div,.rr-chat-empty span,.rr-private,.rr-question .rr-prose,.mr-controls,.group-speaker-next,.group-schedule .group-next-row){background:var(--ui-section);color:var(--ui-text);border-color:var(--ui-border)}
+html[data-hub-theme] :is(.conference-pass){--pass-paper:var(--ui-surface);--pass-ink:var(--ui-text);--pass-sub:var(--ui-muted);--pass-line:var(--ui-border);--pass-a:var(--ui-soft);--pass-b:var(--ui-soft);--pass-soft:var(--ui-soft)}
+html[data-hub-theme] :is(.archive-facts,.archive-mobile-actions,.rr-publication,.rr-overflow>div){background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-border)}
